@@ -8,35 +8,66 @@ use std::{
     ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Not},
 };
 
+type Inner = u8;
+const BITS: usize = 8;
+
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Default)]
-pub struct Bitfield8(u8);
+pub struct Bitfield8(Inner);
 
 impl Bitfield8 {
-    pub fn value(&self) -> u8 {
+    pub fn value(&self) -> Inner {
         self.0
     }
 }
 
-impl Bitfield<u8> for Bitfield8 {}
+impl Bitfield<Inner> for Bitfield8 {
+    fn count_set(&self) -> usize {
+        self.0.count_ones() as usize
+    }
+
+    fn count_unset(&self) -> usize {
+        self.0.count_zeros() as usize
+    }
+
+    fn first_set(&self) -> Option<usize> {
+        if self.0.count_ones() == 0 {
+            None
+        } else {
+            Some((self.0.trailing_zeros() + 1) as usize)
+        }
+    }
+
+    fn last_set(&self) -> Option<usize> {
+        if self.0.count_ones() == 0 {
+            None
+        } else {
+            Some((BITS as u32 - self.0.leading_ones()) as usize)
+        }
+    }
+
+    fn bit_iter(&self) -> impl Iterator<Item = bool> {
+        self.into_iter()
+    }
+}
 
 impl BitfieldMarker for Bitfield8 {}
 
-impl BitfieldHelper<u8> for Bitfield8 {
-    const BIT: u8 = 1;
+impl BitfieldHelper<Inner> for Bitfield8 {
+    const BIT: Inner = 1;
 
-    const EMPTY: u8 = u8::MIN;
+    const EMPTY: Inner = Inner::MIN;
 
-    const ALL: u8 = u8::MAX;
+    const ALL: Inner = Inner::MAX;
 }
 
-impl From<u8> for Bitfield8 {
-    fn from(value: u8) -> Self {
+impl From<Inner> for Bitfield8 {
+    fn from(value: Inner) -> Self {
         Self(value)
     }
 }
 
-impl Into<u8> for Bitfield8 {
-    fn into(self) -> u8 {
+impl Into<Inner> for Bitfield8 {
+    fn into(self) -> Inner {
         self.0
     }
 }
@@ -100,7 +131,7 @@ impl Display for Bitfield8 {
 impl IntoIterator for Bitfield8 {
     type Item = bool;
 
-    type IntoIter = BitIter<u8>;
+    type IntoIter = BitIter<Inner>;
 
     fn into_iter(self) -> Self::IntoIter {
         Self::IntoIter {
@@ -113,8 +144,8 @@ impl IntoIterator for Bitfield8 {
 impl FromIterator<bool> for Bitfield8 {
     fn from_iter<T: IntoIterator<Item = bool>>(iter: T) -> Self {
         let mut bitfield: Self = Self::from(0);
-        for (i, bit) in iter.into_iter().take(8).enumerate() {
-            bitfield.0 |=  (if bit {1} else {0}) << (i as u8);
+        for (i, bit) in iter.into_iter().take(BITS).enumerate() {
+            bitfield.0 |= (if bit { 1 } else { 0 }) << (i as Inner);
         }
         bitfield
     }
@@ -124,10 +155,10 @@ impl FromIterator<bool> for Bitfield8 {
 // mod tests {
 //     use super::*;
 
-//     const A: [Option<u8>; 8] = [None, Some(1), None, Some(3), None, Some(5), None, Some(7)];
-//     const B: [Option<u8>; 8] = [Some(0), None, Some(2), None, Some(4), None, Some(6), None];
-//     const C: [Option<u8>; 8] = [None, None, Some(2), Some(3), None, None, None, Some(7)];
-//     const D: [Option<u8>; 8] = [Some(0), None, Some(2), None, None, None, Some(6), Some(7)];
+//     const A: [Option<Inner>; BITS] = [None, Some(1), None, Some(3), None, Some(5), None, Some(7)];
+//     const B: [Option<Inner>; BITS] = [Some(0), None, Some(2), None, Some(4), None, Some(6), None];
+//     const C: [Option<Inner>; BITS] = [None, None, Some(2), Some(3), None, None, None, Some(7)];
+//     const D: [Option<Inner>; BITS] = [Some(0), None, Some(2), None, None, None, Some(6), Some(7)];
 
 //     #[test]
 //     fn conversion_from_array() {

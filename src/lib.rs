@@ -91,11 +91,10 @@ mod tests {
         println!("{:?}", letters);
 
         let bitfield = Bitfield8::default()
-            .check_flag(1)
-            .check_flag(3)
-            .check_flag(5)
-            .check_flag(7)
-            .build();
+            .check_bit(1)
+            .check_bit(3)
+            .check_bit(5)
+            .check_bit(7);
 
         println!("{bitfield}");
 

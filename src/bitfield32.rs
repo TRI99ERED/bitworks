@@ -8,33 +8,64 @@ use std::{
     ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Not},
 };
 
+type Inner = u32;
+const BITS: usize = 32;
+
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Default)]
-pub struct Bitfield32(u32);
+pub struct Bitfield32(Inner);
 
 impl Bitfield32 {
-    pub fn value(&self) -> u32 {
+    pub fn value(&self) -> Inner {
         self.0
     }
 }
 
-impl Bitfield<u32> for Bitfield32 {}
+impl Bitfield<Inner> for Bitfield32 {
+    fn count_set(&self) -> usize {
+        self.0.count_ones() as usize
+    }
+
+    fn count_unset(&self) -> usize {
+        self.0.count_zeros() as usize
+    }
+
+    fn first_set(&self) -> Option<usize> {
+        if self.0.count_ones() == 0 {
+            None
+        } else {
+            Some((self.0.trailing_zeros() + 1) as usize)
+        }
+    }
+
+    fn last_set(&self) -> Option<usize> {
+        if self.0.count_ones() == 0 {
+            None
+        } else {
+            Some((BITS as u32 - self.0.leading_ones()) as usize)
+        }
+    }
+
+    fn bit_iter(&self) -> impl Iterator<Item = bool> {
+        self.into_iter()
+    }
+}
 
 impl BitfieldMarker for Bitfield32 {}
 
-impl BitfieldHelper<u32> for Bitfield32 {
-    const BIT: u32 = 1;
-    const EMPTY: u32 = u32::MIN;
-    const ALL: u32 = u32::MAX;
+impl BitfieldHelper<Inner> for Bitfield32 {
+    const BIT: Inner = 1;
+    const EMPTY: Inner = Inner::MIN;
+    const ALL: Inner = Inner::MAX;
 }
 
-impl From<u32> for Bitfield32 {
-    fn from(value: u32) -> Self {
+impl From<Inner> for Bitfield32 {
+    fn from(value: Inner) -> Self {
         Self(value)
     }
 }
 
-impl Into<u32> for Bitfield32 {
-    fn into(self) -> u32 {
+impl Into<Inner> for Bitfield32 {
+    fn into(self) -> Inner {
         self.0
     }
 }
@@ -98,7 +129,7 @@ impl Display for Bitfield32 {
 impl IntoIterator for Bitfield32 {
     type Item = bool;
 
-    type IntoIter = BitIter<u32>;
+    type IntoIter = BitIter<Inner>;
 
     fn into_iter(self) -> Self::IntoIter {
         Self::IntoIter {
@@ -111,8 +142,8 @@ impl IntoIterator for Bitfield32 {
 impl FromIterator<bool> for Bitfield32 {
     fn from_iter<T: IntoIterator<Item = bool>>(iter: T) -> Self {
         let mut bitfield: Self = Self::from(0);
-        for (i, bit) in iter.into_iter().take(32).enumerate() {
-            bitfield.0 |=  (if bit {1} else {0}) << (i as u32);
+        for (i, bit) in iter.into_iter().take(BITS).enumerate() {
+            bitfield.0 |= (if bit { 1 } else { 0 }) << (i as Inner);
         }
         bitfield
     }
@@ -122,8 +153,8 @@ impl FromIterator<bool> for Bitfield32 {
 // mod tests {
 //     use super::*;
 
-//     fn a() -> [Option<u32>; 32] {
-//         let mut a = [None; 32];
+//     fn a() -> [Option<Inner>; BITS] {
+//         let mut a = [None; BITS];
 //         a[1] = Some(1);
 //         a[3] = Some(3);
 //         a[5] = Some(5);
@@ -131,8 +162,8 @@ impl FromIterator<bool> for Bitfield32 {
 //         a
 //     }
 
-//     fn b() -> [Option<u32>; 32] {
-//         let mut b = [None; 32];
+//     fn b() -> [Option<Inner>; BITS] {
+//         let mut b = [None; BITS];
 //         b[0] = Some(0);
 //         b[2] = Some(2);
 //         b[4] = Some(4);
@@ -140,16 +171,16 @@ impl FromIterator<bool> for Bitfield32 {
 //         b
 //     }
 
-//     fn c() -> [Option<u32>; 32] {
-//         let mut c = [None; 32];
+//     fn c() -> [Option<Inner>; BITS] {
+//         let mut c = [None; BITS];
 //         c[2] = Some(2);
 //         c[3] = Some(3);
 //         c[7] = Some(7);
 //         c
 //     }
 
-//     fn d() -> [Option<u32>; 32] {
-//         let mut d = [None; 32];
+//     fn d() -> [Option<Inner>; BITS] {
+//         let mut d = [None; BITS];
 //         d[0] = Some(0);
 //         d[2] = Some(2);
 //         d[6] = Some(6);
