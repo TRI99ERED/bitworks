@@ -1,6 +1,6 @@
 use std::{
     mem::size_of,
-    ops::{BitAnd, Shr, ShrAssign},
+    ops::{BitAnd, Shr},
 };
 
 #[derive(Clone, Copy)]
