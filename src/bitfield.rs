@@ -3,7 +3,10 @@ use std::ops::{
     ShrAssign,
 };
 
-use crate::private::{BitfieldHelper, BitfieldMarker};
+use crate::{
+    bitenum::Bitenum,
+    private::{BitfieldHelper, BitfieldMarker},
+};
 
 /// Trait defining common bitfield logic.</br>
 /// T is the value representing the bitfield (u8, u16, etc.).</br>
@@ -133,10 +136,10 @@ where
     ///     assert_eq!(bit_iter.next(), None);
     /// }
     /// ```
-    fn set_pos_iter(&self) -> impl Iterator<Item = u8> {
+    fn set_pos_iter(&self) -> impl Iterator<Item = usize> {
         self.bit_iter()
             .enumerate()
-            .filter_map(|(i, bit)| if bit { Some(i as u8) } else { None })
+            .filter_map(|(i, bit)| if bit { Some(i) } else { None })
     }
 
     /// Returns iterator over positions of the unset bits of the bitfield.
@@ -156,10 +159,76 @@ where
     ///     assert_eq!(bit_iter.next(), None);
     /// }
     /// ```
-    fn unset_pos_iter(&self) -> impl Iterator<Item = u8> {
+    fn unset_pos_iter(&self) -> impl Iterator<Item = usize> {
         self.bit_iter()
             .enumerate()
-            .filter_map(|(i, bit)| if !bit { Some(i as u8) } else { None })
+            .filter_map(|(i, bit)| if !bit { Some(i) } else { None })
+    }
+
+    /// Returns iterator over set bits of the bitfield converted to target enum, where E implements Bitenum.
+    ///
+    /// # Examples
+    /// ```
+    /// use simple_bitfield::{prelude::{Bitfield, Bitfield8, Bitenum}, benum, count_variants};
+    /// 
+    /// benum! {
+    ///     enum E {
+    ///         A, // 0
+    ///         B, // 1
+    ///         D  =  3,
+    ///         E, // 4
+    ///     }
+    /// }
+    /// 
+    /// fn example() {                     // E D _ B A
+    ///     let bitfield = Bitfield8::from(0b_0_1_1_0_1); // implements Bitfield
+    ///     let mut set_enum_iter = Bitfield::set_enum_iter(&bitfield);
+    ///     assert_eq!(set_enum_iter.next(), Some(E::A));
+    ///     assert_eq!(set_enum_iter.next(), Some(E::D));
+    ///     assert_eq!(set_enum_iter.next(), None);
+    /// }
+    /// ```
+    fn set_enum_iter<E>(&self) -> impl Iterator<Item = E>
+    where
+        E: Bitenum,
+    {
+        self.bit_iter()
+            .enumerate()
+            .filter(|&(_, bit)| bit)
+            .filter_map(|(i, _)| E::from_pos(i))
+    }
+    
+    /// Returns iterator over unset bits of the bitfield converted to target enum, where E implements Bitenum.
+    ///
+    /// # Examples
+    /// ```
+    /// use simple_bitfield::{prelude::{Bitfield, Bitfield8, Bitenum}, benum, count_variants};
+    /// 
+    /// benum! {
+    ///     enum E {
+    ///         A, // 0
+    ///         B, // 1
+    ///         D  =  3,
+    ///         E, // 4
+    ///     }
+    /// }
+    /// 
+    /// fn example() {                     // E D _ B A
+    ///     let bitfield = Bitfield8::from(0b_0_1_1_0_1); // implements Bitfield
+    ///     let mut unset_enum_iter = Bitfield::unset_enum_iter(&bitfield);
+    ///     assert_eq!(unset_enum_iter.next(), Some(E::B));
+    ///     assert_eq!(unset_enum_iter.next(), Some(E::E));
+    ///     assert_eq!(unset_enum_iter.next(), None);
+    /// }
+    /// ```
+    fn unset_enum_iter<E>(&self) -> impl Iterator<Item = E>
+    where
+        E: Bitenum,
+    {
+        self.bit_iter()
+            .enumerate()
+            .filter(|&(_, bit)| !bit)
+            .filter_map(|(i, _)| E::from_pos(i))
     }
 
     /// Constructs empty Bitfield.

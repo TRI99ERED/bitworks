@@ -5,8 +5,9 @@ pub mod bitfield32;
 pub mod bitfield64;
 pub mod bitfield8;
 
-pub mod conversion;
 pub mod iter;
+pub mod conversion;
+pub mod bitenum;
 
 pub mod prelude {
     use super::*;
@@ -19,6 +20,8 @@ pub mod prelude {
     pub use bitfield8::Bitfield8;
 
     pub use iter::BitIter;
+    pub use conversion::{FromBitfield, IntoBitfield};
+    pub use bitenum::Bitenum;
 }
 
 mod private {

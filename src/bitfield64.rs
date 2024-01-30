@@ -64,9 +64,9 @@ impl From<Inner> for Bitfield64 {
     }
 }
 
-impl Into<Inner> for Bitfield64 {
-    fn into(self) -> Inner {
-        self.0
+impl From<Bitfield64> for Inner {
+    fn from(value: Bitfield64) -> Self {
+        value.0
     }
 }
 
