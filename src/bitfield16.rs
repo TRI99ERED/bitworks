@@ -1,8 +1,4 @@
-use crate::{
-    bitfield::Bitfield,
-    iter::BitIter,
-    private::{BitfieldHelper, BitfieldMarker},
-};
+use crate::{bitfield::Bitfield, iter::BitIter, private::BitfieldMarker};
 use std::{
     fmt::Display,
     ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Not},
@@ -20,7 +16,12 @@ impl Bitfield16 {
     }
 }
 
-impl Bitfield<Inner> for Bitfield16 {
+impl Bitfield for Bitfield16 {
+    type Repr = Inner;
+    const __BIT: Inner = 1;
+    const EMPTY: Inner = Inner::MIN;
+    const ALL: Inner = Inner::MAX;
+
     fn count_set(&self) -> usize {
         self.0.count_ones() as usize
     }
@@ -51,14 +52,6 @@ impl Bitfield<Inner> for Bitfield16 {
 }
 
 impl BitfieldMarker for Bitfield16 {}
-
-impl BitfieldHelper<Inner> for Bitfield16 {
-    const BIT: Inner = 1;
-
-    const EMPTY: Inner = Inner::MIN;
-
-    const ALL: Inner = Inner::MAX;
-}
 
 impl From<Inner> for Bitfield16 {
     fn from(value: Inner) -> Self {

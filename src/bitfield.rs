@@ -3,22 +3,17 @@ use std::ops::{
     ShrAssign,
 };
 
-use crate::{
-    bitenum::Bitenum,
-    private::{BitfieldHelper, BitfieldMarker},
-};
+use crate::{flagenum::Flagenum, private::BitfieldMarker};
 
 /// Trait defining common bitfield logic.</br>
 /// T is the value representing the bitfield (u8, u16, etc.).</br>
-pub trait Bitfield<T>:
+pub trait Bitfield:
     Sized
     + BitfieldMarker
-    + BitfieldHelper<T>
     + Default
     + Copy
     + Clone
-    + From<T>
-    + Into<T>
+    + From<Self::Repr>
     + BitAnd<Output = Self>
     + BitAndAssign
     + BitOr<Output = Self>
@@ -27,26 +22,36 @@ pub trait Bitfield<T>:
     + BitXorAssign
     + Not<Output = Self>
 where
-    T: Sized
+    Self::Repr: Sized
         + Copy
         + Clone
-        + Not<Output = T>
+        + Not<Output = Self::Repr>
         + PartialEq
         + Eq
-        + BitAnd<T, Output = T>
-        + BitAndAssign<T>
-        + BitOr<T, Output = T>
-        + BitOrAssign<T>
-        + BitXor<T, Output = T>
-        + BitXorAssign<T>
-        + Shl<usize, Output = T>
-        + Shl<T, Output = T>
-        + ShlAssign<T>
-        + Shr<usize, Output = T>
-        + Shr<T, Output = T>
-        + ShrAssign<T>
+        + PartialOrd
+        + Ord
+        + BitAnd<Self::Repr, Output = Self::Repr>
+        + BitAndAssign<Self::Repr>
+        + BitOr<Self::Repr, Output = Self::Repr>
+        + BitOrAssign<Self::Repr>
+        + BitXor<Self::Repr, Output = Self::Repr>
+        + BitXorAssign<Self::Repr>
+        + Shl<usize, Output = Self::Repr>
+        + Shl<Self::Repr, Output = Self::Repr>
+        + ShlAssign<Self::Repr>
+        + Shr<usize, Output = Self::Repr>
+        + Shr<Self::Repr, Output = Self::Repr>
+        + ShrAssign<Self::Repr>
+        + From<Self>
+        + From<u8>
         + TryFrom<usize>,
 {
+    /// Primitive type that represents the Bitfield.
+    type Repr;
+    const __BIT: Self::Repr;
+    const EMPTY: Self::Repr;
+    const ALL: Self::Repr;
+
     /// Count the number of all set bits.
     ///
     /// # Examples
@@ -169,17 +174,15 @@ where
     ///
     /// # Examples
     /// ```
-    /// use simple_bitfield::{prelude::{Bitfield, Bitfield8, Bitenum}, benum, count_variants};
-    /// 
-    /// benum! {
-    ///     enum E {
-    ///         A, // 0
-    ///         B, // 1
-    ///         D  =  3,
-    ///         E, // 4
-    ///     }
+    /// use simple_bitfield::prelude::{Bitfield, Bitfield8, Flagenum};
+    ///
+    /// enum E {
+    ///     A, // 0
+    ///     B, // 1
+    ///     D  =  3,
+    ///     E, // 4
     /// }
-    /// 
+    ///
     /// fn example() {                     // E D _ B A
     ///     let bitfield = Bitfield8::from(0b_0_1_1_0_1); // implements Bitfield
     ///     let mut set_enum_iter = Bitfield::set_enum_iter(&bitfield);
@@ -190,20 +193,21 @@ where
     /// ```
     fn set_enum_iter<E>(&self) -> impl Iterator<Item = E>
     where
-        E: Bitenum,
+        E: Flagenum<Bitfield = Self>,
+        <Self as Bitfield>::Repr: From<E>,
     {
         self.bit_iter()
             .enumerate()
             .filter(|&(_, bit)| bit)
             .filter_map(|(i, _)| E::from_pos(i))
     }
-    
+
     /// Returns iterator over unset bits of the bitfield converted to target enum, where E implements Bitenum.
     ///
     /// # Examples
     /// ```
-    /// use simple_bitfield::{prelude::{Bitfield, Bitfield8, Bitenum}, benum, count_variants};
-    /// 
+    /// use simple_bitfield::prelude::{Bitfield, Bitfield8, Flagenum};
+    ///
     /// benum! {
     ///     enum E {
     ///         A, // 0
@@ -212,7 +216,7 @@ where
     ///         E, // 4
     ///     }
     /// }
-    /// 
+    ///
     /// fn example() {                     // E D _ B A
     ///     let bitfield = Bitfield8::from(0b_0_1_1_0_1); // implements Bitfield
     ///     let mut unset_enum_iter = Bitfield::unset_enum_iter(&bitfield);
@@ -223,7 +227,8 @@ where
     /// ```
     fn unset_enum_iter<E>(&self) -> impl Iterator<Item = E>
     where
-        E: Bitenum,
+        E: Flagenum<Bitfield = Self>,
+        <Self as Bitfield>::Repr: From<E>,
     {
         self.bit_iter()
             .enumerate()
@@ -238,7 +243,7 @@ where
     /// use simple_bitfield::prelude::{Bitfield, Bitfield8};
     ///
     /// fn example() {
-    ///     let bitfield = <Bitfield8 as Bitfield<u8>>::new();
+    ///     let bitfield = Bitfield8::new();
     ///     assert_eq!(bitfield.value(), 0b00000000);
     /// }
     /// ```
@@ -266,9 +271,9 @@ where
     /// ```
     fn set_bit(&mut self, pos: usize, value: bool) -> Self {
         if value {
-            *self |= (Self::BIT << pos).into();
+            *self |= (Self::__BIT << pos).into();
         } else {
-            *self &= (!(Self::BIT << pos)).into();
+            *self &= (!(Self::__BIT << pos)).into();
         }
         *self
     }
@@ -280,14 +285,14 @@ where
     /// use simple_bitfield::prelude::{Bitfield, Bitfield8};
     ///
     /// fn example() {
-    ///     let bitfield = <Bitfield8 as Bitfield<u8>>::new().set_bit(1, true);
+    ///     let bitfield = Bitfield8::new().set_bit(1, true);
     ///     assert_eq!(Bitfield::get_bit(&bitfield, 0), false);
     ///     assert_eq!(Bitfield::get_bit(&bitfield, 1), true);
     /// }
     /// ```
     fn get_bit(&self, pos: usize) -> bool {
-        let bit = Self::BIT << pos;
-        (<Self as Into<T>>::into(*self) & bit) != Self::EMPTY
+        let bit = Self::__BIT << pos;
+        (<Self as Into<Self::Repr>>::into(*self) & bit) != Self::EMPTY
     }
 
     /// Sets bit at pos to 1. Returns copy of the resulting bitfield.
@@ -306,7 +311,7 @@ where
     /// }
     /// ```
     fn check_bit(&mut self, pos: usize) -> Self {
-        *self |= (Self::BIT << pos).into();
+        *self |= (Self::__BIT << pos).into();
         *self
     }
 
@@ -326,7 +331,7 @@ where
     /// }
     /// ```
     fn uncheck_bit(&mut self, pos: usize) -> Self {
-        *self &= (!(Self::BIT << pos)).into();
+        *self &= (!(Self::__BIT << pos)).into();
         *self
     }
 
