@@ -1,6 +1,3 @@
-#[macro_use]
-extern crate flagenum_derive;
-
 pub mod bitfield;
 pub mod bitfield128;
 pub mod bitfield16;
@@ -8,7 +5,7 @@ pub mod bitfield32;
 pub mod bitfield64;
 pub mod bitfield8;
 
-pub mod conversion;
+pub mod error;
 pub mod flagenum;
 pub mod iter;
 
@@ -22,20 +19,15 @@ pub mod prelude {
     pub use bitfield64::Bitfield64;
     pub use bitfield8::Bitfield8;
 
-    pub use conversion::{FromBitfield, IntoBitfield};
     pub use flagenum::Flagenum;
     pub use iter::BitIter;
-}
-
-mod private {
-    pub trait BitfieldMarker {}
 }
 
 #[cfg(test)]
 mod tests {
     use super::prelude::*;
 
-    #[derive(Debug, Flagenum)]
+    #[derive(Debug)]
     enum Days {
         Monday = 0b00000001,
         Tuesday = 0b00000010,
@@ -46,11 +38,11 @@ mod tests {
         Sunday = 0b01000000,
     }
 
-    impl TryFrom<u8> for Days {
+    impl TryFrom<Bitfield8> for Days {
         type Error = String;
 
-        fn try_from(value: u8) -> Result<Self, Self::Error> {
-            match value {
+        fn try_from(value: Bitfield8) -> Result<Self, Self::Error> {
+            match value.value() {
                 0b00000001 => Ok(Days::Monday),
                 0b00000010 => Ok(Days::Tuesday),
                 0b00000100 => Ok(Days::Wednesday),
@@ -61,6 +53,10 @@ mod tests {
                 _ => Err(format!("Invalid value for {}", stringify!($name))),
             }
         }
+    }
+
+    impl Flagenum for Days {
+        type Bitfield = Bitfield8;
     }
 
     impl From<Days> for u8 {
@@ -82,7 +78,7 @@ mod tests {
             .into_iter()
             .enumerate()
             .filter(|(_, flag)| *flag)
-            .map(|(i, _)| Days::from_pos(i))
+            .map(|(i, _)| Days::try_from_bitfield(Bitfield8::from(i as u8)))
             .collect::<Vec<_>>();
         println!("{:?}", days);
 

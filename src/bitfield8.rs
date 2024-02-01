@@ -1,7 +1,16 @@
-use crate::{bitfield::Bitfield, iter::BitIter, private::BitfieldMarker};
+use crate::{
+    bitfield::Bitfield,
+    error::{BitfieldError, ConvTarget},
+    flagenum::Flagenum,
+    iter::BitIter,
+    prelude::{Bitfield128, Bitfield16, Bitfield32, Bitfield64},
+};
 use std::{
     fmt::Display,
-    ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Not},
+    ops::{
+        BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Not, Shl, ShlAssign, Shr,
+        ShrAssign,
+    },
 };
 
 type Inner = u8;
@@ -17,10 +26,10 @@ impl Bitfield8 {
 }
 
 impl Bitfield for Bitfield8 {
-    type Repr = Inner;
-    const __BIT: Inner = 1;
-    const EMPTY: Inner = Inner::MIN;
-    const ALL: Inner = Inner::MAX;
+    const IDENT: Self = Self(1);
+    const EMPTY: Self = Self(Inner::MIN);
+    const ALL: Self = Self(Inner::MAX);
+    const BITS: usize = BITS;
 
     fn count_set(&self) -> usize {
         self.0.count_ones() as usize
@@ -30,28 +39,24 @@ impl Bitfield for Bitfield8 {
         self.0.count_zeros() as usize
     }
 
-    fn first_set(&self) -> Option<usize> {
-        if self.0.count_ones() == 0 {
-            None
-        } else {
-            Some((self.0.trailing_zeros() + 1) as usize)
-        }
+    fn set_enum_iter<E>(&self) -> impl Iterator<Item = E>
+    where
+        E: Flagenum<Bitfield = Self>,
+    {
+        self.set_pos_iter()
+            .filter_map(|i| Inner::try_from(i).ok())
+            .filter_map(|i| E::try_from(Self::from(i)).ok())
     }
 
-    fn last_set(&self) -> Option<usize> {
-        if self.0.count_ones() == 0 {
-            None
-        } else {
-            Some((BITS as u32 - self.0.leading_ones()) as usize)
-        }
-    }
-
-    fn bit_iter(&self) -> impl Iterator<Item = bool> {
-        self.into_iter()
+    fn unset_enum_iter<E>(&self) -> impl Iterator<Item = E>
+    where
+        E: Flagenum<Bitfield = Self>,
+    {
+        self.unset_pos_iter()
+            .filter_map(|i| Inner::try_from(i).ok())
+            .filter_map(|i| E::try_from(Self::from(i)).ok())
     }
 }
-
-impl BitfieldMarker for Bitfield8 {}
 
 impl From<Inner> for Bitfield8 {
     fn from(value: Inner) -> Self {
@@ -115,6 +120,34 @@ impl Not for Bitfield8 {
     }
 }
 
+impl Shl<usize> for Bitfield8 {
+    type Output = Self;
+
+    fn shl(self, rhs: usize) -> Self::Output {
+        Self::from(self.0.shl(rhs))
+    }
+}
+
+impl ShlAssign<usize> for Bitfield8 {
+    fn shl_assign(&mut self, rhs: usize) {
+        *self = self.shl(rhs)
+    }
+}
+
+impl Shr<usize> for Bitfield8 {
+    type Output = Self;
+
+    fn shr(self, rhs: usize) -> Self::Output {
+        Self::from(self.0.shr(rhs))
+    }
+}
+
+impl ShrAssign<usize> for Bitfield8 {
+    fn shr_assign(&mut self, rhs: usize) {
+        *self = self.shr(rhs)
+    }
+}
+
 impl Display for Bitfield8 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{:#010b}", self.0)
@@ -136,116 +169,318 @@ impl IntoIterator for Bitfield8 {
 
 impl FromIterator<bool> for Bitfield8 {
     fn from_iter<T: IntoIterator<Item = bool>>(iter: T) -> Self {
-        let mut bitfield: Self = Self::from(0);
+        let mut bitfield: Self = Self::new();
         for (i, bit) in iter.into_iter().take(BITS).enumerate() {
-            bitfield.0 |= (if bit { 1 } else { 0 }) << (i as Inner);
+            if bit {
+                bitfield.0 |= 1 << (i as Inner);
+            }
         }
         bitfield
     }
 }
 
-// #[cfg(test)]
-// mod tests {
-//     use super::*;
+impl TryFrom<Bitfield16> for Bitfield8 {
+    type Error = BitfieldError;
 
-//     const A: [Option<Inner>; BITS] = [None, Some(1), None, Some(3), None, Some(5), None, Some(7)];
-//     const B: [Option<Inner>; BITS] = [Some(0), None, Some(2), None, Some(4), None, Some(6), None];
-//     const C: [Option<Inner>; BITS] = [None, None, Some(2), Some(3), None, None, None, Some(7)];
-//     const D: [Option<Inner>; BITS] = [Some(0), None, Some(2), None, None, None, Some(6), Some(7)];
+    fn try_from(value: Bitfield16) -> Result<Self, Self::Error> {
+        Inner::try_from(value.value())
+            .map(Self::from)
+            .map_err(|_| BitfieldError::conv_error(ConvTarget::Bitfield16, ConvTarget::Bitfield8))
+    }
+}
 
-//     #[test]
-//     fn conversion_from_array() {
-//         let arr = A;
-//         let bitfield = Bitfield8::from_flag_arr(&arr);
+impl TryFrom<Bitfield32> for Bitfield8 {
+    type Error = BitfieldError;
 
-//         assert_eq!(
-//             bitfield.0,
-//             2 + 2 * 2 * 2 + 2 * 2 * 2 * 2 * 2 + 2 * 2 * 2 * 2 * 2 * 2 * 2
-//         );
-//     }
+    fn try_from(value: Bitfield32) -> Result<Self, Self::Error> {
+        Inner::try_from(value.value())
+            .map(Self::from)
+            .map_err(|_| BitfieldError::conv_error(ConvTarget::Bitfield32, ConvTarget::Bitfield8))
+    }
+}
 
-//     #[test]
-//     fn conversion_into_array() {
-//         let bitfield = Bitfield8(1 + 2 * 2 + 2 * 2 * 2 * 2 + 2 * 2 * 2 * 2 * 2 * 2);
-//         let arr = bitfield.into_flag_arr();
+impl TryFrom<Bitfield64> for Bitfield8 {
+    type Error = BitfieldError;
 
-//         assert_eq!(arr, B);
-//     }
+    fn try_from(value: Bitfield64) -> Result<Self, Self::Error> {
+        Inner::try_from(value.value())
+            .map(Self::from)
+            .map_err(|_| BitfieldError::conv_error(ConvTarget::Bitfield64, ConvTarget::Bitfield8))
+    }
+}
 
-//     #[test]
-//     fn conversion_from_integer() {
-//         let bitfield: Bitfield8 = 170.into();
+impl TryFrom<Bitfield128> for Bitfield8 {
+    type Error = BitfieldError;
 
-//         assert_eq!(bitfield.0, 170);
-//     }
+    fn try_from(value: Bitfield128) -> Result<Self, Self::Error> {
+        Inner::try_from(value.value())
+            .map(Self::from)
+            .map_err(|_| BitfieldError::conv_error(ConvTarget::Bitfield128, ConvTarget::Bitfield8))
+    }
+}
 
-//     #[test]
-//     fn flag_set_to_true() {
-//         let arr = A;
-//         let mut bitfield = Bitfield8::from_flag_arr(&arr);
+#[cfg(test)]
+mod tests {
+    use super::*;
+    type Tested = Bitfield8;
 
-//         bitfield.set_flag(6, true);
+    #[test]
+    fn construction() {
+        let bitfield = Tested::new().set_bit(0, true).check_bit(1).uncheck_bit(0);
 
-//         assert_eq!(
-//             bitfield.0,
-//             2 + 2 * 2 * 2 + 2 * 2 * 2 * 2 * 2 + 2 * 2 * 2 * 2 * 2 * 2 + 2 * 2 * 2 * 2 * 2 * 2 * 2
-//         );
-//     }
+        assert_eq!(bitfield, 0b00000010.into());
+    }
 
-//     #[test]
-//     fn flag_set_to_false() {
-//         let arr = A;
-//         let mut bitfield = Bitfield8::from_flag_arr(&arr);
+    #[test]
+    fn conversion_from_integer() {
+        let bitfield: Tested = 0b10101010.into();
 
-//         bitfield.set_flag(7, false);
+        assert_eq!(bitfield.0, 0b10101010);
+    }
 
-//         assert_eq!(bitfield.0, 2 + 2 * 2 * 2 + 2 * 2 * 2 * 2 * 2);
-//     }
+    #[test]
+    fn value() {
+        let bitfield: Tested = 0b10101010.into();
 
-//     #[test]
-//     fn flag_check() {
-//         let arr = A;
-//         let mut bitfield = Bitfield8::from_flag_arr(&arr);
+        assert_eq!(bitfield.0, bitfield.value());
+    }
 
-//         bitfield.check_flag(6);
+    #[test]
+    fn bit_set_to_true() {
+        let mut bitfield: Tested = 0b10101010.into();
 
-//         assert_eq!(
-//             bitfield.0,
-//             2 + 2 * 2 * 2 + 2 * 2 * 2 * 2 * 2 + 2 * 2 * 2 * 2 * 2 * 2 + 2 * 2 * 2 * 2 * 2 * 2 * 2
-//         );
-//     }
+        bitfield.set_bit(6, true);
 
-//     #[test]
-//     fn flag_uncheck() {
-//         let arr = A;
-//         let mut bitfield = Bitfield8::from_flag_arr(&arr);
+        assert_eq!(bitfield.0, 0b11101010);
+    }
 
-//         bitfield.uncheck_flag(7);
+    #[test]
+    fn bit_set_to_false() {
+        let mut bitfield: Tested = 0b10101010.into();
 
-//         assert_eq!(bitfield.0, 2 + 2 * 2 * 2 + 2 * 2 * 2 * 2 * 2);
-//     }
+        bitfield.set_bit(7, false);
 
-//     #[test]
-//     fn bit_and() {
-//         let a = Bitfield8::from_flag_arr(&A);
-//         let b = Bitfield8::from_flag_arr(&B);
+        assert_eq!(bitfield.0, 0b00101010);
+    }
 
-//         assert_eq!(a & b, 0.into());
-//     }
+    #[test]
+    fn get_bit() {
+        let bitfield: Tested = 0b10101010.into();
 
-//     #[test]
-//     fn bit_or() {
-//         let a = Bitfield8::from_flag_arr(&A);
-//         let b = Bitfield8::from_flag_arr(&B);
+        assert_eq!(bitfield.get_bit(0), false);
+        assert_eq!(bitfield.get_bit(1), true);
+    }
 
-//         assert_eq!(a | b, 255.into());
-//     }
+    #[test]
+    fn bit_check() {
+        let mut bitfield: Tested = 0b10101010.into();
 
-//     #[test]
-//     fn bit_xor() {
-//         let c = Bitfield8::from_flag_arr(&C);
-//         let d = Bitfield8::from_flag_arr(&D);
+        bitfield.check_bit(6);
 
-//         assert_eq!(c ^ d, (1 + 2 * 2 * 2 + 2 * 2 * 2 * 2 * 2 * 2).into());
-//     }
-// }
+        assert_eq!(bitfield.0, 0b11101010);
+    }
+
+    #[test]
+    fn bit_uncheck() {
+        let mut bitfield: Tested = 0b10101010.into();
+
+        bitfield.uncheck_bit(7);
+
+        assert_eq!(bitfield.0, 0b00101010);
+    }
+
+    #[test]
+    fn count_set() {
+        let bitfield: Tested = 0b11100000.into();
+
+        assert_eq!(bitfield.count_set(), 3);
+    }
+
+    #[test]
+    fn count_unset() {
+        let bitfield: Tested = 0b11100000.into();
+
+        assert_eq!(bitfield.count_unset(), 5);
+    }
+
+    #[test]
+    fn shl() {
+        let bitfield: Tested = 0b00000001.into();
+
+        assert_eq!(bitfield << 1, 0b00000010.into());
+
+        let mut bitfield: Tested = 0b00000001.into();
+        bitfield <<= 1;
+
+        assert_eq!(bitfield, 0b00000010.into());
+    }
+
+    #[test]
+    fn shr() {
+        let bitfield: Tested = 0b00000010.into();
+
+        assert_eq!(bitfield >> 1, 0b00000001.into());
+
+        let mut bitfield: Tested = 0b00000010.into();
+        bitfield >>= 1;
+
+        assert_eq!(bitfield, 0b00000001.into());
+    }
+
+    #[test]
+    fn not() {
+        let a: Tested = 0b11110000.into();
+
+        assert_eq!(!a, 0b00001111.into());
+    }
+
+    #[test]
+    fn bit_and() {
+        let a: Tested = 0b11110000.into();
+        let b: Tested = 0b11001100.into();
+
+        assert_eq!(a & b, 0b11000000.into());
+
+        let mut a: Tested = 0b11110000.into();
+        let b: Tested = 0b11001100.into();
+        a &= b;
+
+        assert_eq!(a, 0b11000000.into());
+    }
+
+    #[test]
+    fn bit_or() {
+        let a: Tested = 0b11110000.into();
+        let b: Tested = 0b11001100.into();
+
+        assert_eq!(a | b, 0b11111100.into());
+
+        let mut a: Tested = 0b11110000.into();
+        let b: Tested = 0b11001100.into();
+        a |= b;
+
+        assert_eq!(a, 0b11111100.into());
+    }
+
+    #[test]
+    fn bit_xor() {
+        let a: Tested = 0b11110000.into();
+        let b: Tested = 0b11001100.into();
+
+        assert_eq!(a ^ b, 0b00111100.into());
+
+        let mut a: Tested = 0b11110000.into();
+        let b: Tested = 0b11001100.into();
+        a ^= b;
+
+        assert_eq!(a, 0b00111100.into());
+    }
+
+    #[test]
+    fn complement() {
+        let a: Tested = 0b11110000.into();
+
+        assert_eq!(a.complement(), 0b00001111.into());
+    }
+
+    #[test]
+    fn intersection() {
+        let a: Tested = 0b11110000.into();
+        let b: Tested = 0b11001100.into();
+
+        assert_eq!(a.intersection(b), 0b11000000.into());
+    }
+
+    #[test]
+    fn union() {
+        let a: Tested = 0b11110000.into();
+        let b: Tested = 0b11001100.into();
+
+        assert_eq!(a.union(b), 0b11111100.into());
+    }
+
+    #[test]
+    fn difference() {
+        let a: Tested = 0b11110000.into();
+        let b: Tested = 0b11001100.into();
+
+        assert_eq!(a.difference(b), 0b00110000.into());
+    }
+
+    #[test]
+    fn sym_difference() {
+        let a: Tested = 0b11110000.into();
+        let b: Tested = 0b11001100.into();
+
+        assert_eq!(a.sym_difference(b), 0b00111100.into());
+    }
+
+    #[test]
+    fn bit_iter() {
+        let bitfield: Tested = 0b11110000.into();
+        let mut bit_iter = bitfield.bit_iter();
+
+        assert_eq!(bit_iter.next(), Some(false));
+        assert_eq!(bit_iter.next(), Some(false));
+        assert_eq!(bit_iter.next(), Some(false));
+        assert_eq!(bit_iter.next(), Some(false));
+        assert_eq!(bit_iter.next(), Some(true));
+        assert_eq!(bit_iter.next(), Some(true));
+        assert_eq!(bit_iter.next(), Some(true));
+        assert_eq!(bit_iter.next(), Some(true));
+        assert_eq!(bit_iter.next(), None);
+    }
+
+    #[test]
+    fn collect_from_bit_iter() {
+        let a: Tested = 0b11110000.into();
+        let bit_iter = a.bit_iter();
+        let b: Tested = bit_iter.collect();
+
+        assert_eq!(b, 0b11110000.into());
+
+        let arr = [true, false, true, false, true, false, true, false];
+        let bitfield: Tested = arr
+            .into_iter()
+            // Need to reverse to get the same visual representation, because
+            // array's .into_iter() makes iterator from left to right,
+            // but .collect() will collect from right to left here.
+            .rev()
+            .collect();
+
+        assert_eq!(bitfield, 0b10101010.into());
+    }
+
+    #[test]
+    fn set_pos_iter() {
+        let bitfield: Tested = 0b11110000.into();
+        let mut set_pos_iter = bitfield.set_pos_iter();
+
+        assert_eq!(set_pos_iter.next(), Some(4));
+        assert_eq!(set_pos_iter.next(), Some(5));
+        assert_eq!(set_pos_iter.next(), Some(6));
+        assert_eq!(set_pos_iter.next(), Some(7));
+        assert_eq!(set_pos_iter.next(), None);
+    }
+
+    #[test]
+    fn unset_pos_iter() {
+        let bitfield: Tested = 0b11110000.into();
+        let mut unset_pos_iter = bitfield.unset_pos_iter();
+
+        assert_eq!(unset_pos_iter.next(), Some(0));
+        assert_eq!(unset_pos_iter.next(), Some(1));
+        assert_eq!(unset_pos_iter.next(), Some(2));
+        assert_eq!(unset_pos_iter.next(), Some(3));
+        assert_eq!(unset_pos_iter.next(), None);
+    }
+
+    #[test]
+    fn from_slice() {
+        // Same index order
+        let slice: &[bool] = &[true, false, true, false, true, false, true, false];
+        let bitfield: Tested = Tested::from_slice(slice);
+
+        assert_eq!(bitfield, 0b01010101.into());
+    }
+}
