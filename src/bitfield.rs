@@ -38,6 +38,41 @@ pub trait Bitfield:
     /// Number of bits in the bitfield.
     const BITS: usize;
 
+    /// Constructs empty Bitfield.
+    ///
+    /// # Examples
+    /// ```
+    /// use simple_bitfield::prelude::{Bitfield, Bitfield8};
+    ///
+    /// fn example() {
+    ///     let bitfield = Bitfield8::new();
+    ///     assert_eq!(bitfield.value(), 0b00000000);
+    /// }
+    /// ```
+    fn new() -> Self {
+        Self::EMPTY
+    }
+
+    /// Builds Bitfield from slice over boolean values.<br/>
+    /// Maintains the same index order: leftmost slice item becomes rightmost bit
+    /// in number representation.
+    ///
+    /// # Examples
+    /// ```
+    /// use simple_bitfield::prelude::{Bitfield, Bitfield8};
+    ///
+    /// fn example() {
+    ///    // Same index order
+    ///    let slice: &[bool] = &[true, false, true, false, true, false, true, false];
+    ///    let bitfield: Bitfield8 = Bitfield8::from_slice(slice);
+    ///
+    ///    assert_eq!(bitfield, 0b01010101.into());
+    /// }
+    /// ```
+    fn from_slice(slice: &[bool]) -> Self {
+        slice.iter().take(Self::BITS).copied().collect()
+    }
+
     /// Count the number of all set bits.
     ///
     /// # Examples
@@ -224,21 +259,6 @@ pub trait Bitfield:
             .filter_map(|(i, bit)| if !bit { Some(i) } else { None })
     }
 
-    /// Constructs empty Bitfield.
-    ///
-    /// # Examples
-    /// ```
-    /// use simple_bitfield::prelude::{Bitfield, Bitfield8};
-    ///
-    /// fn example() {
-    ///     let bitfield = Bitfield8::new();
-    ///     assert_eq!(bitfield.value(), 0b00000000);
-    /// }
-    /// ```
-    fn new() -> Self {
-        Self::EMPTY
-    }
-
     /// Sets bit at pos to value. Returns copy of the resulting bitfield.
     ///
     /// # Examples
@@ -410,25 +430,5 @@ pub trait Bitfield:
     /// ```
     fn sym_difference(self, other: Self) -> Self {
         self ^ other
-    }
-
-    /// Builds Bitfield from slice over boolean values.<br/>
-    /// Maintains the same index order: leftmost slice item becomes rightmost bit
-    /// in number representation.
-    ///
-    /// # Examples
-    /// ```
-    /// use simple_bitfield::prelude::{Bitfield, Bitfield8};
-    ///
-    /// fn example() {
-    ///    // Same index order
-    ///    let slice: &[bool] = &[true, false, true, false, true, false, true, false];
-    ///    let bitfield: Bitfield8 = Bitfield8::from_slice(slice);
-    ///
-    ///    assert_eq!(bitfield, 0b01010101.into());
-    /// }
-    /// ```
-    fn from_slice(slice: &[bool]) -> Self {
-        slice.iter().take(Self::BITS).copied().collect()
     }
 }
