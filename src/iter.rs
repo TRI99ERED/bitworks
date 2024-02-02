@@ -1,27 +1,36 @@
-use std::{
-    mem::size_of,
-    ops::{BitAnd, Shr},
-};
+use crate::prelude::{Bitfield, BitfieldIndex};
 
 #[derive(Clone, Copy)]
 pub struct BitIter<T>
 where
-    T: Clone + Copy + PartialEq + Eq + BitAnd<Output = T> + Shr<Output = T> + From<u8>,
+    T: Bitfield,
 {
-    pub bitfield: T,
-    pub index: u8,
+    bitfield: T,
+    index: BitfieldIndex<T>,
+}
+
+impl<T> BitIter<T>
+where
+    T: Bitfield,
+{
+    #[inline(always)]
+    pub fn new(bitfield: T, index: BitfieldIndex<T>) -> Self {
+        BitIter::<T> { bitfield, index }
+    }
 }
 
 impl<T> Iterator for BitIter<T>
 where
-    T: Clone + Copy + PartialEq + Eq + BitAnd<Output = T> + Shr<Output = T> + From<u8>,
+    T: Bitfield,
+    BitfieldIndex<T>: PartialOrd,
 {
     type Item = bool;
 
+    #[inline(always)]
     fn next(&mut self) -> Option<Self::Item> {
-        if self.index < (size_of::<T>() * 8) as u8 {
-            let bit = (self.bitfield >> self.index.into()) & 1u8.into() != 0u8.into();
-            self.index += 1;
+        if self.index <= BitfieldIndex::<T>::MAX {
+            let bit = (self.bitfield >> self.index) & T::ONE != T::EMPTY;
+            self.index = self.index.__add(BitfieldIndex::<T>::ONE);
             Some(bit)
         } else {
             None

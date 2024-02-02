@@ -5,6 +5,7 @@ pub mod bitfield32;
 pub mod bitfield64;
 pub mod bitfield8;
 
+pub mod index;
 pub mod error;
 pub mod flagenum;
 pub mod iter;
@@ -20,5 +21,7 @@ pub mod prelude {
     pub use bitfield8::Bitfield8;
 
     pub use flagenum::Flagenum;
+    pub use index::BitfieldIndex;
+
     pub use iter::BitIter;
 }
