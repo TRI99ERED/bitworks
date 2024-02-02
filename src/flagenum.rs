@@ -1,5 +1,7 @@
 use crate::{
-    bitfield::Bitfield, error::{BitfieldError, BitfieldResult}, index::BitfieldIndex
+    bitfield::Bitfield,
+    error::{BitfieldError, BitfieldResult},
+    index::BitfieldIndex,
 };
 
 pub trait Flagenum: Sized + TryFrom<BitfieldIndex<Self::Bitfield>>

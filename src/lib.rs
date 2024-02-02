@@ -5,9 +5,9 @@ pub mod bitfield32;
 pub mod bitfield64;
 pub mod bitfield8;
 
-pub mod index;
 pub mod error;
 pub mod flagenum;
+pub mod index;
 pub mod iter;
 
 pub mod prelude {
