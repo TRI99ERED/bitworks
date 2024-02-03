@@ -9,8 +9,6 @@ pub trait Bitfield:
     + Clone
     + PartialEq
     + Eq
-    + PartialOrd
-    + Ord
     + Not<Output = Self>
     + BitAnd<Output = Self>
     + BitAndAssign
