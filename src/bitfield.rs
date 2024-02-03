@@ -6,7 +6,6 @@ use std::ops::{BitAnd, BitAndAssign, BitOr, BitXor, Not, Shl, Shr};
 /// Trait defining common bitfield logic.
 pub trait Bitfield:
     Sized
-    + Copy
     + Clone
     + PartialEq
     + Eq
@@ -190,11 +189,11 @@ pub trait Bitfield:
     /// ```
     fn set_bit(&mut self, i: BitfieldIndex<Self>, value: bool) -> Self {
         if value {
-            *self = *self | Self::from(BitfieldIndex::<Self>::MIN) << i;
+            *self = self.clone() | Self::from(BitfieldIndex::<Self>::MIN) << i;
         } else {
-            *self = *self & !(Self::from(BitfieldIndex::<Self>::MIN) << i);
+            *self = self.clone() & !(Self::from(BitfieldIndex::<Self>::MIN) << i);
         }
-        *self
+        self.clone()
     }
 
     /// Returns bit at index.
@@ -212,7 +211,7 @@ pub trait Bitfield:
     #[inline(always)]
     fn get_bit(&self, i: BitfieldIndex<Self>) -> bool {
         let bit = Self::from(BitfieldIndex::<Self>::MIN) << i;
-        (*self & bit) != Self::NONE
+        (self.clone() & bit) != Self::NONE
     }
 
     /// Sets bit at index to 1. Returns copy of the resulting bitfield.
@@ -232,8 +231,8 @@ pub trait Bitfield:
     /// ```
     #[inline(always)]
     fn check_bit(&mut self, i: BitfieldIndex<Self>) -> Self {
-        *self = *self | Self::from(BitfieldIndex::<Self>::MIN) << i;
-        *self
+        *self = self.clone() | Self::from(BitfieldIndex::<Self>::MIN) << i;
+        self.clone()
     }
 
     /// Sets bit at index to 0. Returns copy of the resulting bitfield.
@@ -253,8 +252,8 @@ pub trait Bitfield:
     /// ```
     #[inline(always)]
     fn uncheck_bit(&mut self, i: BitfieldIndex<Self>) -> Self {
-        *self = *self & !(Self::from(BitfieldIndex::<Self>::MIN) << i);
-        *self
+        *self = self.clone() & !(Self::from(BitfieldIndex::<Self>::MIN) << i);
+        self.clone()
     }
 
     /// Returns iterator over bits of the bitfield in boolean representation.
@@ -282,7 +281,7 @@ pub trait Bitfield:
     where
         Self: IntoIterator<Item = bool>,
     {
-        self.into_iter()
+        self.clone().into_iter()
     }
 
     /// Returns iterator over indeces of the set bits of the bitfield.

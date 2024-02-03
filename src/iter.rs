@@ -33,7 +33,9 @@ where
     #[inline(always)]
     fn next(&mut self) -> Option<Self::Item> {
         if self.index <= BitfieldIndex::<T>::MAX {
-            let bit = (self.bitfield >> self.index) & T::from(BitfieldIndex::<T>::MIN) != T::NONE;
+            let bit = (self.bitfield.clone() >> self.index.clone())
+                & T::from(BitfieldIndex::<T>::MIN)
+                != T::NONE;
             self.index = self.index.__add(BitfieldIndex::<T>::ONE);
             Some(bit)
         } else {
