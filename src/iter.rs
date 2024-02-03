@@ -3,7 +3,7 @@
 use crate::prelude::{Bitfield, BitfieldIndex};
 
 /// Iterator over bits of T, where T implements Bitfield.
-#[derive(Clone, Copy)]
+#[derive(Clone)]
 pub struct BitIter<T>
 where
     T: Bitfield,

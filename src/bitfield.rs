@@ -118,7 +118,7 @@ pub trait Bitfield:
         BitfieldIndex<Self>: From<T>,
         Self: FromIterator<T>,
     {
-        slice.iter().take(Self::BITS).copied().collect()
+        slice.iter().take(Self::BITS).cloned().collect()
     }
 
     /// Count the number of all set bits.
