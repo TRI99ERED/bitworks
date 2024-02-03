@@ -1,9 +1,7 @@
-use std::ops::{
-    BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Not, Shl, ShlAssign, Shr,
-    ShrAssign,
-};
+//! Module containing Bitfield.
 
 use crate::{flagenum::Flagenum, index::BitfieldIndex};
+use std::ops::{BitAnd, BitAndAssign, BitOr, BitXor, Not, Shl, Shr};
 
 /// Trait defining common bitfield logic.
 pub trait Bitfield:
@@ -18,28 +16,19 @@ pub trait Bitfield:
     + BitAnd<Output = Self>
     + BitAndAssign
     + BitOr<Output = Self>
-    + BitOrAssign
     + BitXor<Output = Self>
-    + BitXorAssign
     + Shl<BitfieldIndex<Self>, Output = Self>
-    + ShlAssign<BitfieldIndex<Self>>
     + Shr<BitfieldIndex<Self>, Output = Self>
-    + ShrAssign<BitfieldIndex<Self>>
-    + IntoIterator<Item = bool>
-    + FromIterator<bool>
     + From<BitfieldIndex<Self>>
 {
-    /// Identity of the representing type (e.g. 1u8 for u8, 1u16 for u16).
-    const ONE: Self;
+    /// Number of bits in the bitfield.
+    const BITS: usize;
 
     /// Fully unset value of the representing type (e.g. 0u8 for u8, 0u16 for u16).
-    const EMPTY: Self;
+    const NONE: Self;
 
     /// Fully set value of the representing type (e.g. 255u8 for u8, 65535u16 for u16).
     const ALL: Self;
-
-    /// Number of bits in the bitfield.
-    const BITS: usize;
 
     /// Constructs empty Bitfield.
     ///
@@ -54,7 +43,7 @@ pub trait Bitfield:
     /// ```
     #[inline(always)]
     fn new() -> Self {
-        Self::EMPTY
+        Self::NONE
     }
 
     /// Builds Bitfield from slice over boolean values.<br/>
@@ -66,15 +55,72 @@ pub trait Bitfield:
     /// use simple_bitfield::prelude::{Bitfield, Bitfield8};
     ///
     /// fn example() {
-    ///    // Same index order
-    ///    let slice: &[bool] = &[true, false, true, false, true, false, true, false];
-    ///    let bitfield: Bitfield8 = Bitfield8::from_slice(slice);
+    ///     // Same index order
+    ///     let slice: &[bool] = &[true, false, true, false, true, false, true, false];
+    ///     let bitfield: Bitfield8 = Bitfield8::from_slice_bool(slice);
     ///
-    ///    assert_eq!(bitfield, 0b01010101.into());
+    ///     assert_eq!(bitfield, 0b01010101.into());
     /// }
     /// ```
-    #[inline(always)]
-    fn from_slice(slice: &[bool]) -> Self {
+    fn from_slice_bool(slice: &[bool]) -> Self
+    where
+        Self: FromIterator<bool>,
+    {
+        slice.iter().take(Self::BITS).copied().collect()
+    }
+
+    /// Builds Bitfield from slice over T values, where T implements Flagenum.
+    /// Considers contained variants as set bits.
+    ///
+    /// /// # Examples
+    /// ```
+    /// use simple_bitfield::prelude::{Bitfield, Bitfield8, Flagenum, BitfieldIndex};
+    ///
+    /// #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+    /// enum E {
+    ///     A, // 0
+    ///     B, // 1
+    ///     D  =  3,
+    ///     E, // 4
+    /// }
+    ///
+    /// impl TryFrom<BitfieldIndex<Bitfield8>> for E {
+    ///     type Error = String;
+    ///
+    ///     fn try_from(i: BitfieldIndex<Bitfield8>) -> Result<Self, Self::Error> {
+    ///         match i.value() {
+    ///             0 => Ok(E::A),
+    ///             1 => Ok(E::B),
+    ///             3 => Ok(E::D),
+    ///             4 => Ok(E::E),
+    ///             _ => Err(String::new()),
+    ///         }
+    ///     }
+    /// }
+    ///
+    /// impl From<E> for BitfieldIndex<Bitfield8> {
+    ///     fn from(value: E) -> Self {
+    ///         Self::try_from(value as usize).unwrap()
+    ///     }
+    /// }
+    ///
+    /// impl Flagenum for E {
+    ///     type Bitfield = Bitfield8;
+    /// }
+    ///
+    /// fn example() {
+    ///     let slice: &[E] = &[E::A, E::E, E::D];
+    ///     let bitfield: Bitfield8 = Bitfield8::from_slice_flags(slice);
+    ///
+    ///     assert_eq!(bitfield, 0b00011001.into());
+    /// }
+    /// ```
+    fn from_slice_flags<T>(slice: &[T]) -> Self
+    where
+        T: Flagenum<Bitfield = Self>,
+        BitfieldIndex<Self>: From<T>,
+        Self: FromIterator<T>,
+    {
         slice.iter().take(Self::BITS).copied().collect()
     }
 
@@ -144,9 +190,9 @@ pub trait Bitfield:
     /// ```
     fn set_bit(&mut self, i: BitfieldIndex<Self>, value: bool) -> Self {
         if value {
-            *self |= Self::ONE << i;
+            *self = *self | Self::from(BitfieldIndex::<Self>::MIN) << i;
         } else {
-            *self &= !(Self::ONE << i);
+            *self = *self & !(Self::from(BitfieldIndex::<Self>::MIN) << i);
         }
         *self
     }
@@ -165,8 +211,8 @@ pub trait Bitfield:
     /// ```
     #[inline(always)]
     fn get_bit(&self, i: BitfieldIndex<Self>) -> bool {
-        let bit = Self::ONE << i;
-        (*self & bit) != Self::EMPTY
+        let bit = Self::from(BitfieldIndex::<Self>::MIN) << i;
+        (*self & bit) != Self::NONE
     }
 
     /// Sets bit at index to 1. Returns copy of the resulting bitfield.
@@ -176,7 +222,7 @@ pub trait Bitfield:
     /// use simple_bitfield::prelude::{Bitfield, Bitfield8};
     ///
     /// fn example() {
-    ///     let bitfield = Bitfield8::from(0) // implements Bitfield
+    ///     let bitfield = Bitfield8::NONE // implements Bitfield
     ///         .check_bit(1.try_into().unwrap())
     ///         .check_bit(3.try_into().unwrap())
     ///         .check_bit(5.try_into().unwrap())
@@ -186,7 +232,7 @@ pub trait Bitfield:
     /// ```
     #[inline(always)]
     fn check_bit(&mut self, i: BitfieldIndex<Self>) -> Self {
-        *self |= Self::ONE << i;
+        *self = *self | Self::from(BitfieldIndex::<Self>::MIN) << i;
         *self
     }
 
@@ -197,7 +243,7 @@ pub trait Bitfield:
     /// use simple_bitfield::prelude::{Bitfield, Bitfield8};
     ///
     /// fn example() {
-    ///     let bitfield = Bitfield8::from(1) // implements Bitfield
+    ///     let bitfield = Bitfield8::ALL // implements Bitfield
     ///         .uncheck_bit(0.try_into().unwrap())
     ///         .uncheck_bit(2.try_into().unwrap())
     ///         .uncheck_bit(4.try_into().unwrap())
@@ -207,7 +253,7 @@ pub trait Bitfield:
     /// ```
     #[inline(always)]
     fn uncheck_bit(&mut self, i: BitfieldIndex<Self>) -> Self {
-        *self &= !(Self::ONE << i);
+        *self = *self & !(Self::from(BitfieldIndex::<Self>::MIN) << i);
         *self
     }
 
@@ -232,7 +278,10 @@ pub trait Bitfield:
     /// }
     /// ```
     #[inline(always)]
-    fn bit_iter(&self) -> impl Iterator<Item = bool> {
+    fn bit_iter(&self) -> impl Iterator<Item = bool>
+    where
+        Self: IntoIterator<Item = bool>,
+    {
         self.into_iter()
     }
 
@@ -252,7 +301,10 @@ pub trait Bitfield:
     /// }
     /// ```
     #[inline(always)]
-    fn set_index_iter(&self) -> impl Iterator<Item = BitfieldIndex<Self>> {
+    fn set_index_iter(&self) -> impl Iterator<Item = BitfieldIndex<Self>>
+    where
+        Self: IntoIterator<Item = bool>,
+    {
         self.bit_iter().enumerate().filter_map(|(i, bit)| {
             if bit {
                 Some(i.try_into().unwrap())
@@ -280,7 +332,10 @@ pub trait Bitfield:
     /// }
     /// ```
     #[inline(always)]
-    fn unset_index_iter(&self) -> impl Iterator<Item = BitfieldIndex<Self>> {
+    fn unset_index_iter(&self) -> impl Iterator<Item = BitfieldIndex<Self>>
+    where
+        Self: IntoIterator<Item = bool>,
+    {
         self.bit_iter().enumerate().filter_map(|(i, bit)| {
             if !bit {
                 Some(i.try_into().unwrap())
@@ -297,7 +352,7 @@ pub trait Bitfield:
     /// ```
     /// use simple_bitfield::prelude::{Bitfield, Bitfield8, Flagenum, BitfieldIndex};
     ///
-    /// #[derive(Debug, PartialEq, Eq)]
+    /// #[derive(Clone, Copy, Debug, PartialEq, Eq)]
     /// enum E {
     ///     A, // 0
     ///     B, // 1
@@ -316,6 +371,12 @@ pub trait Bitfield:
     ///             4 => Ok(E::E),
     ///             _ => Err(String::new()),
     ///         }
+    ///     }
+    /// }
+    ///
+    /// impl From<E> for BitfieldIndex<Bitfield8> {
+    ///     fn from(value: E) -> Self {
+    ///         Self::try_from(value as usize).unwrap()
     ///     }
     /// }
     ///
@@ -335,9 +396,10 @@ pub trait Bitfield:
     fn selected_variant_iter<T>(&self) -> impl Iterator<Item = T>
     where
         T: Flagenum<Bitfield = Self>,
+        BitfieldIndex<Self>: From<T>,
+        Self: IntoIterator<Item = bool>,
     {
-        self.set_index_iter()
-            .filter_map(|i| T::try_from_index(i).ok())
+        self.set_index_iter().filter_map(|i| T::try_from(i).ok())
     }
 
     /// Returns iterator over unset bit indeces of the bitfield
@@ -347,7 +409,7 @@ pub trait Bitfield:
     /// ```
     /// use simple_bitfield::prelude::{Bitfield, Bitfield8, Flagenum, BitfieldIndex};
     ///
-    /// #[derive(Debug, PartialEq, Eq)]
+    /// #[derive(Clone, Copy, Debug, PartialEq, Eq)]
     /// enum E {
     ///     A, // 0
     ///     B, // 1
@@ -369,6 +431,12 @@ pub trait Bitfield:
     ///     }
     /// }
     ///
+    /// impl From<E> for BitfieldIndex<Bitfield8> {
+    ///     fn from(value: E) -> Self {
+    ///         Self::try_from(value as usize).unwrap()
+    ///     }
+    /// }
+    ///
     /// impl Flagenum for E {
     ///     type Bitfield = Bitfield8;
     /// }
@@ -385,9 +453,10 @@ pub trait Bitfield:
     fn unselected_variant_iter<T>(&self) -> impl Iterator<Item = T>
     where
         T: Flagenum<Bitfield = Self>,
+        BitfieldIndex<Self>: From<T>,
+        Self: IntoIterator<Item = bool>,
     {
-        self.unset_index_iter()
-            .filter_map(|i| T::try_from_index(i).ok())
+        self.unset_index_iter().filter_map(|i| T::try_from(i).ok())
     }
 
     /// Returns Set complement (`self′`) of bitfield.<br/>
@@ -401,7 +470,7 @@ pub trait Bitfield:
     ///     let a = Bitfield8::from(0b11110000); // implements Bitfield
     ///     let b = Bitfield::complement(a);
     ///     assert_eq!(a.value(), 0b11110000);
-    ///     assert_eq!(a.value(), 0b00001111);
+    ///     assert_eq!(b.value(), 0b00001111);
     /// }
     /// ```
     #[inline(always)]

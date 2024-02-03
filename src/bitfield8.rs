@@ -1,10 +1,13 @@
+//! Module containing Bitfield8.
+
 use crate::{
     bitfield::Bitfield,
     error::{BitfieldError, ConvTarget},
     iter::BitIter,
-    prelude::{Bitfield128, Bitfield16, Bitfield32, Bitfield64, BitfieldIndex},
+    prelude::{Bitfield128, Bitfield16, Bitfield32, Bitfield64, BitfieldIndex, Flagenum},
 };
 use std::{
+    collections::BTreeSet,
     fmt::Display,
     ops::{
         BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Not, Shl, ShlAssign, Shr,
@@ -13,8 +16,10 @@ use std::{
 };
 
 type Inner = u8;
+type Index = BitfieldIndex<Bitfield8>;
 const BITS: usize = 8;
 
+/// Bitfield of size 8.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Default)]
 pub struct Bitfield8(Inner);
 
@@ -26,10 +31,9 @@ impl Bitfield8 {
 }
 
 impl Bitfield for Bitfield8 {
-    const ONE: Self = Self(1);
-    const EMPTY: Self = Self(Inner::MIN);
-    const ALL: Self = Self(Inner::MAX);
     const BITS: usize = BITS;
+    const NONE: Self = Self(Inner::MIN);
+    const ALL: Self = Self(Inner::MAX);
 
     #[inline(always)]
     fn count_set(&self) -> usize {
@@ -56,9 +60,53 @@ impl From<Bitfield8> for Inner {
     }
 }
 
-impl From<BitfieldIndex<Bitfield8>> for Bitfield8 {
-    fn from(value: BitfieldIndex<Bitfield8>) -> Self {
-        Self::ONE << value
+impl From<Index> for Bitfield8 {
+    fn from(value: Index) -> Self {
+        Self(1) << value
+    }
+}
+
+impl TryFrom<Bitfield16> for Bitfield8 {
+    type Error = BitfieldError;
+
+    #[inline(always)]
+    fn try_from(value: Bitfield16) -> Result<Self, Self::Error> {
+        Inner::try_from(value.value())
+            .map(Self::from)
+            .map_err(|_| BitfieldError::conv_error(ConvTarget::Bitfield16, ConvTarget::Bitfield8))
+    }
+}
+
+impl TryFrom<Bitfield32> for Bitfield8 {
+    type Error = BitfieldError;
+
+    #[inline(always)]
+    fn try_from(value: Bitfield32) -> Result<Self, Self::Error> {
+        Inner::try_from(value.value())
+            .map(Self::from)
+            .map_err(|_| BitfieldError::conv_error(ConvTarget::Bitfield32, ConvTarget::Bitfield8))
+    }
+}
+
+impl TryFrom<Bitfield64> for Bitfield8 {
+    type Error = BitfieldError;
+
+    #[inline(always)]
+    fn try_from(value: Bitfield64) -> Result<Self, Self::Error> {
+        Inner::try_from(value.value())
+            .map(Self::from)
+            .map_err(|_| BitfieldError::conv_error(ConvTarget::Bitfield64, ConvTarget::Bitfield8))
+    }
+}
+
+impl TryFrom<Bitfield128> for Bitfield8 {
+    type Error = BitfieldError;
+
+    #[inline(always)]
+    fn try_from(value: Bitfield128) -> Result<Self, Self::Error> {
+        Inner::try_from(value.value())
+            .map(Self::from)
+            .map_err(|_| BitfieldError::conv_error(ConvTarget::Bitfield128, ConvTarget::Bitfield8))
     }
 }
 
@@ -119,34 +167,34 @@ impl Not for Bitfield8 {
     }
 }
 
-impl Shl<BitfieldIndex<Self>> for Bitfield8 {
+impl Shl<Index> for Bitfield8 {
     type Output = Self;
 
     #[inline(always)]
-    fn shl(self, rhs: BitfieldIndex<Self>) -> Self::Output {
+    fn shl(self, rhs: Index) -> Self::Output {
         Self::from(self.0.shl(rhs.value()))
     }
 }
 
-impl ShlAssign<BitfieldIndex<Self>> for Bitfield8 {
+impl ShlAssign<Index> for Bitfield8 {
     #[inline(always)]
-    fn shl_assign(&mut self, rhs: BitfieldIndex<Self>) {
+    fn shl_assign(&mut self, rhs: Index) {
         *self = self.shl(rhs)
     }
 }
 
-impl Shr<BitfieldIndex<Self>> for Bitfield8 {
+impl Shr<Index> for Bitfield8 {
     type Output = Self;
 
     #[inline(always)]
-    fn shr(self, rhs: BitfieldIndex<Self>) -> Self::Output {
+    fn shr(self, rhs: Index) -> Self::Output {
         Self::from(self.0.shr(rhs.value()))
     }
 }
 
-impl ShrAssign<BitfieldIndex<Self>> for Bitfield8 {
+impl ShrAssign<Index> for Bitfield8 {
     #[inline(always)]
-    fn shr_assign(&mut self, rhs: BitfieldIndex<Self>) {
+    fn shr_assign(&mut self, rhs: Index) {
         *self = self.shr(rhs)
     }
 }
@@ -163,63 +211,39 @@ impl IntoIterator for Bitfield8 {
     type IntoIter = BitIter<Self>;
 
     fn into_iter(self) -> Self::IntoIter {
-        Self::IntoIter::new(self, BitfieldIndex::<Self>::MIN)
+        Self::IntoIter::new(self, Index::MIN)
     }
 }
 
 impl FromIterator<bool> for Bitfield8 {
     fn from_iter<T: IntoIterator<Item = bool>>(iter: T) -> Self {
-        let mut bitfield: Self = Self::new();
-        for (i, bit) in iter.into_iter().take(BITS).enumerate() {
-            if bit {
-                bitfield.0 |= 1 << (i as Inner);
+        iter.into_iter()
+            .take(BITS)
+            .enumerate()
+            .filter_map(|(i, bit)| if bit { Some(i) } else { None })
+            .filter_map(|i| Index::try_from(i).ok())
+            .fold(Self::NONE, |acc, i| acc | Self(1) << i)
+    }
+}
+
+impl<A> FromIterator<A> for Bitfield8
+where
+    A: Flagenum<Bitfield = Self>,
+    Index: From<A>,
+{
+    fn from_iter<T: IntoIterator<Item = A>>(iter: T) -> Self {
+        let mut bitfield = Self::NONE;
+        let mut seen_indices = BTreeSet::new();
+
+        for e in iter {
+            let index = Index::from(e);
+            if !seen_indices.contains(&index) {
+                seen_indices.insert(index);
+                bitfield |= Self(1) << index;
             }
         }
+
         bitfield
-    }
-}
-
-impl TryFrom<Bitfield16> for Bitfield8 {
-    type Error = BitfieldError;
-
-    #[inline(always)]
-    fn try_from(value: Bitfield16) -> Result<Self, Self::Error> {
-        Inner::try_from(value.value())
-            .map(Self::from)
-            .map_err(|_| BitfieldError::conv_error(ConvTarget::Bitfield16, ConvTarget::Bitfield8))
-    }
-}
-
-impl TryFrom<Bitfield32> for Bitfield8 {
-    type Error = BitfieldError;
-
-    #[inline(always)]
-    fn try_from(value: Bitfield32) -> Result<Self, Self::Error> {
-        Inner::try_from(value.value())
-            .map(Self::from)
-            .map_err(|_| BitfieldError::conv_error(ConvTarget::Bitfield32, ConvTarget::Bitfield8))
-    }
-}
-
-impl TryFrom<Bitfield64> for Bitfield8 {
-    type Error = BitfieldError;
-
-    #[inline(always)]
-    fn try_from(value: Bitfield64) -> Result<Self, Self::Error> {
-        Inner::try_from(value.value())
-            .map(Self::from)
-            .map_err(|_| BitfieldError::conv_error(ConvTarget::Bitfield64, ConvTarget::Bitfield8))
-    }
-}
-
-impl TryFrom<Bitfield128> for Bitfield8 {
-    type Error = BitfieldError;
-
-    #[inline(always)]
-    fn try_from(value: Bitfield128) -> Result<Self, Self::Error> {
-        Inner::try_from(value.value())
-            .map(Self::from)
-            .map_err(|_| BitfieldError::conv_error(ConvTarget::Bitfield128, ConvTarget::Bitfield8))
     }
 }
 
@@ -243,6 +267,13 @@ mod tests {
         let bitfield: Tested = 0b10101010.into();
 
         assert_eq!(bitfield.0, 0b10101010);
+    }
+
+    #[test]
+    fn conversion_from_index() {
+        let bitfield = Tested::from(BitfieldIndex::<Tested>::MIN);
+
+        assert_eq!(bitfield.0, 1);
     }
 
     #[test]
@@ -486,7 +517,7 @@ mod tests {
     fn from_slice() {
         // Same index order
         let slice: &[bool] = &[true, false, true, false, true, false, true, false];
-        let bitfield: Tested = Tested::from_slice(slice);
+        let bitfield: Tested = Tested::from_slice_bool(slice);
 
         assert_eq!(bitfield, 0b01010101.into());
     }

@@ -1,9 +1,12 @@
+//! Module containing Bitfield128.
+
 use crate::{
     bitfield::Bitfield,
     iter::BitIter,
-    prelude::{Bitfield16, Bitfield32, Bitfield64, Bitfield8, BitfieldIndex},
+    prelude::{Bitfield16, Bitfield32, Bitfield64, Bitfield8, BitfieldIndex, Flagenum},
 };
 use std::{
+    collections::BTreeSet,
     fmt::Display,
     ops::{
         BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Not, Shl, ShlAssign, Shr,
@@ -12,8 +15,10 @@ use std::{
 };
 
 type Inner = u128;
+type Index = BitfieldIndex<Bitfield128>;
 const BITS: usize = 128;
 
+/// Bitfield of size 128.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Default)]
 pub struct Bitfield128(Inner);
 
@@ -25,10 +30,9 @@ impl Bitfield128 {
 }
 
 impl Bitfield for Bitfield128 {
-    const ONE: Self = Self(1);
-    const EMPTY: Self = Self(Inner::MIN);
-    const ALL: Self = Self(Inner::MAX);
     const BITS: usize = BITS;
+    const NONE: Self = Self(Inner::MIN);
+    const ALL: Self = Self(Inner::MAX);
 
     #[inline(always)]
     fn count_set(&self) -> usize {
@@ -55,9 +59,37 @@ impl From<Bitfield128> for Inner {
     }
 }
 
-impl From<BitfieldIndex<Bitfield128>> for Bitfield128 {
-    fn from(value: BitfieldIndex<Bitfield128>) -> Self {
-        Self::ONE << value
+impl From<Index> for Bitfield128 {
+    fn from(value: Index) -> Self {
+        Self(1) << value
+    }
+}
+
+impl From<Bitfield8> for Bitfield128 {
+    #[inline(always)]
+    fn from(value: Bitfield8) -> Self {
+        Self(value.value() as Inner)
+    }
+}
+
+impl From<Bitfield16> for Bitfield128 {
+    #[inline(always)]
+    fn from(value: Bitfield16) -> Self {
+        Self(value.value() as Inner)
+    }
+}
+
+impl From<Bitfield32> for Bitfield128 {
+    #[inline(always)]
+    fn from(value: Bitfield32) -> Self {
+        Self(value.value() as Inner)
+    }
+}
+
+impl From<Bitfield64> for Bitfield128 {
+    #[inline(always)]
+    fn from(value: Bitfield64) -> Self {
+        Self(value.value() as Inner)
     }
 }
 
@@ -118,34 +150,34 @@ impl Not for Bitfield128 {
     }
 }
 
-impl Shl<BitfieldIndex<Self>> for Bitfield128 {
+impl Shl<Index> for Bitfield128 {
     type Output = Self;
 
     #[inline(always)]
-    fn shl(self, rhs: BitfieldIndex<Self>) -> Self::Output {
+    fn shl(self, rhs: Index) -> Self::Output {
         Self::from(self.0.shl(rhs.value()))
     }
 }
 
-impl ShlAssign<BitfieldIndex<Self>> for Bitfield128 {
+impl ShlAssign<Index> for Bitfield128 {
     #[inline(always)]
-    fn shl_assign(&mut self, rhs: BitfieldIndex<Self>) {
+    fn shl_assign(&mut self, rhs: Index) {
         *self = self.shl(rhs)
     }
 }
 
-impl Shr<BitfieldIndex<Self>> for Bitfield128 {
+impl Shr<Index> for Bitfield128 {
     type Output = Self;
 
     #[inline(always)]
-    fn shr(self, rhs: BitfieldIndex<Self>) -> Self::Output {
+    fn shr(self, rhs: Index) -> Self::Output {
         Self::from(self.0.shr(rhs.value()))
     }
 }
 
-impl ShrAssign<BitfieldIndex<Self>> for Bitfield128 {
+impl ShrAssign<Index> for Bitfield128 {
     #[inline(always)]
-    fn shr_assign(&mut self, rhs: BitfieldIndex<Self>) {
+    fn shr_assign(&mut self, rhs: Index) {
         *self = self.shr(rhs)
     }
 }
@@ -162,7 +194,7 @@ impl IntoIterator for Bitfield128 {
     type IntoIter = BitIter<Self>;
 
     fn into_iter(self) -> Self::IntoIter {
-        Self::IntoIter::new(self, BitfieldIndex::<Self>::MIN)
+        Self::IntoIter::new(self, Index::MIN)
     }
 }
 
@@ -176,31 +208,24 @@ impl FromIterator<bool> for Bitfield128 {
     }
 }
 
-impl From<Bitfield8> for Bitfield128 {
-    #[inline(always)]
-    fn from(value: Bitfield8) -> Self {
-        Self(value.value() as Inner)
-    }
-}
+impl<A> FromIterator<A> for Bitfield128
+where
+    A: Flagenum<Bitfield = Self>,
+    Index: From<A>,
+{
+    fn from_iter<T: IntoIterator<Item = A>>(iter: T) -> Self {
+        let mut bitfield = Self::NONE;
+        let mut seen_indices = BTreeSet::new();
 
-impl From<Bitfield16> for Bitfield128 {
-    #[inline(always)]
-    fn from(value: Bitfield16) -> Self {
-        Self(value.value() as Inner)
-    }
-}
+        for e in iter {
+            let index = Index::from(e);
+            if !seen_indices.contains(&index) {
+                seen_indices.insert(index);
+                bitfield |= Self(1) << index;
+            }
+        }
 
-impl From<Bitfield32> for Bitfield128 {
-    #[inline(always)]
-    fn from(value: Bitfield32) -> Self {
-        Self(value.value() as Inner)
-    }
-}
-
-impl From<Bitfield64> for Bitfield128 {
-    #[inline(always)]
-    fn from(value: Bitfield64) -> Self {
-        Self(value.value() as Inner)
+        bitfield
     }
 }
 
@@ -224,6 +249,13 @@ mod tests {
         let bitfield: Tested = 0b10101010.into();
 
         assert_eq!(bitfield.0, 0b10101010);
+    }
+
+    #[test]
+    fn conversion_from_index() {
+        let bitfield = Tested::from(BitfieldIndex::<Tested>::MIN);
+
+        assert_eq!(bitfield.0, 1);
     }
 
     #[test]
@@ -317,7 +349,7 @@ mod tests {
 
     #[test]
     fn not() {
-        let a: Tested = Tested::EMPTY;
+        let a: Tested = Tested::NONE;
 
         assert_eq!(!a, Tested::ALL);
     }
@@ -366,7 +398,7 @@ mod tests {
 
     #[test]
     fn complement() {
-        let a: Tested = Tested::EMPTY;
+        let a: Tested = Tested::NONE;
 
         assert_eq!(a.complement(), Tested::ALL);
     }
@@ -477,7 +509,7 @@ mod tests {
     fn from_slice() {
         // Same index order
         let slice: &[bool] = &[true, false, true, false, true, false, true, false];
-        let bitfield: Tested = Tested::from_slice(slice);
+        let bitfield: Tested = Tested::from_slice_bool(slice);
 
         assert_eq!(bitfield, 0b01010101.into());
     }

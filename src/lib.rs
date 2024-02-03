@@ -1,3 +1,5 @@
+//! Crate meant to provide easy to use bitfields, with some out of the box functionality.
+
 pub mod bitfield;
 pub mod bitfield128;
 pub mod bitfield16;
@@ -10,6 +12,7 @@ pub mod flagenum;
 pub mod index;
 pub mod iter;
 
+/// Prelude.
 pub mod prelude {
     use super::*;
 

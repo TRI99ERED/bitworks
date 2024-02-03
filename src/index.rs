@@ -1,6 +1,9 @@
+//! Module containing BitfieldIndex.
+
 use crate::prelude::Bitfield;
 use std::marker::PhantomData;
 
+/// Struct meant to safely index the T, where T implements Bitfield.
 #[derive(Clone, Copy, PartialEq, Eq, Debug, PartialOrd, Ord, Hash)]
 pub struct BitfieldIndex<T: Bitfield>(usize, PhantomData<T>);
 
@@ -8,15 +11,52 @@ impl<T> BitfieldIndex<T>
 where
     T: Bitfield,
 {
+    /// Value of 1 for `BitfieldIndex`.<br/>
+    /// Shortcut from having to use `BitfieldIndex::<T>::try_from(1).unwrap()`
     pub const ONE: Self = Self(1, PhantomData);
+
+    /// Minimum value for `BitfieldIndex`.<br/>
+    /// Shortcut from having to use `BitfieldIndex::<T>::try_from(usize::MIN).unwrap()`
     pub const MIN: Self = Self(0, PhantomData);
+
+    /// Maximum value for `BitfieldIndex`.<br/>
+    /// Shortcut from having to use `BitfieldIndex::<T>::try_from(T::BITS - 1).unwrap()`
     pub const MAX: Self = Self(T::BITS - 1, PhantomData);
 
+    /// Returns value of `BitfieldIndex`.
+    ///
+    /// # Examples
+    /// ```
+    /// use simple_bitfield::prelude::{Bitfield8, BitfieldIndex};
+    ///
+    /// fn example() {
+    ///     let index = BitfieldIndex::<Bitfield8>::MAX;
+    ///     assert_eq!(index.value(), 7);
+    /// }
+    /// ```
     #[inline(always)]
     pub fn value(&self) -> usize {
         self.0
     }
 
+    /// Returns optional `BitfieldIndex`, that is sum of self and other, or `None` on overflow.
+    ///
+    /// # Examples
+    /// ```
+    /// use simple_bitfield::prelude::{Bitfield8, BitfieldIndex};
+    ///
+    /// fn example() {
+    ///     let a = BitfieldIndex::<Bitfield8>::ONE;
+    ///     let b = BitfieldIndex::<Bitfield8>::ONE;
+    ///     let c = a.checked_add(b);
+    ///     assert_eq!(c.unwrap().value(), 2);
+    ///
+    ///     let d = BitfieldIndex::<Bitfield8>::MAX;
+    ///     let e = BitfieldIndex::<Bitfield8>::ONE;
+    ///     let f = d.checked_add(e);
+    ///     assert_eq!(f, None);
+    /// }
+    /// ```
     #[inline(always)]
     pub fn checked_add(&self, other: Self) -> Option<Self> {
         self.0
@@ -25,26 +65,82 @@ where
             .map(|i| Self(i, PhantomData))
     }
 
+    /// Returns optional `BitfieldIndex`, that is difference of self and other, or `None` on overflow.
+    ///
+    /// # Examples
+    /// ```
+    /// use simple_bitfield::prelude::{Bitfield8, BitfieldIndex};
+    ///
+    /// fn example() {
+    ///     let a = BitfieldIndex::<Bitfield8>::MAX;
+    ///     let b = BitfieldIndex::<Bitfield8>::ONE;
+    ///     let c = a.checked_sub(b);
+    ///     assert_eq!(c.unwrap().value(), 6);
+    ///
+    ///     let d = BitfieldIndex::<Bitfield8>::MIN;
+    ///     let e = BitfieldIndex::<Bitfield8>::ONE;
+    ///     let f = d.checked_sub(e);
+    ///     assert_eq!(f, None);
+    /// }
+    /// ```
     #[inline(always)]
     pub fn checked_sub(&self, other: Self) -> Option<Self> {
         self.0.checked_sub(other.0).map(|i| Self(i, PhantomData))
     }
 
+    /// Returns `BitfieldIndex`, that is sum of self and other, or `BitfieldIndex::<T>::MAX` on overflow.
+    ///
+    /// # Examples
+    /// ```
+    /// use simple_bitfield::prelude::{Bitfield8, BitfieldIndex};
+    ///
+    /// fn example() {
+    ///     let a = BitfieldIndex::<Bitfield8>::ONE;
+    ///     let b = BitfieldIndex::<Bitfield8>::ONE;
+    ///     let c = a.saturating_add(b);
+    ///     assert_eq!(c.value(), 2);
+    ///
+    ///     let d = BitfieldIndex::<Bitfield8>::MAX;
+    ///     let e = BitfieldIndex::<Bitfield8>::ONE;
+    ///     let f = d.saturating_add(e);
+    ///     assert_eq!(f.value(), 7);
+    /// }
+    /// ```
     #[inline(always)]
     pub fn saturating_add(&self, other: Self) -> Self {
         self.checked_add(other).unwrap_or(Self::MAX)
     }
 
+    /// Returns `BitfieldIndex`, that is difference of self and other, or `BitfieldIndex::<T>::MIN` on overflow.
+    ///
+    /// # Examples
+    /// ```
+    /// use simple_bitfield::prelude::{Bitfield8, BitfieldIndex};
+    ///
+    /// fn example() {
+    ///     let a = BitfieldIndex::<Bitfield8>::MAX;
+    ///     let b = BitfieldIndex::<Bitfield8>::ONE;
+    ///     let c = a.saturating_sub(b);
+    ///     assert_eq!(c.value(), 6);
+    ///
+    ///     let d = BitfieldIndex::<Bitfield8>::MIN;
+    ///     let e = BitfieldIndex::<Bitfield8>::ONE;
+    ///     let f = d.saturating_sub(e);
+    ///     assert_eq!(f.value(), 0);
+    /// }
+    /// ```
     #[inline(always)]
     pub fn saturating_sub(&self, other: Self) -> Self {
         self.checked_sub(other).unwrap_or(Self::MIN)
     }
 
+    /// Range unsafe sum of self and other.
     #[inline(always)]
     pub(crate) fn __add(&self, other: Self) -> Self {
         Self(self.0 + other.0, PhantomData)
     }
 
+    /// Range unsafe difference of self and other.
     #[inline(always)]
     pub(crate) fn __sub(&self, other: Self) -> Self {
         Self(self.0 - other.0, PhantomData)

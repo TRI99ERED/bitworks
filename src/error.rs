@@ -1,3 +1,5 @@
+//! Module containing error types.
+
 use std::{error::Error, fmt::Display};
 
 pub type BitfieldResult<T> = Result<T, BitfieldError>;
