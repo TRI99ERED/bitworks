@@ -1,10 +1,10 @@
 //! Module containing BitfieldIndex.
 
 use crate::prelude::Bitfield;
-use std::marker::PhantomData;
+use std::{cmp::Ordering, marker::PhantomData};
 
 /// Struct meant to safely index the T, where T implements Bitfield.
-#[derive(Clone, Copy, PartialEq, Eq, Debug, PartialOrd, Ord, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Hash)]
 pub struct BitfieldIndex<T: Bitfield>(usize, PhantomData<T>);
 
 impl<T> BitfieldIndex<T>
@@ -170,5 +170,27 @@ where
     #[inline(always)]
     fn from(value: BitfieldIndex<T>) -> Self {
         value.0
+    }
+}
+
+impl<T> PartialOrd for BitfieldIndex<T>
+where
+    T: Bitfield,
+{
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl<T> Ord for BitfieldIndex<T>
+where
+    T: Bitfield,
+{
+    fn cmp(&self, other: &Self) -> Ordering {
+        match self.0.cmp(&other.0) {
+            Ordering::Equal => {}
+            ord => return ord,
+        }
+        self.1.cmp(&other.1)
     }
 }

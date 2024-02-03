@@ -20,7 +20,7 @@ type Index = BitfieldIndex<Bitfield64>;
 const BITS: usize = 64;
 
 /// Bitfield of size 64.
-#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Default)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Default)]
 pub struct Bitfield64(Inner);
 
 impl Bitfield64 {

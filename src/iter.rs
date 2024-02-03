@@ -26,13 +26,12 @@ where
 impl<T> Iterator for BitIter<T>
 where
     T: Bitfield,
-    BitfieldIndex<T>: PartialOrd,
 {
     type Item = bool;
 
     #[inline(always)]
     fn next(&mut self) -> Option<Self::Item> {
-        if self.index <= BitfieldIndex::<T>::MAX {
+        if self.index.value() <= BitfieldIndex::<T>::MAX.value() {
             let bit = (self.bitfield.clone() >> self.index.clone())
                 & T::from(BitfieldIndex::<T>::MIN)
                 != T::NONE;

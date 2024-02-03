@@ -20,7 +20,7 @@ type Index = BitfieldIndex<Bitfield16>;
 const BITS: usize = 16;
 
 /// Bitfield of size 16.
-#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Default)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Default)]
 pub struct Bitfield16(Inner);
 
 impl Bitfield16 {
