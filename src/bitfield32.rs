@@ -2,7 +2,7 @@
 
 use crate::{
     bitfield::Bitfield,
-    error::{BitfieldError, ConvTarget},
+    error::{ConvError, ConvTarget},
     iter::BitIter,
     prelude::{Bitfield128, Bitfield16, Bitfield64, Bitfield8, BitfieldIndex, Flagenum},
 };
@@ -61,6 +61,7 @@ impl From<Bitfield32> for Inner {
 }
 
 impl From<Index> for Bitfield32 {
+    #[inline(always)]
     fn from(value: Index) -> Self {
         Self(1) << value
     }
@@ -81,24 +82,24 @@ impl From<Bitfield16> for Bitfield32 {
 }
 
 impl TryFrom<Bitfield64> for Bitfield32 {
-    type Error = BitfieldError;
+    type Error = ConvError;
 
     #[inline(always)]
     fn try_from(value: Bitfield64) -> Result<Self, Self::Error> {
         Inner::try_from(value.value())
             .map(Self::from)
-            .map_err(|_| BitfieldError::conv_error(ConvTarget::Bitfield64, ConvTarget::Bitfield32))
+            .map_err(|_| ConvError::new(ConvTarget::Field(64), ConvTarget::Field(32)))
     }
 }
 
 impl TryFrom<Bitfield128> for Bitfield32 {
-    type Error = BitfieldError;
+    type Error = ConvError;
 
     #[inline(always)]
     fn try_from(value: Bitfield128) -> Result<Self, Self::Error> {
         Inner::try_from(value.value())
             .map(Self::from)
-            .map_err(|_| BitfieldError::conv_error(ConvTarget::Bitfield128, ConvTarget::Bitfield32))
+            .map_err(|_| ConvError::new(ConvTarget::Field(128), ConvTarget::Field(32)))
     }
 }
 
@@ -192,6 +193,7 @@ impl ShrAssign<Index> for Bitfield32 {
 }
 
 impl Display for Bitfield32 {
+    #[inline(always)]
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{:#034b}", self.0)
     }
@@ -202,6 +204,7 @@ impl IntoIterator for Bitfield32 {
 
     type IntoIter = BitIter<Self>;
 
+    #[inline(always)]
     fn into_iter(self) -> Self::IntoIter {
         Self::IntoIter::new(self, Index::MIN)
     }

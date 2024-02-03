@@ -71,7 +71,7 @@ pub trait Bitfield:
     ///
     /// # Examples
     /// ```
-    /// use simple_bitfield::prelude::{Bitfield, Bitfield8, Flagenum, BitfieldIndex};
+    /// use simple_bitfield::{prelude::{Bitfield, Bitfield8, Flagenum, BitfieldIndex}, error::{ConvError, ConvTarget}};
     ///
     /// #[derive(Clone, Copy, Debug, PartialEq, Eq)]
     /// enum E {
@@ -82,7 +82,7 @@ pub trait Bitfield:
     /// }
     ///
     /// impl TryFrom<BitfieldIndex<Bitfield8>> for E {
-    ///     type Error = String;
+    ///     type Error = ConvError;
     ///
     ///     fn try_from(i: BitfieldIndex<Bitfield8>) -> Result<Self, Self::Error> {
     ///         match i.value() {
@@ -90,7 +90,7 @@ pub trait Bitfield:
     ///             1 => Ok(E::B),
     ///             3 => Ok(E::D),
     ///             4 => Ok(E::E),
-    ///             _ => Err(String::new()),
+    ///             _ => Err(ConvError::new(ConvTarget::Index(8), ConvTarget::Enum(8))),
     ///         }
     ///     }
     /// }
@@ -185,6 +185,7 @@ pub trait Bitfield:
     ///     assert_eq!(bitfield.value(), 0b10101010);
     /// }
     /// ```
+    #[inline(always)]
     fn set_bit(&mut self, i: BitfieldIndex<Self>, value: bool) -> Self {
         if value {
             *self = self.clone() | Self::from(BitfieldIndex::<Self>::MIN) << i;
@@ -347,7 +348,7 @@ pub trait Bitfield:
     ///
     /// # Examples
     /// ```
-    /// use simple_bitfield::prelude::{Bitfield, Bitfield8, Flagenum, BitfieldIndex};
+    /// use simple_bitfield::{prelude::{Bitfield, Bitfield8, Flagenum, BitfieldIndex}, error::{ConvError, ConvTarget}};
     ///
     /// #[derive(Clone, Copy, Debug, PartialEq, Eq)]
     /// enum E {
@@ -358,7 +359,7 @@ pub trait Bitfield:
     /// }
     ///
     /// impl TryFrom<BitfieldIndex<Bitfield8>> for E {
-    ///     type Error = String;
+    ///     type Error = ConvError;
     ///
     ///     fn try_from(i: BitfieldIndex<Bitfield8>) -> Result<Self, Self::Error> {
     ///         match i.value() {
@@ -366,7 +367,7 @@ pub trait Bitfield:
     ///             1 => Ok(E::B),
     ///             3 => Ok(E::D),
     ///             4 => Ok(E::E),
-    ///             _ => Err(String::new()),
+    ///             _ => Err(ConvError::new(ConvTarget::Index(8), ConvTarget::Enum(8))),
     ///         }
     ///     }
     /// }
@@ -404,7 +405,7 @@ pub trait Bitfield:
     ///
     /// # Examples
     /// ```
-    /// use simple_bitfield::prelude::{Bitfield, Bitfield8, Flagenum, BitfieldIndex};
+    /// use simple_bitfield::{prelude::{Bitfield, Bitfield8, Flagenum, BitfieldIndex}, error::{ConvError, ConvTarget}};
     ///
     /// #[derive(Clone, Copy, Debug, PartialEq, Eq)]
     /// enum E {
@@ -415,7 +416,7 @@ pub trait Bitfield:
     /// }
     ///
     /// impl TryFrom<BitfieldIndex<Bitfield8>> for E {
-    ///     type Error = String;
+    ///     type Error = ConvError;
     ///
     ///     fn try_from(i: BitfieldIndex<Bitfield8>) -> Result<Self, Self::Error> {
     ///         match i.value() {
@@ -423,7 +424,7 @@ pub trait Bitfield:
     ///             1 => Ok(E::B),
     ///             3 => Ok(E::D),
     ///             4 => Ok(E::E),
-    ///             _ => Err(String::new()),
+    ///             _ => Err(ConvError::new(ConvTarget::Index(8), ConvTarget::Enum(8))),
     ///         }
     ///     }
     /// }

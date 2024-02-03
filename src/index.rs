@@ -1,6 +1,9 @@
 //! Module containing BitfieldIndex.
 
-use crate::prelude::Bitfield;
+use crate::{
+    error::{ConvError, ConvResult, ConvTarget},
+    prelude::Bitfield,
+};
 use std::{cmp::Ordering, marker::PhantomData};
 
 /// Struct meant to safely index the T, where T implements Bitfield.
@@ -134,6 +137,18 @@ where
         self.checked_sub(other).unwrap_or(Self::MIN)
     }
 
+    pub fn try_from_other<U>(other: BitfieldIndex<U>) -> ConvResult<Self>
+    where
+        U: Bitfield,
+    {
+        if U::BITS <= T::BITS {
+            Ok(Self(other.0, PhantomData))
+        } else {
+            Self::try_from(other.0)
+                .map_err(|_| ConvError::new(ConvTarget::Index(U::BITS), ConvTarget::Index(T::BITS)))
+        }
+    }
+
     /// Range unsafe sum of self and other.
     #[inline(always)]
     pub(crate) fn __add(&self, other: Self) -> Self {
@@ -151,14 +166,17 @@ impl<T> TryFrom<usize> for BitfieldIndex<T>
 where
     T: Bitfield,
 {
-    type Error = String;
+    type Error = ConvError;
 
     #[inline(always)]
     fn try_from(value: usize) -> Result<Self, Self::Error> {
         if value < T::BITS {
             Ok(Self(value, PhantomData))
         } else {
-            Err(format!("value has to be in bounds of 0..{}", T::BITS))
+            Err(ConvError::new(
+                ConvTarget::Raw(value),
+                ConvTarget::Index(T::BITS),
+            ))
         }
     }
 }

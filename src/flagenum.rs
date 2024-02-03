@@ -6,7 +6,7 @@ use crate::{bitfield::Bitfield, index::BitfieldIndex};
 ///
 /// # Examples
 /// ```
-/// use simple_bitfield::prelude::{Bitfield, Flagenum, Bitfield8, BitfieldIndex};
+/// use simple_bitfield::{prelude::{Bitfield, Bitfield8, Flagenum, BitfieldIndex}, error::{ConvError, ConvTarget}};
 ///
 /// #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 /// enum WeekDay {
@@ -20,7 +20,7 @@ use crate::{bitfield::Bitfield, index::BitfieldIndex};
 /// }
 ///
 /// impl TryFrom<BitfieldIndex<Bitfield8>> for WeekDay {
-///     type Error = String;
+///     type Error = ConvError;
 ///
 ///     fn try_from(value: BitfieldIndex<Bitfield8>) -> Result<Self, Self::Error> {
 ///         match value.value() {
@@ -31,7 +31,7 @@ use crate::{bitfield::Bitfield, index::BitfieldIndex};
 ///             4 => Ok(WeekDay::Friday),
 ///             5 => Ok(WeekDay::Saturday),
 ///             6 => Ok(WeekDay::Sunday),
-///             _ => Err("Invalid value for WeekDay".to_owned()),
+///             _ => Err(ConvError::new(ConvTarget::Index(8), ConvTarget::Enum(8))),
 ///         }
 ///     }
 /// }
@@ -73,7 +73,10 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::bitfield8::Bitfield8;
+    use crate::{
+        bitfield8::Bitfield8,
+        error::{ConvError, ConvTarget},
+    };
 
     #[test]
     fn normal_representation() {
@@ -89,7 +92,7 @@ mod tests {
         }
 
         impl TryFrom<BitfieldIndex<Bitfield8>> for WeekDay {
-            type Error = String;
+            type Error = ConvError;
 
             fn try_from(value: BitfieldIndex<Bitfield8>) -> Result<Self, Self::Error> {
                 match value.value() {
@@ -100,7 +103,7 @@ mod tests {
                     4 => Ok(WeekDay::Friday),
                     5 => Ok(WeekDay::Saturday),
                     6 => Ok(WeekDay::Sunday),
-                    _ => Err("Invalid value for WeekDay".to_owned()),
+                    _ => Err(ConvError::new(ConvTarget::Index(8), ConvTarget::Enum(8))),
                 }
             }
         }
@@ -145,7 +148,7 @@ mod tests {
         }
 
         impl TryFrom<BitfieldIndex<Bitfield8>> for WeekDay {
-            type Error = String;
+            type Error = ConvError;
 
             fn try_from(value: BitfieldIndex<Bitfield8>) -> Result<Self, Self::Error> {
                 match value.value() {
@@ -156,7 +159,7 @@ mod tests {
                     4 => Ok(WeekDay::Friday),
                     5 => Ok(WeekDay::Saturday),
                     6 => Ok(WeekDay::Sunday),
-                    _ => Err("Invalid value for WeekDay".to_owned()),
+                    _ => Err(ConvError::new(ConvTarget::Index(8), ConvTarget::Enum(8))),
                 }
             }
         }

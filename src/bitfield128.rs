@@ -60,6 +60,7 @@ impl From<Bitfield128> for Inner {
 }
 
 impl From<Index> for Bitfield128 {
+    #[inline(always)]
     fn from(value: Index) -> Self {
         Self(1) << value
     }
@@ -183,6 +184,7 @@ impl ShrAssign<Index> for Bitfield128 {
 }
 
 impl Display for Bitfield128 {
+    #[inline(always)]
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{:#0130b}", self.0)
     }
@@ -193,6 +195,7 @@ impl IntoIterator for Bitfield128 {
 
     type IntoIter = BitIter<Self>;
 
+    #[inline(always)]
     fn into_iter(self) -> Self::IntoIter {
         Self::IntoIter::new(self, Index::MIN)
     }

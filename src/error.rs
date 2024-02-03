@@ -1,51 +1,58 @@
 //! Module containing error types.
 
-use std::{error::Error, fmt::Display};
+use std::{
+    error::Error,
+    fmt::{Debug, Display},
+};
 
-pub type BitfieldResult<T> = Result<T, BitfieldError>;
+pub type ConvResult<T> = Result<T, ConvError>;
+
+#[derive(Clone, Copy)]
+pub enum ConvTarget {
+    Field(usize),
+    Index(usize),
+    Enum(usize),
+    Raw(usize),
+}
 
 #[derive(Clone, Copy, Debug)]
-pub enum ConvTarget {
-    Bitfield8,
-    Bitfield16,
-    Bitfield32,
-    Bitfield64,
-    Bitfield128,
+pub struct ConvError {
+    from: ConvTarget,
+    to: ConvTarget,
+}
+
+impl Debug for ConvTarget {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Field(size) => write!(f, "Bitfield{size}"),
+            Self::Index(size) => write!(f, "BitfieldIndex<Bitfield{size}>"),
+            Self::Enum(size) => write!(f, "Flagenum<Bitfield = Bitfield{size}>"),
+            Self::Raw(n) => write!(f, "{n}usize"),
+        }
+    }
 }
 
 impl Display for ConvTarget {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match *self {
-            ConvTarget::Bitfield8 => write!(f, "Bitfield8"),
-            ConvTarget::Bitfield16 => write!(f, "Bitfield16"),
-            ConvTarget::Bitfield32 => write!(f, "Bitfield32"),
-            ConvTarget::Bitfield64 => write!(f, "Bitfield64"),
-            ConvTarget::Bitfield128 => write!(f, "Bitfield128"),
+            Self::Field(size) => write!(f, "Bitfield of size {size}"),
+            Self::Index(size) => write!(f, "BitfieldIndex of size {size}"),
+            Self::Enum(size) => write!(f, "Flagenum of size {size}"),
+            Self::Raw(n) => write!(f, "{n}usize"),
         }
     }
 }
 
-#[derive(Clone, Copy, Debug)]
-pub enum BitfieldError {
-    IntoEnum,
-    Conversion { from: ConvTarget, to: ConvTarget },
-}
-
-impl BitfieldError {
-    pub fn conv_error(from: ConvTarget, to: ConvTarget) -> Self {
-        Self::Conversion { from, to }
+impl ConvError {
+    pub fn new(from: ConvTarget, to: ConvTarget) -> Self {
+        Self { from, to }
     }
 }
 
-impl Error for BitfieldError {}
+impl Error for ConvError {}
 
-impl Display for BitfieldError {
+impl Display for ConvError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match *self {
-            BitfieldError::IntoEnum => write!(f, "invalid value for enum"),
-            BitfieldError::Conversion { from, to } => {
-                write!(f, "couldn't convert from {from} to {to}")
-            }
-        }
+        write!(f, "failed to convert from {} to {}", self.from, self.to)
     }
 }
