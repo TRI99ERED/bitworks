@@ -72,7 +72,7 @@ pub trait Bitfield:
     /// Builds Bitfield from slice over T values, where T implements Flagenum.
     /// Considers contained variants as set bits.
     ///
-    /// /// # Examples
+    /// # Examples
     /// ```
     /// use simple_bitfield::prelude::{Bitfield, Bitfield8, Flagenum, BitfieldIndex};
     ///
