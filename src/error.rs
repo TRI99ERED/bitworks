@@ -7,7 +7,8 @@ use std::{
 
 pub type ConvResult<T> = Result<T, ConvError>;
 
-#[derive(Clone, Copy)]
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum ConvTarget {
     Field(usize),
     Index(usize),
@@ -15,7 +16,8 @@ pub enum ConvTarget {
     Raw(usize),
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct ConvError {
     from: ConvTarget,
     to: ConvTarget,

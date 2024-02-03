@@ -23,7 +23,7 @@ use crate::{bitfield::Bitfield, index::BitfieldIndex};
 ///     type Error = ConvError;
 ///
 ///     fn try_from(value: BitfieldIndex<Bitfield8>) -> Result<Self, Self::Error> {
-///         match value.value() {
+///         match value.into_inner() {
 ///             0 => Ok(WeekDay::Monday),
 ///             1 => Ok(WeekDay::Tuesday),
 ///             2 => Ok(WeekDay::Wednesday),
@@ -47,7 +47,7 @@ use crate::{bitfield::Bitfield, index::BitfieldIndex};
 /// }
 ///
 /// fn example() {
-///     let mut iter = Bitfield8::ALL.selected_variant_iter::<WeekDay>();
+///     let mut iter = Bitfield8::ALL.selected_variants::<WeekDay>();
 ///
 ///     assert_eq!(iter.next().unwrap(), WeekDay::Monday);
 ///     assert_eq!(iter.next().unwrap(), WeekDay::Tuesday);
@@ -59,7 +59,7 @@ use crate::{bitfield::Bitfield, index::BitfieldIndex};
 ///     assert_eq!(iter.next(), None);
 ///
 ///     let bitfield = Bitfield8::from(0b10101010);
-///     let iter = bitfield.selected_variant_iter::<WeekDay>();
+///     let iter = bitfield.selected_variants::<WeekDay>();
 ///     assert_eq!(iter.collect::<Bitfield8>(), Bitfield8::from(0b00101010));
 /// }
 /// ```
@@ -95,7 +95,7 @@ mod tests {
             type Error = ConvError;
 
             fn try_from(value: BitfieldIndex<Bitfield8>) -> Result<Self, Self::Error> {
-                match value.value() {
+                match value.into_inner() {
                     0 => Ok(WeekDay::Monday),
                     1 => Ok(WeekDay::Tuesday),
                     2 => Ok(WeekDay::Wednesday),
@@ -118,7 +118,7 @@ mod tests {
             type Bitfield = Bitfield8;
         }
 
-        let mut iter = Bitfield8::ALL.selected_variant_iter::<WeekDay>();
+        let mut iter = Bitfield8::ALL.selected_variants::<WeekDay>();
 
         assert_eq!(iter.next().unwrap(), WeekDay::Monday);
         assert_eq!(iter.next().unwrap(), WeekDay::Tuesday);
@@ -130,7 +130,7 @@ mod tests {
         assert_eq!(iter.next(), None);
 
         let bitfield = Bitfield8::from(0b10101010);
-        let iter = bitfield.selected_variant_iter::<WeekDay>();
+        let iter = bitfield.selected_variants::<WeekDay>();
         assert_eq!(iter.collect::<Bitfield8>(), Bitfield8::from(0b00101010));
     }
 
@@ -151,7 +151,7 @@ mod tests {
             type Error = ConvError;
 
             fn try_from(value: BitfieldIndex<Bitfield8>) -> Result<Self, Self::Error> {
-                match value.value() {
+                match value.into_inner() {
                     0 => Ok(WeekDay::Monday),
                     1 => Ok(WeekDay::Tuesday),
                     2 => Ok(WeekDay::Wednesday),
@@ -182,7 +182,7 @@ mod tests {
             type Bitfield = Bitfield8;
         }
 
-        let mut iter = Bitfield8::ALL.selected_variant_iter::<WeekDay>();
+        let mut iter = Bitfield8::ALL.selected_variants::<WeekDay>();
 
         assert_eq!(iter.next().unwrap(), WeekDay::Monday);
         assert_eq!(iter.next().unwrap(), WeekDay::Tuesday);
@@ -194,7 +194,7 @@ mod tests {
         assert_eq!(iter.next(), None);
 
         let bitfield = Bitfield8::from(0b10101010);
-        let iter = bitfield.selected_variant_iter::<WeekDay>();
+        let iter = bitfield.selected_variants::<WeekDay>();
         assert_eq!(iter.collect::<Bitfield8>(), Bitfield8::from(0b00101010));
     }
 }

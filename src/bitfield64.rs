@@ -3,12 +3,12 @@
 use crate::{
     bitfield::Bitfield,
     error::{ConvError, ConvTarget},
-    iter::BitIter,
+    iter::Bits,
     prelude::{Bitfield128, Bitfield16, Bitfield32, Bitfield8, BitfieldIndex, Flagenum},
 };
 use std::{
     collections::BTreeSet,
-    fmt::Display,
+    fmt::{Binary, Display, LowerHex, Octal, UpperHex},
     ops::{
         BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Not, Shl, ShlAssign, Shr,
         ShrAssign,
@@ -20,12 +20,13 @@ type Index = BitfieldIndex<Bitfield64>;
 const BITS: usize = 64;
 
 /// Bitfield of size 64.
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Default)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Default, Hash)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Bitfield64(Inner);
 
 impl Bitfield64 {
     #[inline(always)]
-    pub fn value(&self) -> Inner {
+    pub fn into_inner(&self) -> Inner {
         self.0
     }
 }
@@ -70,21 +71,21 @@ impl From<Index> for Bitfield64 {
 impl From<Bitfield8> for Bitfield64 {
     #[inline(always)]
     fn from(value: Bitfield8) -> Self {
-        Self(value.value() as Inner)
+        Self(value.into_inner() as Inner)
     }
 }
 
 impl From<Bitfield16> for Bitfield64 {
     #[inline(always)]
     fn from(value: Bitfield16) -> Self {
-        Self(value.value() as Inner)
+        Self(value.into_inner() as Inner)
     }
 }
 
 impl From<Bitfield32> for Bitfield64 {
     #[inline(always)]
     fn from(value: Bitfield32) -> Self {
-        Self(value.value() as Inner)
+        Self(value.into_inner() as Inner)
     }
 }
 
@@ -93,7 +94,7 @@ impl TryFrom<Bitfield128> for Bitfield64 {
 
     #[inline(always)]
     fn try_from(value: Bitfield128) -> Result<Self, Self::Error> {
-        Inner::try_from(value.value())
+        Inner::try_from(value.into_inner())
             .map(Self::from)
             .map_err(|_| ConvError::new(ConvTarget::Field(128), ConvTarget::Field(64)))
     }
@@ -161,7 +162,7 @@ impl Shl<Index> for Bitfield64 {
 
     #[inline(always)]
     fn shl(self, rhs: Index) -> Self::Output {
-        Self::from(self.0.shl(rhs.value()))
+        Self::from(self.0.shl(rhs.into_inner()))
     }
 }
 
@@ -177,7 +178,7 @@ impl Shr<Index> for Bitfield64 {
 
     #[inline(always)]
     fn shr(self, rhs: Index) -> Self::Output {
-        Self::from(self.0.shr(rhs.value()))
+        Self::from(self.0.shr(rhs.into_inner()))
     }
 }
 
@@ -188,17 +189,10 @@ impl ShrAssign<Index> for Bitfield64 {
     }
 }
 
-impl Display for Bitfield64 {
-    #[inline(always)]
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:#066b}", self.0)
-    }
-}
-
 impl IntoIterator for Bitfield64 {
     type Item = bool;
 
-    type IntoIter = BitIter<Self>;
+    type IntoIter = Bits<Self>;
 
     #[inline(always)]
     fn into_iter(self) -> Self::IntoIter {
@@ -237,6 +231,37 @@ where
     }
 }
 
+impl Display for Bitfield64 {
+    #[inline(always)]
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:064b}", self.0)
+    }
+}
+
+impl Binary for Bitfield64 {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:#066b}", self.0)
+    }
+}
+
+impl Octal for Bitfield64 {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:#026o}", self.0)
+    }
+}
+
+impl UpperHex for Bitfield64 {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:#018X}", self.0)
+    }
+}
+
+impl LowerHex for Bitfield64 {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:#018x}", self.0)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -245,7 +270,7 @@ mod tests {
     #[test]
     fn construction() {
         let bitfield = Tested::new()
-            .set_bit(0.try_into().unwrap(), true)
+            .set_bit_at_index(0.try_into().unwrap(), true)
             .check_bit(1.try_into().unwrap())
             .uncheck_bit(0.try_into().unwrap());
 
@@ -270,14 +295,14 @@ mod tests {
     fn value() {
         let bitfield: Tested = 0b10101010.into();
 
-        assert_eq!(bitfield.0, bitfield.value());
+        assert_eq!(bitfield.0, bitfield.into_inner());
     }
 
     #[test]
     fn bit_set_to_true() {
         let mut bitfield: Tested = 0b10101010.into();
 
-        bitfield.set_bit(6.try_into().unwrap(), true);
+        bitfield.set_bit_at_index(6.try_into().unwrap(), true);
 
         assert_eq!(bitfield.0, 0b11101010);
     }
@@ -286,7 +311,7 @@ mod tests {
     fn bit_set_to_false() {
         let mut bitfield: Tested = 0b10101010.into();
 
-        bitfield.set_bit(7.try_into().unwrap(), false);
+        bitfield.set_bit_at_index(7.try_into().unwrap(), false);
 
         assert_eq!(bitfield.0, 0b00101010);
     }
@@ -295,8 +320,8 @@ mod tests {
     fn get_bit() {
         let bitfield: Tested = 0b10101010.into();
 
-        assert_eq!(bitfield.get_bit(0.try_into().unwrap()), false);
-        assert_eq!(bitfield.get_bit(1.try_into().unwrap()), true);
+        assert_eq!(bitfield.bit_at_index(0.try_into().unwrap()), false);
+        assert_eq!(bitfield.bit_at_index(1.try_into().unwrap()), true);
     }
 
     #[test]
@@ -446,7 +471,7 @@ mod tests {
     #[test]
     fn bit_iter() {
         let bitfield: Tested = 0b11110000.into();
-        let mut bit_iter = bitfield.bit_iter();
+        let mut bit_iter = bitfield.bits();
 
         assert_eq!(bit_iter.next(), Some(false));
         assert_eq!(bit_iter.next(), Some(false));
@@ -467,7 +492,7 @@ mod tests {
     #[test]
     fn collect_from_bit_iter() {
         let a: Tested = 0b11110000.into();
-        let bit_iter = a.bit_iter();
+        let bit_iter = a.bits();
         let b: Tested = bit_iter.collect();
 
         assert_eq!(b, 0b11110000.into());
@@ -487,7 +512,7 @@ mod tests {
     #[test]
     fn set_pos_iter() {
         let bitfield: Tested = 0b11110000.into();
-        let mut set_pos_iter = bitfield.set_index_iter();
+        let mut set_pos_iter = bitfield.set_indeces();
 
         assert_eq!(set_pos_iter.next(), Some(4.try_into().unwrap()));
         assert_eq!(set_pos_iter.next(), Some(5.try_into().unwrap()));
@@ -499,7 +524,7 @@ mod tests {
     #[test]
     fn unset_pos_iter() {
         let bitfield: Tested = 0b11110000.into();
-        let mut unset_pos_iter = bitfield.unset_index_iter();
+        let mut unset_pos_iter = bitfield.unset_indeces();
 
         assert_eq!(unset_pos_iter.next(), Some(0.try_into().unwrap()));
         assert_eq!(unset_pos_iter.next(), Some(1.try_into().unwrap()));

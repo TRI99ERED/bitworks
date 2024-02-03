@@ -7,7 +7,8 @@ use crate::{
 use std::{cmp::Ordering, marker::PhantomData};
 
 /// Struct meant to safely index the T, where T implements Bitfield.
-#[derive(Clone, Copy, PartialEq, Eq, Debug, Hash)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Default, Hash)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct BitfieldIndex<T: Bitfield>(usize, PhantomData<T>);
 
 impl<T> BitfieldIndex<T>
@@ -34,11 +35,11 @@ where
     ///
     /// fn example() {
     ///     let index = BitfieldIndex::<Bitfield8>::MAX;
-    ///     assert_eq!(index.value(), 7);
+    ///     assert_eq!(index.into_inner(), 7);
     /// }
     /// ```
     #[inline(always)]
-    pub fn value(&self) -> usize {
+    pub fn into_inner(&self) -> usize {
         self.0
     }
 
@@ -52,7 +53,7 @@ where
     ///     let a = BitfieldIndex::<Bitfield8>::ONE;
     ///     let b = BitfieldIndex::<Bitfield8>::ONE;
     ///     let c = a.checked_add(b);
-    ///     assert_eq!(c.unwrap().value(), 2);
+    ///     assert_eq!(c.unwrap().into_inner(), 2);
     ///
     ///     let d = BitfieldIndex::<Bitfield8>::MAX;
     ///     let e = BitfieldIndex::<Bitfield8>::ONE;
@@ -78,7 +79,7 @@ where
     ///     let a = BitfieldIndex::<Bitfield8>::MAX;
     ///     let b = BitfieldIndex::<Bitfield8>::ONE;
     ///     let c = a.checked_sub(b);
-    ///     assert_eq!(c.unwrap().value(), 6);
+    ///     assert_eq!(c.unwrap().into_inner(), 6);
     ///
     ///     let d = BitfieldIndex::<Bitfield8>::MIN;
     ///     let e = BitfieldIndex::<Bitfield8>::ONE;
@@ -101,12 +102,12 @@ where
     ///     let a = BitfieldIndex::<Bitfield8>::ONE;
     ///     let b = BitfieldIndex::<Bitfield8>::ONE;
     ///     let c = a.saturating_add(b);
-    ///     assert_eq!(c.value(), 2);
+    ///     assert_eq!(c.into_inner(), 2);
     ///
     ///     let d = BitfieldIndex::<Bitfield8>::MAX;
     ///     let e = BitfieldIndex::<Bitfield8>::ONE;
     ///     let f = d.saturating_add(e);
-    ///     assert_eq!(f.value(), 7);
+    ///     assert_eq!(f.into_inner(), 7);
     /// }
     /// ```
     #[inline(always)]
@@ -124,12 +125,12 @@ where
     ///     let a = BitfieldIndex::<Bitfield8>::MAX;
     ///     let b = BitfieldIndex::<Bitfield8>::ONE;
     ///     let c = a.saturating_sub(b);
-    ///     assert_eq!(c.value(), 6);
+    ///     assert_eq!(c.into_inner(), 6);
     ///
     ///     let d = BitfieldIndex::<Bitfield8>::MIN;
     ///     let e = BitfieldIndex::<Bitfield8>::ONE;
     ///     let f = d.saturating_sub(e);
-    ///     assert_eq!(f.value(), 0);
+    ///     assert_eq!(f.into_inner(), 0);
     /// }
     /// ```
     #[inline(always)]
@@ -137,14 +138,29 @@ where
         self.checked_sub(other).unwrap_or(Self::MIN)
     }
 
-    pub fn try_from_other<U>(other: BitfieldIndex<U>) -> ConvResult<Self>
+    /// Saturating conversion between BifieldIndeces.
+    #[inline(always)]
+    pub fn to_other<U>(self) -> BitfieldIndex<U>
     where
         U: Bitfield,
     {
-        if U::BITS <= T::BITS {
-            Ok(Self(other.0, PhantomData))
+        if U::BITS >= T::BITS {
+            BitfieldIndex::<U>(self.0, PhantomData)
         } else {
-            Self::try_from(other.0)
+            BitfieldIndex::<U>::MAX
+        }
+    }
+
+    /// Attempted conversion between BifieldIndeces.
+    #[inline(always)]
+    pub fn try_to_other<U>(self) -> ConvResult<BitfieldIndex<U>>
+    where
+        U: Bitfield,
+    {
+        if U::BITS >= T::BITS {
+            Ok(BitfieldIndex::<U>(self.0, PhantomData))
+        } else {
+            BitfieldIndex::<U>::try_from(self.0)
                 .map_err(|_| ConvError::new(ConvTarget::Index(U::BITS), ConvTarget::Index(T::BITS)))
         }
     }

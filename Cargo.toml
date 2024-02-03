@@ -6,8 +6,10 @@ license = "MIT OR Apache-2.0"
 description = "Crate meant to provide easy to use bitfields, with some out of the box functionality."
 repository = "https://github.com/TRI99ERED/simple-bitfield/"
 readme = "README.md"
-
+keywords = ["bitfield", "bitwise", "data-structure"]
+categories = ["compression", "data-structures"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+serde = { version = "1.0.196", optional = true, features = ["derive"] }

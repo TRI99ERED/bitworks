@@ -26,5 +26,5 @@ pub mod prelude {
     pub use flagenum::Flagenum;
     pub use index::BitfieldIndex;
 
-    pub use iter::BitIter;
+    pub use iter::Bits;
 }

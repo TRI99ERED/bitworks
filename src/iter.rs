@@ -3,8 +3,8 @@
 use crate::prelude::{Bitfield, BitfieldIndex};
 
 /// Iterator over bits of T, where T implements Bitfield.
-#[derive(Clone)]
-pub struct BitIter<T>
+#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Default, Hash)]
+pub struct Bits<T>
 where
     T: Bitfield,
 {
@@ -12,18 +12,18 @@ where
     index: BitfieldIndex<T>,
 }
 
-impl<T> BitIter<T>
+impl<T> Bits<T>
 where
     T: Bitfield,
 {
     /// Constructs new value of BitIter.
     #[inline(always)]
     pub fn new(bitfield: T, index: BitfieldIndex<T>) -> Self {
-        BitIter::<T> { bitfield, index }
+        Bits::<T> { bitfield, index }
     }
 }
 
-impl<T> Iterator for BitIter<T>
+impl<T> Iterator for Bits<T>
 where
     T: Bitfield,
 {
@@ -31,7 +31,7 @@ where
 
     #[inline(always)]
     fn next(&mut self) -> Option<Self::Item> {
-        if self.index.value() <= BitfieldIndex::<T>::MAX.value() {
+        if self.index.into_inner() <= BitfieldIndex::<T>::MAX.into_inner() {
             let bit = (self.bitfield.clone() >> self.index.clone())
                 & T::from(BitfieldIndex::<T>::MIN)
                 != T::NONE;
