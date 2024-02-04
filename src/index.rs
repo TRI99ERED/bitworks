@@ -25,7 +25,7 @@ where
 
     /// Maximum value for `BitfieldIndex`.<br/>
     /// Shortcut from having to use `BitfieldIndex::<T>::try_from(T::BITS - 1).unwrap()`
-    pub const MAX: Self = Self(T::BITS - 1, PhantomData);
+    pub const MAX: Self = Self(T::BIT_SIZE - 1, PhantomData);
 
     /// Returns value of `BitfieldIndex`.
     ///
@@ -65,7 +65,7 @@ where
     pub fn checked_add(&self, other: Self) -> Option<Self> {
         self.0
             .checked_add(other.0)
-            .filter(|&i| i < T::BITS)
+            .filter(|&i| i < T::BIT_SIZE)
             .map(|i| Self(i, PhantomData))
     }
 
@@ -144,7 +144,7 @@ where
     where
         U: Bitfield,
     {
-        if U::BITS >= T::BITS {
+        if U::BIT_SIZE >= T::BIT_SIZE {
             BitfieldIndex::<U>(self.0, PhantomData)
         } else {
             BitfieldIndex::<U>::MAX
@@ -157,11 +157,15 @@ where
     where
         U: Bitfield,
     {
-        if U::BITS >= T::BITS {
+        if U::BIT_SIZE >= T::BIT_SIZE {
             Ok(BitfieldIndex::<U>(self.0, PhantomData))
         } else {
-            BitfieldIndex::<U>::try_from(self.0)
-                .map_err(|_| ConvError::new(ConvTarget::Index(U::BITS), ConvTarget::Index(T::BITS)))
+            BitfieldIndex::<U>::try_from(self.0).map_err(|_| {
+                ConvError::new(
+                    ConvTarget::Index(U::BIT_SIZE),
+                    ConvTarget::Index(T::BIT_SIZE),
+                )
+            })
         }
     }
 
@@ -186,12 +190,12 @@ where
 
     #[inline(always)]
     fn try_from(value: usize) -> Result<Self, Self::Error> {
-        if value < T::BITS {
+        if value < T::BIT_SIZE {
             Ok(Self(value, PhantomData))
         } else {
             Err(ConvError::new(
                 ConvTarget::Raw(value),
-                ConvTarget::Index(T::BITS),
+                ConvTarget::Index(T::BIT_SIZE),
             ))
         }
     }

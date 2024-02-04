@@ -16,7 +16,7 @@ use std::{
 };
 
 type Inner = u8;
-type Index = BitfieldIndex<Bitfield8>;
+type BIndex = BitfieldIndex<Bitfield8>;
 const BITS: usize = 8;
 
 /// Bitfield of size 8.
@@ -32,17 +32,18 @@ impl Bitfield8 {
 }
 
 impl Bitfield for Bitfield8 {
-    const BITS: usize = BITS;
+    const BIT_SIZE: usize = BITS;
+    const ONE: Self = Self(1);
     const NONE: Self = Self(Inner::MIN);
     const ALL: Self = Self(Inner::MAX);
 
     #[inline(always)]
-    fn count_set(&self) -> usize {
+    fn count_ones(&self) -> usize {
         self.0.count_ones() as usize
     }
 
     #[inline(always)]
-    fn count_unset(&self) -> usize {
+    fn count_zeros(&self) -> usize {
         self.0.count_zeros() as usize
     }
 }
@@ -61,9 +62,9 @@ impl From<Bitfield8> for Inner {
     }
 }
 
-impl From<Index> for Bitfield8 {
+impl From<BIndex> for Bitfield8 {
     #[inline(always)]
-    fn from(value: Index) -> Self {
+    fn from(value: BIndex) -> Self {
         Self(1) << value
     }
 }
@@ -109,6 +110,15 @@ impl TryFrom<Bitfield128> for Bitfield8 {
         Inner::try_from(value.into_inner())
             .map(Self::from)
             .map_err(|_| ConvError::new(ConvTarget::Field(128), ConvTarget::Field(8)))
+    }
+}
+
+impl Not for Bitfield8 {
+    type Output = Self;
+
+    #[inline(always)]
+    fn not(self) -> Self::Output {
+        Self(!self.0)
     }
 }
 
@@ -160,43 +170,34 @@ impl BitXorAssign for Bitfield8 {
     }
 }
 
-impl Not for Bitfield8 {
+impl Shl<BIndex> for Bitfield8 {
     type Output = Self;
 
     #[inline(always)]
-    fn not(self) -> Self::Output {
-        Self(!self.0)
-    }
-}
-
-impl Shl<Index> for Bitfield8 {
-    type Output = Self;
-
-    #[inline(always)]
-    fn shl(self, rhs: Index) -> Self::Output {
+    fn shl(self, rhs: BIndex) -> Self::Output {
         Self::from(self.0.shl(rhs.into_inner()))
     }
 }
 
-impl ShlAssign<Index> for Bitfield8 {
+impl ShlAssign<BIndex> for Bitfield8 {
     #[inline(always)]
-    fn shl_assign(&mut self, rhs: Index) {
+    fn shl_assign(&mut self, rhs: BIndex) {
         *self = self.shl(rhs)
     }
 }
 
-impl Shr<Index> for Bitfield8 {
+impl Shr<BIndex> for Bitfield8 {
     type Output = Self;
 
     #[inline(always)]
-    fn shr(self, rhs: Index) -> Self::Output {
+    fn shr(self, rhs: BIndex) -> Self::Output {
         Self::from(self.0.shr(rhs.into_inner()))
     }
 }
 
-impl ShrAssign<Index> for Bitfield8 {
+impl ShrAssign<BIndex> for Bitfield8 {
     #[inline(always)]
-    fn shr_assign(&mut self, rhs: Index) {
+    fn shr_assign(&mut self, rhs: BIndex) {
         *self = self.shr(rhs)
     }
 }
@@ -208,7 +209,7 @@ impl IntoIterator for Bitfield8 {
 
     #[inline(always)]
     fn into_iter(self) -> Self::IntoIter {
-        Self::IntoIter::new(self, Index::MIN)
+        Self::IntoIter::new(self, BIndex::MIN)
     }
 }
 
@@ -218,7 +219,7 @@ impl FromIterator<bool> for Bitfield8 {
             .take(BITS)
             .enumerate()
             .filter_map(|(i, bit)| if bit { Some(i) } else { None })
-            .filter_map(|i| Index::try_from(i).ok())
+            .filter_map(|i| BIndex::try_from(i).ok())
             .fold(Self::NONE, |acc, i| acc | Self(1) << i)
     }
 }
@@ -226,14 +227,14 @@ impl FromIterator<bool> for Bitfield8 {
 impl<A> FromIterator<A> for Bitfield8
 where
     A: Flagenum<Bitfield = Self>,
-    Index: From<A>,
+    BIndex: From<A>,
 {
     fn from_iter<T: IntoIterator<Item = A>>(iter: T) -> Self {
         let mut bitfield = Self::NONE;
         let mut seen_indices = BTreeSet::new();
 
         for e in iter {
-            let index = Index::from(e);
+            let index = BIndex::from(e);
             if !seen_indices.contains(&index) {
                 seen_indices.insert(index);
                 bitfield |= Self(1) << index;
@@ -283,7 +284,7 @@ mod tests {
     #[test]
     fn construction() {
         let bitfield = Tested::new()
-            .set_bit_at_index(0.try_into().unwrap(), true)
+            .set(0.try_into().unwrap(), true)
             .check_bit(1.try_into().unwrap())
             .uncheck_bit(0.try_into().unwrap());
 
@@ -315,7 +316,7 @@ mod tests {
     fn bit_set_to_true() {
         let mut bitfield: Tested = 0b10101010.into();
 
-        bitfield.set_bit_at_index(6.try_into().unwrap(), true);
+        bitfield.set(6.try_into().unwrap(), true);
 
         assert_eq!(bitfield.0, 0b11101010);
     }
@@ -324,7 +325,7 @@ mod tests {
     fn bit_set_to_false() {
         let mut bitfield: Tested = 0b10101010.into();
 
-        bitfield.set_bit_at_index(7.try_into().unwrap(), false);
+        bitfield.set(7.try_into().unwrap(), false);
 
         assert_eq!(bitfield.0, 0b00101010);
     }
@@ -333,8 +334,8 @@ mod tests {
     fn get_bit() {
         let bitfield: Tested = 0b10101010.into();
 
-        assert_eq!(bitfield.bit_at_index(0.try_into().unwrap()), false);
-        assert_eq!(bitfield.bit_at_index(1.try_into().unwrap()), true);
+        assert_eq!(bitfield.get(0.try_into().unwrap()), false);
+        assert_eq!(bitfield.get(1.try_into().unwrap()), true);
     }
 
     #[test]
@@ -359,14 +360,14 @@ mod tests {
     fn count_set() {
         let bitfield: Tested = 0b11100000.into();
 
-        assert_eq!(bitfield.count_set(), 3);
+        assert_eq!(bitfield.count_ones(), 3);
     }
 
     #[test]
     fn count_unset() {
         let bitfield: Tested = 0b11100000.into();
 
-        assert_eq!(bitfield.count_unset(), 5);
+        assert_eq!(bitfield.count_zeros(), 5);
     }
 
     #[test]
@@ -548,5 +549,17 @@ mod tests {
         let bitfield: Tested = Tested::from_slice_bool(slice);
 
         assert_eq!(bitfield, 0b01010101.into());
+    }
+
+    #[test]
+    fn test_send() {
+        fn assert_send<T: Send>() {}
+        assert_send::<Tested>();
+    }
+
+    #[test]
+    fn test_sync() {
+        fn assert_sync<T: Sync>() {}
+        assert_sync::<Tested>();
     }
 }

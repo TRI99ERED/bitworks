@@ -6,7 +6,6 @@ use std::ops::{BitAnd, BitAndAssign, BitOr, BitXor, Not, Shl, Shr};
 /// Trait defining common bitfield logic.
 pub trait Bitfield:
     Sized
-    + Default
     + Clone
     + PartialEq
     + Eq
@@ -19,29 +18,82 @@ pub trait Bitfield:
     + Shr<BitfieldIndex<Self>, Output = Self>
     + From<BitfieldIndex<Self>>
 {
-    /// Number of bits in the bitfield.
-    const BITS: usize;
+    /// Number of bits (size) of the bitfield.
+    ///
+    /// # Examples
+    /// ```rust
+    /// # use std::error::Error;
+    /// #
+    /// # fn main() -> Result<(), Box<dyn Error>> {
+    /// use simple_bitfield::prelude::{Bitfield, Bitfield8};
+    ///
+    /// let size_in_bits = <Bitfield8 as Bitfield>::BIT_SIZE;
+    ///
+    /// assert_eq!(size_in_bits, 8);
+    /// #   Ok(())
+    /// # }
+    /// ```
+    const BIT_SIZE: usize;
 
-    /// Fully unset value of the representing type (e.g. 0u8 for u8, 0u16 for u16).
+    const ONE: Self;
+
+    /// Value of the bitfield with every bit unset.
+    ///
+    /// # Examples
+    /// ```rust
+    /// # use std::error::Error;
+    /// #
+    /// # fn main() -> Result<(), Box<dyn Error>> {
+    /// use simple_bitfield::prelude::{Bitfield, Bitfield8};
+    ///
+    /// let bitfield: Bitfield8 = Bitfield::NONE;
+    ///
+    /// assert_eq!(bitfield.into_inner(), 0b00000000);
+    /// #   Ok(())
+    /// # }
+    /// ```
     const NONE: Self;
 
-    /// Fully set value of the representing type (e.g. 255u8 for u8, 65535u16 for u16).
+    /// Value of the bitfield with every bit set.
+    ///
+    /// # Examples
+    /// ```rust
+    /// # use std::error::Error;
+    /// #
+    /// # fn main() -> Result<(), Box<dyn Error>> {
+    /// use simple_bitfield::prelude::{Bitfield, Bitfield8};
+    ///
+    /// let bitfield: Bitfield8 = Bitfield::ALL;
+    ///
+    /// assert_eq!(bitfield.into_inner(), 0b11111111);
+    /// #   Ok(())
+    /// # }
+    /// ```
     const ALL: Self;
 
     /// Constructs empty Bitfield.
     ///
     /// # Examples
-    /// ```
+    /// ```rust
+    /// # use std::error::Error;
+    /// #
+    /// # fn main() -> Result<(), Box<dyn Error>> {
     /// use simple_bitfield::prelude::{Bitfield, Bitfield8};
     ///
-    /// fn example() {
-    ///     let bitfield = Bitfield8::new();
-    ///     assert_eq!(bitfield.into_inner(), 0b00000000);
-    /// }
+    /// let bitfield: Bitfield8 = Bitfield::new();
+    ///
+    /// assert_eq!(bitfield.into_inner(), 0b00000000);
+    /// #   Ok(())
+    /// # }
     /// ```
     #[inline(always)]
     fn new() -> Self {
         Self::NONE
+    }
+
+    #[inline(always)]
+    fn from_index(index: BitfieldIndex<Self>) -> Self {
+        Self::ONE << index
     }
 
     /// Builds Bitfield from slice over boolean values.<br/>
@@ -49,29 +101,35 @@ pub trait Bitfield:
     /// in number representation.
     ///
     /// # Examples
-    /// ```
+    /// ```rust
+    /// # use std::error::Error;
+    /// #
+    /// # fn main() -> Result<(), Box<dyn Error>> {
     /// use simple_bitfield::prelude::{Bitfield, Bitfield8};
     ///
-    /// fn example() {
-    ///     // Same index order
-    ///     let slice: &[bool] = &[true, false, true, false, true, false, true, false];
-    ///     let bitfield: Bitfield8 = Bitfield8::from_slice_bool(slice);
+    /// // Same index order
+    /// let slice: &[bool] = &[true, false, true, false, true, false, true, false];
+    /// let bitfield: Bitfield8 = Bitfield::from_slice_bool(slice);
     ///
-    ///     assert_eq!(bitfield, 0b01010101.into());
-    /// }
+    /// assert_eq!(bitfield.into_inner(), 0b01010101);
+    /// #   Ok(())
+    /// # }
     /// ```
     fn from_slice_bool(slice: &[bool]) -> Self
     where
         Self: FromIterator<bool>,
     {
-        slice.iter().take(Self::BITS).copied().collect()
+        slice.iter().take(Self::BIT_SIZE).copied().collect()
     }
 
     /// Builds Bitfield from slice over T values, where T implements Flagenum.
     /// Considers contained variants as set bits.
     ///
     /// # Examples
-    /// ```
+    /// ```rust
+    /// # use std::error::Error;
+    /// #
+    /// # fn main() -> Result<(), Box<dyn Error>> {
     /// use simple_bitfield::{prelude::{Bitfield, Bitfield8, Flagenum, BitfieldIndex}, error::{ConvError, ConvTarget}};
     ///
     /// #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -85,8 +143,8 @@ pub trait Bitfield:
     /// impl TryFrom<BitfieldIndex<Bitfield8>> for E {
     ///     type Error = ConvError;
     ///
-    ///     fn try_from(i: BitfieldIndex<Bitfield8>) -> Result<Self, Self::Error> {
-    ///         match i.into_inner() {
+    ///     fn try_from(index: BitfieldIndex<Bitfield8>) -> Result<Self, Self::Error> {
+    ///         match index.into_inner() {
     ///             0 => Ok(E::A),
     ///             1 => Ok(E::B),
     ///             3 => Ok(E::D),
@@ -98,7 +156,7 @@ pub trait Bitfield:
     ///
     /// impl From<E> for BitfieldIndex<Bitfield8> {
     ///     fn from(value: E) -> Self {
-    ///         Self::try_from(value as usize).unwrap()
+    ///         Self::try_from(value as usize).expect("Enum E should always be a valid index")
     ///     }
     /// }
     ///
@@ -106,12 +164,12 @@ pub trait Bitfield:
     ///     type Bitfield = Bitfield8;
     /// }
     ///
-    /// fn example() {
-    ///     let slice: &[E] = &[E::A, E::E, E::D];
-    ///     let bitfield: Bitfield8 = Bitfield8::from_slice_flags(slice);
+    /// let slice: &[E] = &[E::A, E::E, E::D];
+    /// let bitfield: Bitfield8 = Bitfield::from_slice_flags(slice);
     ///
-    ///     assert_eq!(bitfield, 0b00011001.into());
-    /// }
+    /// assert_eq!(bitfield.into_inner(), 0b00011001);
+    /// #   Ok(())
+    /// # }
     /// ```
     fn from_slice_flags<T>(slice: &[T]) -> Self
     where
@@ -119,25 +177,28 @@ pub trait Bitfield:
         BitfieldIndex<Self>: From<T>,
         Self: FromIterator<T>,
     {
-        slice.iter().take(Self::BITS).cloned().collect()
+        slice.iter().take(Self::BIT_SIZE).cloned().collect()
     }
 
     /// Count the number of all set bits.
     ///
     /// # Examples
-    /// ```
+    /// ```rust
+    /// # use std::error::Error;
+    /// #
+    /// # fn main() -> Result<(), Box<dyn Error>> {
     /// use simple_bitfield::prelude::{Bitfield, Bitfield8};
     ///
-    /// fn example() {
-    ///     let bitfield = Bitfield8::from(0b00000111); // implements Bitfield
-    ///     assert_eq!(Bitfield::count_set(&bitfield), 3);
-    ///     assert_ne!(Bitfield::count_set(&bitfield), 4);
-    /// }
+    /// let bitfield = Bitfield8::from(0b00000111);
+    ///
+    /// assert_eq!(Bitfield::count_ones(&bitfield), 3);
+    /// #   Ok(())
+    /// # }
     /// ```
     #[inline(always)]
-    fn count_set(&self) -> usize {
-        (0..Self::BITS).fold(0, |acc, i| {
-            acc + if self.bit_at_index(i.try_into().unwrap()) {
+    fn count_ones(&self) -> usize {
+        (0..Self::BIT_SIZE).fold(0, |acc, i| {
+            acc + if self.get(i.try_into().unwrap()) {
                 1
             } else {
                 0
@@ -148,19 +209,22 @@ pub trait Bitfield:
     /// Count the number of all unset bits.
     ///
     /// # Examples
-    /// ```
+    /// ```rust
+    /// # use std::error::Error;
+    /// #
+    /// # fn main() -> Result<(), Box<dyn Error>> {
     /// use simple_bitfield::prelude::{Bitfield, Bitfield8};
     ///
-    /// fn example() {
-    ///     let bitfield = Bitfield8::from(0b00000111); // implements Bitfield
-    ///     assert_eq!(Bitfield::count_unset(&bitfield), 5);
-    ///     assert_ne!(Bitfield::count_set(&bitfield), 4);
-    /// }
+    /// let bitfield = Bitfield8::from(0b00000111);
+    ///
+    /// assert_eq!(Bitfield::count_zeros(&bitfield), 5);
+    /// #   Ok(())
+    /// # }
     /// ```
     #[inline(always)]
-    fn count_unset(&self) -> usize {
-        (0..Self::BITS).fold(0, |acc, i| {
-            acc + (if self.bit_at_index(i.try_into().unwrap()) {
+    fn count_zeros(&self) -> usize {
+        (0..Self::BIT_SIZE).fold(0, |acc, i| {
+            acc + (if self.get(i.try_into().unwrap()) {
                 0
             } else {
                 1
@@ -171,27 +235,31 @@ pub trait Bitfield:
     /// Sets bit at index to value. Returns copy of the resulting bitfield.
     ///
     /// # Examples
-    /// ```
+    /// ```rust
+    /// # use std::error::Error;
+    /// #
+    /// # fn main() -> Result<(), Box<dyn Error>> {
     /// use simple_bitfield::prelude::{Bitfield, Bitfield8};
     ///
-    /// fn example() {
-    ///     let bitfield = Bitfield8::from(0b01010100) // implements Bitfield
-    ///         .set_bit_at_index(1.try_into().unwrap(), true)
-    ///         .set_bit_at_index(2.try_into().unwrap(), false)
-    ///         .set_bit_at_index(3.try_into().unwrap(), true)
-    ///         .set_bit_at_index(4.try_into().unwrap(), false)
-    ///         .set_bit_at_index(5.try_into().unwrap(), true)
-    ///         .set_bit_at_index(6.try_into().unwrap(), false)
-    ///         .set_bit_at_index(7.try_into().unwrap(), true);
-    ///     assert_eq!(bitfield.into_inner(), 0b10101010);
-    /// }
+    /// let bitfield = Bitfield8::from(0b01010100)
+    ///     .set(1.try_into()?, true)
+    ///     .set(2.try_into()?, false)
+    ///     .set(3.try_into()?, true)
+    ///     .set(4.try_into()?, false)
+    ///     .set(5.try_into()?, true)
+    ///     .set(6.try_into()?, false)
+    ///     .set(7.try_into()?, true);
+    ///
+    /// assert_eq!(bitfield.into_inner(), 0b10101010);
+    /// #   Ok(())
+    /// # }
     /// ```
     #[inline(always)]
-    fn set_bit_at_index(&mut self, i: BitfieldIndex<Self>, value: bool) -> Self {
+    fn set(&mut self, index: BitfieldIndex<Self>, value: bool) -> Self {
         if value {
-            *self = self.clone() | Self::from(BitfieldIndex::<Self>::MIN) << i;
+            *self = self.clone() | Self::from(BitfieldIndex::<Self>::MIN) << index;
         } else {
-            *self = self.clone() & !(Self::from(BitfieldIndex::<Self>::MIN) << i);
+            *self = self.clone() & !(Self::from(BitfieldIndex::<Self>::MIN) << index);
         }
         self.clone()
     }
@@ -199,82 +267,98 @@ pub trait Bitfield:
     /// Returns bit at index.
     ///
     /// # Examples
-    /// ```
+    /// ```rust
+    /// # use std::error::Error;
+    /// #
+    /// # fn main() -> Result<(), Box<dyn Error>> {
     /// use simple_bitfield::prelude::{Bitfield, Bitfield8};
     ///
-    /// fn example() {
-    ///     let bitfield = Bitfield8::new().set_bit_at_index(1.try_into().unwrap(), true);
-    ///     assert_eq!(Bitfield::bit_at_index(&bitfield, 0.try_into().unwrap()), false);
-    ///     assert_eq!(Bitfield::bit_at_index(&bitfield, 1.try_into().unwrap()), true);
-    /// }
+    /// let bitfield = Bitfield8::new().set(1.try_into()?, true);
+    ///
+    /// assert_eq!(Bitfield::get(&bitfield, 0.try_into()?), false);
+    /// assert_eq!(Bitfield::get(&bitfield, 1.try_into()?), true);
+    /// #   Ok(())
+    /// # }
     /// ```
     #[inline(always)]
-    fn bit_at_index(&self, i: BitfieldIndex<Self>) -> bool {
-        let bit = Self::from(BitfieldIndex::<Self>::MIN) << i;
+    fn get(&self, index: BitfieldIndex<Self>) -> bool {
+        let bit = Self::from(BitfieldIndex::<Self>::MIN) << index;
         (self.clone() & bit) != Self::NONE
     }
 
     /// Sets bit at index to 1. Returns copy of the resulting bitfield.
     ///
     /// # Examples
-    /// ```
+    /// ```rust
+    /// # use std::error::Error;
+    /// #
+    /// # fn main() -> Result<(), Box<dyn Error>> {
     /// use simple_bitfield::prelude::{Bitfield, Bitfield8};
     ///
-    /// fn example() {
-    ///     let bitfield = Bitfield8::NONE // implements Bitfield
-    ///         .check_bit(1.try_into().unwrap())
-    ///         .check_bit(3.try_into().unwrap())
-    ///         .check_bit(5.try_into().unwrap())
-    ///         .check_bit(7.try_into().unwrap());
-    ///     assert_eq!(bitfield.into_inner(), 0b10101010);
-    /// }
+    /// let bitfield = Bitfield8::NONE
+    ///     .check_bit(1.try_into()?)
+    ///     .check_bit(3.try_into()?)
+    ///     .check_bit(5.try_into()?)
+    ///     .check_bit(7.try_into()?);
+    ///
+    /// assert_eq!(bitfield.into_inner(), 0b10101010);
+    /// #   Ok(())
+    /// # }
     /// ```
     #[inline(always)]
-    fn check_bit(&mut self, i: BitfieldIndex<Self>) -> Self {
-        *self = self.clone() | Self::from(BitfieldIndex::<Self>::MIN) << i;
+    fn check_bit(&mut self, index: BitfieldIndex<Self>) -> Self {
+        *self = self.clone() | Self::from(BitfieldIndex::<Self>::MIN) << index;
         self.clone()
     }
 
     /// Sets bit at index to 0. Returns copy of the resulting bitfield.
     ///
     /// # Examples
-    /// ```
+    /// ```rust
+    /// # use std::error::Error;
+    /// #
+    /// # fn main() -> Result<(), Box<dyn Error>> {
     /// use simple_bitfield::prelude::{Bitfield, Bitfield8};
     ///
-    /// fn example() {
-    ///     let bitfield = Bitfield8::ALL // implements Bitfield
-    ///         .uncheck_bit(0.try_into().unwrap())
-    ///         .uncheck_bit(2.try_into().unwrap())
-    ///         .uncheck_bit(4.try_into().unwrap())
-    ///         .uncheck_bit(6.try_into().unwrap());
-    ///     assert_eq!(bitfield.into_inner(), 0b10101010);
-    /// }
+    /// let bitfield = Bitfield8::ALL
+    ///     .uncheck_bit(0.try_into()?)
+    ///     .uncheck_bit(2.try_into()?)
+    ///     .uncheck_bit(4.try_into()?)
+    ///     .uncheck_bit(6.try_into()?);
+    ///
+    /// assert_eq!(bitfield.into_inner(), 0b10101010);
+    /// #   Ok(())
+    /// # }
     /// ```
     #[inline(always)]
-    fn uncheck_bit(&mut self, i: BitfieldIndex<Self>) -> Self {
-        *self = self.clone() & !(Self::from(BitfieldIndex::<Self>::MIN) << i);
+    fn uncheck_bit(&mut self, index: BitfieldIndex<Self>) -> Self {
+        *self = self.clone() & !(Self::from(BitfieldIndex::<Self>::MIN) << index);
         self.clone()
     }
 
     /// Returns iterator over bits of the bitfield in boolean representation.
     ///
     /// # Examples
-    /// ```
+    /// ```rust
+    /// # use std::error::Error;
+    /// #
+    /// # fn main() -> Result<(), Box<dyn Error>> {
     /// use simple_bitfield::prelude::{Bitfield, Bitfield8};
     ///
-    /// fn example() {
-    ///     let bitfield = Bitfield8::from(0b01010100); // implements Bitfield
-    ///     let mut iter = Bitfield::bits(&bitfield);
-    ///     assert_eq!(iter.next(), Some(false)); // 0
-    ///     assert_eq!(iter.next(), Some(false)); // 0
-    ///     assert_eq!(iter.next(), Some(true));  // 1
-    ///     assert_eq!(iter.next(), Some(false)); // 0
-    ///     assert_eq!(iter.next(), Some(true));  // 1
-    ///     assert_eq!(iter.next(), Some(false)); // 0
-    ///     assert_eq!(iter.next(), Some(true));  // 1
-    ///     assert_eq!(iter.next(), Some(false)); // 0
-    ///     assert_eq!(iter.next(), None);
-    /// }
+    /// let bitfield = Bitfield8::from(0b01010100);
+    /// let mut iter = Bitfield::bits(&bitfield);
+    ///
+    /// assert_eq!(iter.next(), Some(false)); // 0
+    /// assert_eq!(iter.next(), Some(false)); // 0
+    /// assert_eq!(iter.next(), Some(true));  // 1
+    /// assert_eq!(iter.next(), Some(false)); // 0
+    /// assert_eq!(iter.next(), Some(true));  // 1
+    /// assert_eq!(iter.next(), Some(false)); // 0
+    /// assert_eq!(iter.next(), Some(true));  // 1
+    /// assert_eq!(iter.next(), Some(false)); // 0
+    /// assert_eq!(iter.next(), None);
+    /// #   Ok(())
+    /// # }
     /// ```
     #[inline(always)]
     fn bits(&self) -> impl Iterator<Item = bool>
@@ -287,17 +371,21 @@ pub trait Bitfield:
     /// Returns iterator over indeces of the set bits of the bitfield.
     ///
     /// # Examples
-    /// ```
+    /// ```rust
+    /// # use std::error::Error;
+    /// #
+    /// # fn main() -> Result<(), Box<dyn Error>> {
     /// use simple_bitfield::prelude::{Bitfield, Bitfield8};
     ///
-    /// fn example() {
-    ///     let bitfield = Bitfield8::from(0b01010100); // implements Bitfield
-    ///     let mut iter = Bitfield::set_indeces(&bitfield);
-    ///     assert_eq!(iter.next(), Some(2.try_into().unwrap()));
-    ///     assert_eq!(iter.next(), Some(4.try_into().unwrap()));
-    ///     assert_eq!(iter.next(), Some(6.try_into().unwrap()));
-    ///     assert_eq!(iter.next(), None);
-    /// }
+    /// let bitfield = Bitfield8::from(0b01010100);
+    /// let mut iter = Bitfield::set_indeces(&bitfield);
+    ///
+    /// assert_eq!(iter.next(), Some(2.try_into()?));
+    /// assert_eq!(iter.next(), Some(4.try_into()?));
+    /// assert_eq!(iter.next(), Some(6.try_into()?));
+    /// assert_eq!(iter.next(), None);
+    /// #   Ok(())
+    /// # }
     /// ```
     #[inline(always)]
     fn set_indeces(&self) -> impl Iterator<Item = BitfieldIndex<Self>>
@@ -316,19 +404,23 @@ pub trait Bitfield:
     /// Returns iterator over indeces of the unset bits of the bitfield.
     ///
     /// # Examples
-    /// ```
+    /// ```rust
+    /// # use std::error::Error;
+    /// #
+    /// # fn main() -> Result<(), Box<dyn Error>> {
     /// use simple_bitfield::prelude::{Bitfield, Bitfield8};
     ///
-    /// fn example() {
-    ///     let bitfield = Bitfield8::from(0b01010100); // implements Bitfield
-    ///     let mut iter = Bitfield::unset_indeces(&bitfield);
-    ///     assert_eq!(iter.next(), Some(0.try_into().unwrap()));
-    ///     assert_eq!(iter.next(), Some(1.try_into().unwrap()));
-    ///     assert_eq!(iter.next(), Some(3.try_into().unwrap()));
-    ///     assert_eq!(iter.next(), Some(5.try_into().unwrap()));
-    ///     assert_eq!(iter.next(), Some(7.try_into().unwrap()));
-    ///     assert_eq!(iter.next(), None);
-    /// }
+    /// let bitfield = Bitfield8::from(0b01010100);
+    /// let mut iter = Bitfield::unset_indeces(&bitfield);
+    ///
+    /// assert_eq!(iter.next(), Some(0.try_into()?));
+    /// assert_eq!(iter.next(), Some(1.try_into()?));
+    /// assert_eq!(iter.next(), Some(3.try_into()?));
+    /// assert_eq!(iter.next(), Some(5.try_into()?));
+    /// assert_eq!(iter.next(), Some(7.try_into()?));
+    /// assert_eq!(iter.next(), None);
+    /// #   Ok(())
+    /// # }
     /// ```
     #[inline(always)]
     fn unset_indeces(&self) -> impl Iterator<Item = BitfieldIndex<Self>>
@@ -348,7 +440,10 @@ pub trait Bitfield:
     /// converted to target type T, where T implements Flagenum.
     ///
     /// # Examples
-    /// ```
+    /// ```rust
+    /// # use std::error::Error;
+    /// #
+    /// # fn main() -> Result<(), Box<dyn Error>> {
     /// use simple_bitfield::{prelude::{Bitfield, Bitfield8, Flagenum, BitfieldIndex}, error::{ConvError, ConvTarget}};
     ///
     /// #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -362,8 +457,8 @@ pub trait Bitfield:
     /// impl TryFrom<BitfieldIndex<Bitfield8>> for E {
     ///     type Error = ConvError;
     ///
-    ///     fn try_from(i: BitfieldIndex<Bitfield8>) -> Result<Self, Self::Error> {
-    ///         match i.into_inner() {
+    ///     fn try_from(index: BitfieldIndex<Bitfield8>) -> Result<Self, Self::Error> {
+    ///         match index.into_inner() {
     ///             0 => Ok(E::A),
     ///             1 => Ok(E::B),
     ///             3 => Ok(E::D),
@@ -375,7 +470,7 @@ pub trait Bitfield:
     ///
     /// impl From<E> for BitfieldIndex<Bitfield8> {
     ///     fn from(value: E) -> Self {
-    ///         Self::try_from(value as usize).unwrap()
+    ///         Self::try_from(value as usize).expect("Enum E should always be a valid index")
     ///     }
     /// }
     ///
@@ -383,13 +478,15 @@ pub trait Bitfield:
     ///     type Bitfield = Bitfield8;
     /// }
     ///
-    /// fn example() {                     // E D _ B A
-    ///     let bitfield = Bitfield8::from(0b_0_1_1_0_1); // implements Bitfield
-    ///     let mut iter = Bitfield::selected_variants::<E>(&bitfield);
-    ///     assert_eq!(iter.next(), Some(E::A));
-    ///     assert_eq!(iter.next(), Some(E::D));
-    ///     assert_eq!(iter.next(), None);
-    /// }
+    ///                                // E D _ B A
+    /// let bitfield = Bitfield8::from(0b_0_1_1_0_1); // implements Bitfield
+    /// let mut iter = Bitfield::selected_variants::<E>(&bitfield);
+    ///
+    /// assert_eq!(iter.next(), Some(E::A));
+    /// assert_eq!(iter.next(), Some(E::D));
+    /// assert_eq!(iter.next(), None);
+    /// # Ok(())
+    /// # }
     /// ```
     #[inline(always)]
     fn selected_variants<T>(&self) -> impl Iterator<Item = T>
@@ -405,7 +502,10 @@ pub trait Bitfield:
     /// converted to target type T, where T implements Flagenum.
     ///
     /// # Examples
-    /// ```
+    /// ```rust
+    /// # use std::error::Error;
+    /// #
+    /// # fn main() -> Result<(), Box<dyn Error>> {
     /// use simple_bitfield::{prelude::{Bitfield, Bitfield8, Flagenum, BitfieldIndex}, error::{ConvError, ConvTarget}};
     ///
     /// #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -419,8 +519,8 @@ pub trait Bitfield:
     /// impl TryFrom<BitfieldIndex<Bitfield8>> for E {
     ///     type Error = ConvError;
     ///
-    ///     fn try_from(i: BitfieldIndex<Bitfield8>) -> Result<Self, Self::Error> {
-    ///         match i.into_inner() {
+    ///     fn try_from(index: BitfieldIndex<Bitfield8>) -> Result<Self, Self::Error> {
+    ///         match index.into_inner() {
     ///             0 => Ok(E::A),
     ///             1 => Ok(E::B),
     ///             3 => Ok(E::D),
@@ -432,7 +532,7 @@ pub trait Bitfield:
     ///
     /// impl From<E> for BitfieldIndex<Bitfield8> {
     ///     fn from(value: E) -> Self {
-    ///         Self::try_from(value as usize).unwrap()
+    ///         Self::try_from(value as usize).expect("Enum E should always be a valid index")
     ///     }
     /// }
     ///
@@ -440,13 +540,15 @@ pub trait Bitfield:
     ///     type Bitfield = Bitfield8;
     /// }
     ///
-    /// fn example() {                     // E D _ B A
-    ///     let bitfield = Bitfield8::from(0b_0_1_1_0_1); // implements Bitfield
-    ///     let mut iter = Bitfield::unselected_variants::<E>(&bitfield);
-    ///     assert_eq!(iter.next(), Some(E::B));
-    ///     assert_eq!(iter.next(), Some(E::E));
-    ///     assert_eq!(iter.next(), None);
-    /// }
+    ///                                // E D _ B A
+    /// let bitfield = Bitfield8::from(0b_0_1_1_0_1); // implements Bitfield
+    /// let mut iter = Bitfield::unselected_variants::<E>(&bitfield);
+    ///
+    /// assert_eq!(iter.next(), Some(E::B));
+    /// assert_eq!(iter.next(), Some(E::E));
+    /// assert_eq!(iter.next(), None);
+    /// #   Ok(())
+    /// # }
     /// ```
     #[inline(always)]
     fn unselected_variants<T>(&self) -> impl Iterator<Item = T>
@@ -462,15 +564,19 @@ pub trait Bitfield:
     /// Alias for `!` operator
     ///
     /// # Examples
-    /// ```
+    /// ```rust
+    /// # use std::error::Error;
+    /// #
+    /// # fn main() -> Result<(), Box<dyn Error>> {
     /// use simple_bitfield::prelude::{Bitfield, Bitfield8};
     ///
-    /// fn example() {
-    ///     let a = Bitfield8::from(0b11110000); // implements Bitfield
-    ///     let b = Bitfield::complement(a);
-    ///     assert_eq!(a.into_inner(), 0b11110000);
-    ///     assert_eq!(b.into_inner(), 0b00001111);
-    /// }
+    /// let a = Bitfield8::from(0b11110000);
+    /// let b = Bitfield::complement(a);
+    ///
+    /// assert_eq!(a.into_inner(), 0b11110000);
+    /// assert_eq!(b.into_inner(), 0b00001111);
+    /// #   Ok(())
+    /// # }
     /// ```
     #[inline(always)]
     fn complement(self) -> Self {
@@ -481,15 +587,19 @@ pub trait Bitfield:
     /// Alias for `|` operator
     ///
     /// # Examples
-    /// ```
+    /// ```rust
+    /// # use std::error::Error;
+    /// #
+    /// # fn main() -> Result<(), Box<dyn Error>> {
     /// use simple_bitfield::prelude::{Bitfield, Bitfield8};
     ///
-    /// fn example() {
-    ///     let a = Bitfield8::from(0b11001100); // implements Bitfield
-    ///     let b = Bitfield8::from(0b11110000);
-    ///     let c = Bitfield::union(a, b);
-    ///     assert_eq!(c.into_inner(), 0b11111100);
-    /// }
+    /// let a = Bitfield8::from(0b11001100);
+    /// let b = Bitfield8::from(0b11110000);
+    /// let c = Bitfield::union(a, b);
+    ///
+    /// assert_eq!(c.into_inner(), 0b11111100);
+    /// #   Ok(())
+    /// # }
     /// ```
     #[inline(always)]
     fn union(self, other: Self) -> Self {
@@ -500,15 +610,19 @@ pub trait Bitfield:
     /// Alias for `&` operator
     ///
     /// # Examples
-    /// ```
+    /// ```rust
+    /// # use std::error::Error;
+    /// #
+    /// # fn main() -> Result<(), Box<dyn Error>> {
     /// use simple_bitfield::prelude::{Bitfield, Bitfield8};
     ///
-    /// fn example() {
-    ///     let a = Bitfield8::from(0b11001100); // implements Bitfield
-    ///     let b = Bitfield8::from(0b11110000);
-    ///     let c = Bitfield::intersection(a, b);
-    ///     assert_eq!(c.into_inner(), 0b11000000);
-    /// }
+    /// let a = Bitfield8::from(0b11001100);
+    /// let b = Bitfield8::from(0b11110000);
+    /// let c = Bitfield::intersection(a, b);
+    ///
+    /// assert_eq!(c.into_inner(), 0b11000000);
+    /// #   Ok(())
+    /// # }
     /// ```
     #[inline(always)]
     fn intersection(self, other: Self) -> Self {
@@ -518,15 +632,19 @@ pub trait Bitfield:
     /// Returns Set difference (`self \ other`) of two bitfields.
     ///
     /// # Examples
-    /// ```
+    /// ```rust
+    /// # use std::error::Error;
+    /// #
+    /// # fn main() -> Result<(), Box<dyn Error>> {
     /// use simple_bitfield::prelude::{Bitfield, Bitfield8};
     ///
-    /// fn example() {
-    ///     let a = Bitfield8::from(0b11001100); // implements Bitfield
-    ///     let b = Bitfield8::from(0b11110000);
-    ///     let c = Bitfield::difference(a, b);
-    ///     assert_eq!(c.into_inner(), 0b00001100);
-    /// }
+    /// let a = Bitfield8::from(0b11001100);
+    /// let b = Bitfield8::from(0b11110000);
+    /// let c = Bitfield::difference(a, b);
+    ///
+    /// assert_eq!(c.into_inner(), 0b00001100);
+    /// #   Ok(())
+    /// # }
     /// ```
     #[inline(always)]
     fn difference(self, other: Self) -> Self {
@@ -537,15 +655,19 @@ pub trait Bitfield:
     /// Alias for `^` operator
     ///
     /// # Examples
-    /// ```
+    /// ```rust
+    /// # use std::error::Error;
+    /// #
+    /// # fn main() -> Result<(), Box<dyn Error>> {
     /// use simple_bitfield::prelude::{Bitfield, Bitfield8};
     ///
-    /// fn example() {
-    ///     let a = Bitfield8::from(0b11001100); // implements Bitfield
-    ///     let b = Bitfield8::from(0b11110000);
-    ///     let c = Bitfield::sym_difference(a, b);
-    ///     assert_eq!(c.into_inner(), 0b00111100);
-    /// }
+    /// let a = Bitfield8::from(0b11001100); // implements Bitfield
+    /// let b = Bitfield8::from(0b11110000);
+    /// let c = Bitfield::sym_difference(a, b);
+    ///
+    /// assert_eq!(c.into_inner(), 0b00111100);
+    /// #   Ok(())
+    /// # }
     /// ```
     #[inline(always)]
     fn sym_difference(self, other: Self) -> Self {
