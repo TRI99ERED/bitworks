@@ -4,10 +4,10 @@ use crate::{
     error::{ConvError, ConvResult, ConvTarget},
     prelude::Bitfield,
 };
-use std::{cmp::Ordering, marker::PhantomData};
+use std::{cmp::Ordering, fmt::Debug, hash::Hash, marker::PhantomData};
 
 /// Struct meant to safely index the T, where T implements Bitfield.
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Default, Hash)]
+#[derive(Default)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct BitfieldIndex<T: Bitfield>(usize, PhantomData<T>);
 
@@ -211,6 +211,17 @@ where
     }
 }
 
+impl<T> Clone for BitfieldIndex<T>
+where
+    T: Bitfield,
+{
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+
+impl<T> Copy for BitfieldIndex<T> where T: Bitfield {}
+
 impl<T> PartialOrd for BitfieldIndex<T>
 where
     T: Bitfield,
@@ -230,5 +241,34 @@ where
             ord => return ord,
         }
         self.1.cmp(&other.1)
+    }
+}
+
+impl<T> PartialEq for BitfieldIndex<T>
+where
+    T: Bitfield,
+{
+    fn eq(&self, other: &Self) -> bool {
+        self.0 == other.0 && self.1 == other.1
+    }
+}
+
+impl<T> Eq for BitfieldIndex<T> where T: Bitfield {}
+
+impl<T> Debug for BitfieldIndex<T>
+where
+    T: Bitfield,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "BitfieldIndex<Bitfield{}>({})", T::BIT_SIZE, self.0)
+    }
+}
+
+impl<T> Hash for BitfieldIndex<T>
+where
+    T: Bitfield,
+{
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.0.hash(state);
     }
 }

@@ -1,4 +1,4 @@
-//! Module containing Flagenum.
+//! Module containing FlagsEnum.
 
 use crate::{bitfield::Bitfield, index::BitfieldIndex};
 
@@ -6,7 +6,7 @@ use crate::{bitfield::Bitfield, index::BitfieldIndex};
 ///
 /// # Examples
 /// ```
-/// use simple_bitfield::{prelude::{Bitfield, Bitfield8, Flagenum, BitfieldIndex}, error::{ConvError, ConvTarget}};
+/// use simple_bitfield::{prelude::{Bitfield, Bitfield8, FlagsEnum, BitfieldIndex}, error::{ConvError, ConvTarget}};
 ///
 /// #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 /// enum WeekDay {
@@ -42,7 +42,7 @@ use crate::{bitfield::Bitfield, index::BitfieldIndex};
 ///     }
 /// }
 ///
-/// impl Flagenum for WeekDay {
+/// impl FlagsEnum for WeekDay {
 ///     type Bitfield = Bitfield8;
 /// }
 ///
@@ -63,7 +63,7 @@ use crate::{bitfield::Bitfield, index::BitfieldIndex};
 ///     assert_eq!(iter.collect::<Bitfield8>(), Bitfield8::from(0b00101010));
 /// }
 /// ```
-pub trait Flagenum: Sized + Clone + TryFrom<BitfieldIndex<Self::Bitfield>>
+pub trait FlagsEnum: Sized + Clone + TryFrom<BitfieldIndex<Self::Bitfield>>
 where
     Self::Bitfield: Bitfield,
 {
@@ -114,7 +114,7 @@ mod tests {
             }
         }
 
-        impl Flagenum for WeekDay {
+        impl FlagsEnum for WeekDay {
             type Bitfield = Bitfield8;
         }
 
@@ -178,7 +178,7 @@ mod tests {
             }
         }
 
-        impl Flagenum for WeekDay {
+        impl FlagsEnum for WeekDay {
             type Bitfield = Bitfield8;
         }
 
