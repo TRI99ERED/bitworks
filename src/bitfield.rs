@@ -23,7 +23,7 @@ pub trait Bitfield:
     + Shr<BitfieldIndex<Self>, Output = Self>
     + From<BitfieldIndex<Self>>
 {
-    /// Number of bits (size) of the bitfield.
+    /// Number of bits (`size` in bits) of the `Bitfield`.
     ///
     /// # Examples
     /// ```rust
@@ -40,7 +40,7 @@ pub trait Bitfield:
     /// ```
     const BIT_SIZE: usize;
 
-    /// Value of the bitfield with the least significant bit set.
+    /// Value of the `Bitfield` with the least significant bit set.
     ///
     /// # Examples
     /// ```rust
@@ -57,7 +57,7 @@ pub trait Bitfield:
     /// ```
     const ONE: Self;
 
-    /// Value of the bitfield with every bit unset.
+    /// Value of the `Bitfield` with every bit unset.
     ///
     /// # Examples
     /// ```rust
@@ -74,7 +74,7 @@ pub trait Bitfield:
     /// ```
     const NONE: Self;
 
-    /// Value of the bitfield with every bit set.
+    /// Value of the `Bitfield` with every bit set.
     ///
     /// # Examples
     /// ```rust
