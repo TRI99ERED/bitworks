@@ -91,7 +91,7 @@ pub trait Bitfield:
     /// ```
     const ALL: Self;
 
-    /// Constructs empty Bitfield.
+    /// Constructs empty `Bitfield`.
     ///
     /// # Examples
     /// ```rust
@@ -111,7 +111,7 @@ pub trait Bitfield:
         Self::NONE
     }
 
-    /// Constructs Bitfield from BitfieldIndex.
+    /// Constructs `Bitfield` from [`BitfieldIndex`].
     ///
     /// # Examples
     /// ```rust
@@ -137,7 +137,7 @@ pub trait Bitfield:
         Self::ONE << *index
     }
 
-    /// Constructs Bitfield from FlagsEnum.
+    /// Constructs `Bitfield` from `T`, where `T` implements [`FlagsEnum`].
     ///
     /// # Examples
     /// ```rust
@@ -199,10 +199,10 @@ pub trait Bitfield:
         Self::ONE << BitfieldIndex::<Self>::from(*flag)
     }
 
-    /// Expands Bitfield to a bigger one.
+    /// Expands `Bitfield` to a bigger one.
     ///
     /// # Errors
-    /// Size of Res is smaller, than size of Self.
+    /// Size of `Res` is smaller, than size of `Self`.
     ///
     /// # Examples
     /// ```rust
@@ -238,10 +238,10 @@ pub trait Bitfield:
         }
     }
 
-    /// Expands Bitfield to a bigger one. Uses unsafe optimizations.
+    /// Expands `Bitfield` to a bigger one. Uses [`unsafe`] optimizations.
     ///
     /// # Errors
-    /// Size of Res is smaller, than size of Self.
+    /// Size of `Res` is smaller, than size of `Self`.
     ///
     /// # Examples
     /// ```rust
@@ -279,9 +279,8 @@ pub trait Bitfield:
         }
     }
 
-    /// Builds Bitfield from slice over boolean values.<br/>
-    /// Maintains the same index order: leftmost slice item becomes rightmost bit
-    /// in number representation.
+    /// Builds `Bitfield` from [`slice`] over [`bool`]ean values.<br/>
+    /// Maintains the same index order: leftmost `slice` item becomes the least significant bit.
     ///
     /// # Examples
     /// ```rust
@@ -305,7 +304,7 @@ pub trait Bitfield:
         slice.iter().take(Self::BIT_SIZE).copied().collect()
     }
 
-    /// Builds Bitfield from slice over T values, where T implements FlagsEnum.
+    /// Builds `Bitfield` from slice over `T` values, where `T` implements [`FlagsEnum`].<br/>
     /// Considers contained variants as set bits.
     ///
     /// # Examples
@@ -415,7 +414,7 @@ pub trait Bitfield:
         })
     }
 
-    /// Sets bit at index to value. Returns copy of the resulting bitfield.
+    /// Sets bit at [`index`][BitfieldIndex] to value. Returns copy of the resulting `Bitfield`.
     ///
     /// # Examples
     /// ```rust
@@ -447,7 +446,7 @@ pub trait Bitfield:
         self.clone()
     }
 
-    /// Returns a copy of a bit at index.
+    /// Returns a copy of a bit at [`index`][BitfieldIndex].
     ///
     /// # Examples
     /// ```rust
@@ -469,7 +468,7 @@ pub trait Bitfield:
         (self.clone() & bit) != Self::NONE
     }
 
-    /// Returns a [`BitRef`] holding an immutable reference to the bit at index.
+    /// Returns a [`BitRef`] holding an immutable reference to the bit at [`index`][BitfieldIndex].
     ///
     /// # Examples
     /// ```rust
@@ -490,7 +489,7 @@ pub trait Bitfield:
         BitRef(self.bit(index), index, self)
     }
 
-    /// Returns a [`BitMut`] holding a mutable reference to the bit at index.
+    /// Returns a [`BitMut`] holding a mutable reference to the bit at [`index`][BitfieldIndex].
     ///
     /// # Examples
     /// ```rust
@@ -516,7 +515,7 @@ pub trait Bitfield:
         BitMut(self.bit(index), index, self)
     }
 
-    /// Sets bit at index to 1. Returns copy of the resulting bitfield.
+    /// Sets bit at [`index`][BitfieldIndex] to 1. Returns copy of the resulting `Bitfield`.
     ///
     /// # Examples
     /// ```rust
@@ -541,7 +540,7 @@ pub trait Bitfield:
         self.clone()
     }
 
-    /// Sets bit at index to 0. Returns copy of the resulting bitfield.
+    /// Sets bit at [`index`][BitfieldIndex] to 0. Returns copy of the resulting `Bitfield`.
     ///
     /// # Examples
     /// ```rust
@@ -566,8 +565,8 @@ pub trait Bitfield:
         self.clone()
     }
 
-    /// Returns Set complement (`self′`) of bitfield.<br/>
-    /// Alias for `!` operator
+    /// Returns Set complement (`self′`) of `Bitfield`.<br/>
+    /// Alias for [`!`] operator
     ///
     /// # Examples
     /// ```rust
@@ -589,8 +588,8 @@ pub trait Bitfield:
         !self
     }
 
-    /// Returns Set union (`self ∪ other`) of two bitfields.<br/>
-    /// Alias for `|` operator
+    /// Returns Set union (`self ∪ other`) of two `Bitfield`s.<br/>
+    /// Alias for [`|`] operator
     ///
     /// # Examples
     /// ```rust
@@ -612,8 +611,8 @@ pub trait Bitfield:
         self | other
     }
 
-    /// Returns Set intersection (`self ∩ other`) of two bitfields.<br/>
-    /// Alias for `&` operator
+    /// Returns Set intersection (`self ∩ other`) of two `Bitfield`s.<br/>
+    /// Alias for [`&`] operator
     ///
     /// # Examples
     /// ```rust
@@ -635,7 +634,7 @@ pub trait Bitfield:
         self & other
     }
 
-    /// Returns Set difference (`self \ other`) of two bitfields.
+    /// Returns Set difference (`self \ other`) of two `Bitfields`.
     ///
     /// # Examples
     /// ```rust
@@ -657,8 +656,8 @@ pub trait Bitfield:
         self & !other
     }
 
-    /// Returns Set symmetric difference (`self Δ other`) of two bitfields.<br/>
-    /// Alias for `^` operator
+    /// Returns Set symmetric difference (`self Δ other`) of two `Bitfield`s.<br/>
+    /// Alias for [`^`] operator
     ///
     /// # Examples
     /// ```rust
@@ -680,10 +679,10 @@ pub trait Bitfield:
         self ^ other
     }
 
-    /// Combines two Bitfields to create a bigger one.
+    /// Combines two `Bitfield`s to create a bigger one.
     ///
     /// # Errors
-    /// Size of Res is smaller, than the sum of size of Self and size of Other.
+    /// Size of `Res` is smaller, than the sum of size of `Self` and size of `Other`.
     ///
     /// # Examples
     /// ```rust
@@ -732,10 +731,10 @@ pub trait Bitfield:
         }
     }
 
-    /// Splits Bitfield into two smaller ones.
+    /// Splits `Bitfield` into two smaller ones.
     ///
     /// # Errors
-    /// Size of Self is smaller, than the sum of size of Res1 and size of Res2.
+    /// Size of `Self` is smaller, than the sum of size of `Res1` and size of `Res2`.
     ///
     /// # Examples
     /// ```rust
@@ -782,10 +781,10 @@ pub trait Bitfield:
         }
     }
 
-    /// Combines two Bitfields to create a bigger one. Uses unsafe optimizations.
+    /// Combines two `Bitfield`s to create a bigger one. Uses [`unsafe`] optimizations.
     ///
     /// # Errors
-    /// Size of Res is smaller, than the sum of size of Self and size of Other.
+    /// Size of `Res` is smaller, than the sum of size of `Self` and size of `Other`.
     ///
     /// # Examples
     /// ```rust
@@ -832,10 +831,10 @@ pub trait Bitfield:
         }
     }
 
-    /// Splits Bitfield into two smaller ones. Uses unsafe optimizations.
+    /// Splits `Bitfield` into two smaller ones. Uses [`unsafe`] optimizations.
     ///
     /// # Errors
-    /// Size of Self is smaller, than the sum of size of Res1 and size of Res2.
+    /// Size of `Self` is smaller, than the sum of size of `Res1` and size of `Res2`.
     ///
     /// # Examples
     /// ```rust
@@ -883,7 +882,7 @@ pub trait Bitfield:
         }
     }
 
-    /// Returns iterator over bits of the bitfield in boolean representation.
+    /// Returns iterator over bits of the `Bitfield` in [`bool`]ean representation.
     ///
     /// # Examples
     /// ```rust
@@ -915,7 +914,7 @@ pub trait Bitfield:
     }
 
     /// Returns iterator over [`BitRef`] holding immutable references
-    /// to bits of the bitfield in boolean representation.
+    /// to bits of the bitfield in [`bool`]ean representation.
     ///
     /// # Examples
     /// ```rust
@@ -947,7 +946,7 @@ pub trait Bitfield:
     }
 
     /// Returns iterator over [`BitMut`] holding mutable references
-    /// to bits of the bitfield in boolean representation.
+    /// to bits of the bitfield in [`bool`]ean representation.
     ///
     /// # Examples
     /// ```rust
@@ -975,7 +974,7 @@ pub trait Bitfield:
             .map(move |i| unsafe { p.as_mut().unwrap().bit_mut(i) })
     }
 
-    /// Returns iterator over indeces of the set bits of the bitfield.
+    /// Returns iterator over [`indeces`][BitfieldIndex] of the set bits of the `Bitfield`.
     ///
     /// # Examples
     /// ```rust
@@ -1005,7 +1004,7 @@ pub trait Bitfield:
         })
     }
 
-    /// Returns iterator over indeces of the unset bits of the bitfield.
+    /// Returns iterator over [`indeces`][BitfieldIndex] of the unset bits of the `Bitfield`.
     ///
     /// # Examples
     /// ```rust
@@ -1037,8 +1036,8 @@ pub trait Bitfield:
         })
     }
 
-    /// Returns iterator over set bit indeces of the bitfield
-    /// converted to target type T, where T implements FlagsEnum.
+    /// Returns iterator over set bit [`indeces`][BitfieldIndex] of the `Bitfield`
+    /// converted to target type `T`, where `T` implements [`FlagsEnum`].
     ///
     /// # Examples
     /// ```rust
@@ -1098,8 +1097,8 @@ pub trait Bitfield:
         self.ones().filter_map(|i| T::try_from(i).ok())
     }
 
-    /// Returns iterator over unset bit indeces of the bitfield
-    /// converted to target type T, where T implements FlagsEnum.
+    /// Returns iterator over unset bit [`indeces`][BitfieldIndex] of the `Bitfield`
+    /// converted to target type `T`, where `T` implements [`FlagsEnum`].
     ///
     /// # Examples
     /// ```rust
@@ -1167,7 +1166,7 @@ pub trait Bitfield:
 /// * [`Bitfield::fast_combine()`]
 /// * [`Bitfield::fast_split()`]
 ///
-/// All the methods above have corresponding versions without `fast_` prefix, which contains no unsafe code
+/// All the methods above have corresponding versions without `fast_` prefix, which contains no [`unsafe`] code
 /// and aren't restricted to only `Simple` types.
 ///
 /// # Safety
