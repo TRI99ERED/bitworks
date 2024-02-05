@@ -1,9 +1,8 @@
-//! Module containing Bitfield16.
+//! Module containing [`Bitfield16`].
 
 use crate::{
     bitfield::{Bitfield, Simple},
     error::{ConvError, ConvTarget},
-    // iter::Bits,
     prelude::{Bitfield128, Bitfield32, Bitfield64, Bitfield8, BitfieldIndex, FlagsEnum},
 };
 use std::{
@@ -19,13 +18,13 @@ type Inner = u16;
 type BIndex = BitfieldIndex<Bitfield16>;
 const BITS: usize = 16;
 
-/// Bitfield of size 16.
+/// [`Bitfield`] of size 16.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Default, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Bitfield16(Inner);
 
 impl Bitfield16 {
-    /// Returns the inner representation of Bitfield8.
+    /// Returns the inner representation of `Bitfield16`.
     ///
     /// # Examples
     /// ```rust

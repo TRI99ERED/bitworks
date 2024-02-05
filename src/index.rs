@@ -1,4 +1,4 @@
-//! Module containing BitfieldIndex.
+//! Module containing [`BitfieldIndex`].
 
 use crate::{
     error::{ConvError, ConvResult, ConvTarget},
@@ -27,7 +27,7 @@ where
     /// Shortcut from having to use `BitfieldIndex::<T>::try_from(T::BITS - 1).unwrap()`
     pub const MAX: Self = Self(T::BIT_SIZE - 1, PhantomData);
 
-    /// Returns value of `BitfieldIndex`.
+    /// Returns value of `BitfieldIndex` as [`usize`].
     ///
     /// # Examples
     /// ```
@@ -43,7 +43,7 @@ where
         self.0
     }
 
-    /// Returns optional `BitfieldIndex`, that is sum of self and other, or `None` on overflow.
+    /// Returns [`Some`] `BitfieldIndex`, that is sum of `self` and `other`, or [`None`] on overflow.
     ///
     /// # Examples
     /// ```
@@ -69,7 +69,7 @@ where
             .map(|i| Self(i, PhantomData))
     }
 
-    /// Returns optional `BitfieldIndex`, that is difference of self and other, or `None` on overflow.
+    /// Returns [`Some`] `BitfieldIndex`, that is difference of `self` and `other`, or [`None`] on overflow.
     ///
     /// # Examples
     /// ```
@@ -92,7 +92,8 @@ where
         self.0.checked_sub(other.0).map(|i| Self(i, PhantomData))
     }
 
-    /// Returns `BitfieldIndex`, that is sum of self and other, or `BitfieldIndex::<T>::MAX` on overflow.
+    /// Returns `BitfieldIndex`, that is sum of `self` and `other`,
+    /// or [`BitfieldIndex::<T>::MAX`] on overflow.
     ///
     /// # Examples
     /// ```
@@ -115,7 +116,8 @@ where
         self.checked_add(other).unwrap_or(Self::MAX)
     }
 
-    /// Returns `BitfieldIndex`, that is difference of self and other, or `BitfieldIndex::<T>::MIN` on overflow.
+    /// Returns `BitfieldIndex`, that is difference of `self` and `other`,
+    /// or [`BitfieldIndex::<T>::MIN`] on overflow.
     ///
     /// # Examples
     /// ```
@@ -138,7 +140,7 @@ where
         self.checked_sub(other).unwrap_or(Self::MIN)
     }
 
-    /// Saturating conversion between BifieldIndeces.
+    /// Saturating conversion between `BifieldIndex`es.
     #[inline(always)]
     pub fn to_other<U>(self) -> BitfieldIndex<U>
     where
@@ -151,10 +153,10 @@ where
         }
     }
 
-    /// Attempted conversion between BifieldIndeces.
+    /// Attempted conversion between `BifieldIndex`es.
     ///
     /// # Errors
-    /// U::BIT_SIZE is smaller, than T::BIT_SIZE
+    /// `U::BIT_SIZE` is smaller, than `T::BIT_SIZE`.
     #[inline(always)]
     pub fn try_to_other<U>(self) -> ConvResult<BitfieldIndex<U>>
     where
@@ -172,13 +174,13 @@ where
         }
     }
 
-    /// Range unsafe sum of self and other.
+    /// Range unsafe sum of `self` and `other`.
     #[inline(always)]
     pub(crate) fn __add(&self, other: Self) -> Self {
         Self(self.0 + other.0, PhantomData)
     }
 
-    /// Range unsafe difference of self and other.
+    /// Range unsafe difference of `self` and `other`.
     #[inline(always)]
     pub(crate) fn __sub(&self, other: Self) -> Self {
         Self(self.0 - other.0, PhantomData)

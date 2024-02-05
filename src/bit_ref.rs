@@ -1,3 +1,5 @@
+//! Module containing [`BitRef`] and [`BitMut`] smart pointers.
+
 use crate::{bitfield::Bitfield, prelude::BitfieldIndex};
 use std::{
     fmt::Debug,

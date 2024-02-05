@@ -1,4 +1,4 @@
-//! Module containing Bitfield.
+//! Module containing [`Bitfield`].
 
 use crate::{
     bit_ref::{BitMut, BitRef},

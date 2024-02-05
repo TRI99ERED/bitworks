@@ -1,8 +1,8 @@
-//! Module containing FlagsEnum.
+//! Module containing [`FlagsEnum`].
 
 use crate::{bitfield::Bitfield, index::BitfieldIndex};
 
-/// Marker trait for `enum`s, whose variants represent the different indeces of [`Bitfield`].
+/// Marker trait for [`enum`]s, whose variants represent the different indeces of [`Bitfield`].
 ///
 /// # Examples
 /// ```
@@ -68,6 +68,7 @@ where
     Self::Bitfield: Bitfield,
     BitfieldIndex<Self::Bitfield>: From<Self>,
 {
+    /// [`Bitfield`] which bits `FlagsEnum` enumerates
     type Bitfield;
 }
 

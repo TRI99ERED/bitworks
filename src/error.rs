@@ -1,4 +1,4 @@
-//! Module containing error types.
+//! Module containing [`ConvError`].
 
 use std::{
     error::Error,
