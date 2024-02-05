@@ -634,7 +634,7 @@ pub trait Bitfield:
         self & other
     }
 
-    /// Returns Set difference (`self \ other`) of two `Bitfields`.
+    /// Returns Set difference (`self \ other`) of two `Bitfield`s.
     ///
     /// # Examples
     /// ```rust
@@ -1079,7 +1079,7 @@ pub trait Bitfield:
     /// }
     ///
     ///                                // E D _ B A
-    /// let bitfield = Bitfield8::from(0b_0_1_1_0_1); // implements Bitfield
+    /// let bitfield = Bitfield8::from(0b_0_1_1_0_1);
     /// let mut iter = Bitfield::selected_variants::<E>(&bitfield);
     ///
     /// assert_eq!(iter.next(), Some(E::A));
@@ -1140,7 +1140,7 @@ pub trait Bitfield:
     /// }
     ///
     ///                                // E D _ B A
-    /// let bitfield = Bitfield8::from(0b_0_1_1_0_1); // implements Bitfield
+    /// let bitfield = Bitfield8::from(0b_0_1_1_0_1);
     /// let mut iter = Bitfield::unselected_variants::<E>(&bitfield);
     ///
     /// assert_eq!(iter.next(), Some(E::B));
