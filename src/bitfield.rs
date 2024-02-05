@@ -32,7 +32,7 @@ pub trait Bitfield:
     /// # fn main() -> Result<(), Box<dyn Error>> {
     /// use simple_bitfield::prelude::{Bitfield, Bitfield8};
     ///
-    /// let size_in_bits = <Bitfield8 as Bitfield>::BIT_SIZE;
+    /// let size_in_bits = Bitfield8::BIT_SIZE;
     ///
     /// assert_eq!(size_in_bits, 8);
     /// #   Ok(())
@@ -49,7 +49,7 @@ pub trait Bitfield:
     /// # fn main() -> Result<(), Box<dyn Error>> {
     /// use simple_bitfield::prelude::{Bitfield, Bitfield8};
     ///
-    /// let bitfield: Bitfield8 = Bitfield::ONE;
+    /// let bitfield = Bitfield8::ONE;
     ///
     /// assert_eq!(bitfield.into_inner(), 0b00000001);
     /// #   Ok(())
@@ -66,7 +66,7 @@ pub trait Bitfield:
     /// # fn main() -> Result<(), Box<dyn Error>> {
     /// use simple_bitfield::prelude::{Bitfield, Bitfield8};
     ///
-    /// let bitfield: Bitfield8 = Bitfield::NONE;
+    /// let bitfield = Bitfield8::NONE;
     ///
     /// assert_eq!(bitfield.into_inner(), 0b00000000);
     /// #   Ok(())
@@ -83,7 +83,7 @@ pub trait Bitfield:
     /// # fn main() -> Result<(), Box<dyn Error>> {
     /// use simple_bitfield::prelude::{Bitfield, Bitfield8};
     ///
-    /// let bitfield: Bitfield8 = Bitfield::ALL;
+    /// let bitfield = Bitfield8::ALL;
     ///
     /// assert_eq!(bitfield.into_inner(), 0b11111111);
     /// #   Ok(())
@@ -100,7 +100,7 @@ pub trait Bitfield:
     /// # fn main() -> Result<(), Box<dyn Error>> {
     /// use simple_bitfield::prelude::{Bitfield, Bitfield8};
     ///
-    /// let bitfield: Bitfield8 = Bitfield::new();
+    /// let bitfield = Bitfield8::new();
     ///
     /// assert_eq!(bitfield.into_inner(), 0b00000000);
     /// #   Ok(())
@@ -120,13 +120,13 @@ pub trait Bitfield:
     /// # fn main() -> Result<(), Box<dyn Error>> {
     /// use simple_bitfield::prelude::{Bitfield, Bitfield8, BitfieldIndex};
     ///
-    /// let index: BitfieldIndex<Bitfield8> = 0.try_into()?;
-    /// let bitfield: Bitfield8 = Bitfield::from_index(&index);
+    /// let index = 0.try_into()?;
+    /// let bitfield = Bitfield8::from_index(&index);
     ///
     /// assert_eq!(bitfield.into_inner(), 0b00000001);
     ///
-    /// let index: BitfieldIndex<Bitfield8> = 3.try_into()?;
-    /// let bitfield: Bitfield8 = Bitfield::from_index(&index);
+    /// let index = 3.try_into()?;
+    /// let bitfield = Bitfield8::from_index(&index);
     ///
     /// assert_eq!(bitfield.into_inner(), 0b00001000);
     /// #   Ok(())
@@ -179,12 +179,12 @@ pub trait Bitfield:
     /// }
     ///
     /// let flag = E::A;
-    /// let bitfield: Bitfield8 = Bitfield::from_flag(&flag);
+    /// let bitfield = Bitfield8::from_flag(&flag);
     ///
     /// assert_eq!(bitfield.into_inner(), 0b00000001);
     ///
     /// let flag = E::D;
-    /// let bitfield: Bitfield8 = Bitfield::from_flag(&flag);
+    /// let bitfield = Bitfield8::from_flag(&flag);
     ///
     /// assert_eq!(bitfield.into_inner(), 0b00001000);
     /// # Ok(())
@@ -211,8 +211,8 @@ pub trait Bitfield:
     /// # fn main() -> Result<(), Box<dyn Error>> {
     /// use simple_bitfield::prelude::{Bitfield, Bitfield8, Bitfield16};
     ///
-    /// let bitfield8: Bitfield8 = Bitfield8::from(0b00000001);
-    /// let bitfield16: Bitfield16 = Bitfield::expand(&bitfield8)?;
+    /// let bitfield8 = Bitfield8::from(0b00000001);
+    /// let bitfield16: Bitfield16 = bitfield8.expand()?;
     ///
     /// assert_eq!(bitfield16.into_inner(), 0b0000000000000001);
     /// #   Ok(())
@@ -250,8 +250,8 @@ pub trait Bitfield:
     /// # fn main() -> Result<(), Box<dyn Error>> {
     /// use simple_bitfield::prelude::{Bitfield, Bitfield8, Bitfield16};
     ///
-    /// let bitfield8: Bitfield8 = Bitfield8::from(0b00000001);
-    /// let bitfield16: Bitfield16 = Bitfield::fast_expand(&bitfield8)?;
+    /// let bitfield8 = Bitfield8::from(0b00000001);
+    /// let bitfield16: Bitfield16 = bitfield8.fast_expand()?;
     ///
     /// assert_eq!(bitfield16.into_inner(), 0b0000000000000001);
     /// #   Ok(())
@@ -291,7 +291,7 @@ pub trait Bitfield:
     ///
     /// // Same index order
     /// let slice: &[bool] = &[true, false, true, false, true, false, true, false];
-    /// let bitfield: Bitfield8 = Bitfield::from_slice_bool(slice);
+    /// let bitfield = Bitfield8::from_slice_bool(slice);
     ///
     /// assert_eq!(bitfield.into_inner(), 0b01010101);
     /// #   Ok(())
@@ -347,7 +347,7 @@ pub trait Bitfield:
     /// }
     ///
     /// let slice: &[E] = &[E::A, E::E, E::D];
-    /// let bitfield: Bitfield8 = Bitfield::from_slice_flags(slice);
+    /// let bitfield = Bitfield8::from_slice_flags(slice);
     ///
     /// assert_eq!(bitfield.into_inner(), 0b00011001);
     /// #   Ok(())
@@ -373,7 +373,7 @@ pub trait Bitfield:
     ///
     /// let bitfield = Bitfield8::from(0b00000111);
     ///
-    /// assert_eq!(Bitfield::count_ones(&bitfield), 3);
+    /// assert_eq!(bitfield.count_ones(), 3);
     /// #   Ok(())
     /// # }
     /// ```
@@ -399,7 +399,7 @@ pub trait Bitfield:
     ///
     /// let bitfield = Bitfield8::from(0b00000111);
     ///
-    /// assert_eq!(Bitfield::count_zeros(&bitfield), 5);
+    /// assert_eq!(bitfield.count_zeros(), 5);
     /// #   Ok(())
     /// # }
     /// ```
@@ -457,8 +457,8 @@ pub trait Bitfield:
     ///
     /// let bitfield = Bitfield8::new().set_bit(1.try_into()?, true);
     ///
-    /// assert_eq!(Bitfield::bit(&bitfield, 0.try_into()?), false);
-    /// assert_eq!(Bitfield::bit(&bitfield, 1.try_into()?), true);
+    /// assert_eq!(bitfield.bit(0.try_into()?), false);
+    /// assert_eq!(bitfield.bit(1.try_into()?), true);
     /// #   Ok(())
     /// # }
     /// ```
@@ -479,8 +479,8 @@ pub trait Bitfield:
     ///
     /// let bitfield = Bitfield8::new().set_bit(1.try_into()?, true);
     ///
-    /// assert_eq!(*Bitfield::bit_ref(&bitfield, 0.try_into()?), false);
-    /// assert_eq!(*Bitfield::bit_ref(&bitfield, 1.try_into()?), true);
+    /// assert_eq!(*bitfield.bit_ref(0.try_into()?), false);
+    /// assert_eq!(*bitfield.bit_ref(1.try_into()?), true);
     /// #   Ok(())
     /// # }
     /// ```
@@ -500,13 +500,13 @@ pub trait Bitfield:
     ///
     /// let mut bitfield = Bitfield8::new();
     ///
-    /// assert_eq!(Bitfield::bit(&bitfield, 0.try_into()?), false);
-    /// assert_eq!(Bitfield::bit(&bitfield, 1.try_into()?), false);
+    /// assert_eq!(bitfield.bit(0.try_into()?), false);
+    /// assert_eq!(bitfield.bit(1.try_into()?), false);
     ///
-    /// *Bitfield::bit_mut(&mut bitfield, 0.try_into()?) = true;
+    /// *bitfield.bit_mut(0.try_into()?) = true;
     ///
-    /// assert_eq!(Bitfield::bit(&bitfield, 0.try_into()?), true);
-    /// assert_eq!(Bitfield::bit(&bitfield, 1.try_into()?), false);
+    /// assert_eq!(bitfield.bit(0.try_into()?), true);
+    /// assert_eq!(bitfield.bit(1.try_into()?), false);
     /// #   Ok(())
     /// # }
     /// ```
@@ -576,7 +576,7 @@ pub trait Bitfield:
     /// use simple_bitfield::prelude::{Bitfield, Bitfield8};
     ///
     /// let a = Bitfield8::from(0b11110000);
-    /// let b = Bitfield::complement(a);
+    /// let b = a.complement();
     ///
     /// assert_eq!(a.into_inner(), 0b11110000);
     /// assert_eq!(b.into_inner(), 0b00001111);
@@ -600,7 +600,7 @@ pub trait Bitfield:
     ///
     /// let a = Bitfield8::from(0b11001100);
     /// let b = Bitfield8::from(0b11110000);
-    /// let c = Bitfield::union(a, b);
+    /// let c = a.union(b);
     ///
     /// assert_eq!(c.into_inner(), 0b11111100);
     /// #   Ok(())
@@ -623,7 +623,7 @@ pub trait Bitfield:
     ///
     /// let a = Bitfield8::from(0b11001100);
     /// let b = Bitfield8::from(0b11110000);
-    /// let c = Bitfield::intersection(a, b);
+    /// let c = a.intersection(b);
     ///
     /// assert_eq!(c.into_inner(), 0b11000000);
     /// #   Ok(())
@@ -645,7 +645,7 @@ pub trait Bitfield:
     ///
     /// let a = Bitfield8::from(0b11001100);
     /// let b = Bitfield8::from(0b11110000);
-    /// let c = Bitfield::difference(a, b);
+    /// let c = a.difference(b);
     ///
     /// assert_eq!(c.into_inner(), 0b00001100);
     /// #   Ok(())
@@ -668,7 +668,7 @@ pub trait Bitfield:
     ///
     /// let a = Bitfield8::from(0b11001100); // implements Bitfield
     /// let b = Bitfield8::from(0b11110000);
-    /// let c = Bitfield::sym_difference(a, b);
+    /// let c = a.sym_difference(b);
     ///
     /// assert_eq!(c.into_inner(), 0b00111100);
     /// #   Ok(())
@@ -691,9 +691,9 @@ pub trait Bitfield:
     /// # fn main() -> Result<(), Box<dyn Error>> {
     /// use simple_bitfield::prelude::{Bitfield, Bitfield8, Bitfield16};
     ///
-    /// let bitfield8_1: Bitfield8 = Bitfield8::from(0b00000001);
-    /// let bitfield8_2: Bitfield8 = Bitfield8::from(0b00000011);
-    /// let bitfield16: Bitfield16 = Bitfield::combine(&bitfield8_1, &bitfield8_2)?;
+    /// let bitfield8_1 = Bitfield8::from(0b00000001);
+    /// let bitfield8_2 = Bitfield8::from(0b00000011);
+    /// let bitfield16: Bitfield16 = bitfield8_1.combine(&bitfield8_2)?;
     ///
     /// assert_eq!(bitfield16.into_inner(), 0b0000001100000001);
     /// #   Ok(())
@@ -743,8 +743,8 @@ pub trait Bitfield:
     /// # fn main() -> Result<(), Box<dyn Error>> {
     /// use simple_bitfield::prelude::{Bitfield, Bitfield8, Bitfield16};
     ///
-    /// let bitfield16: Bitfield16 = Bitfield16::from(0b0000001100000001);
-    /// let (bitfield8_1, bitfield8_2): (Bitfield8, Bitfield8) = Bitfield::split(&bitfield16)?;
+    /// let bitfield16 = Bitfield16::from(0b0000001100000001);
+    /// let (bitfield8_1, bitfield8_2): (Bitfield8, Bitfield8) = bitfield16.split()?;
     ///
     /// assert_eq!(bitfield8_1.into_inner(), 0b00000001);
     /// assert_eq!(bitfield8_2.into_inner(), 0b00000011);
@@ -793,9 +793,9 @@ pub trait Bitfield:
     /// # fn main() -> Result<(), Box<dyn Error>> {
     /// use simple_bitfield::prelude::{Bitfield, Bitfield8, Bitfield16};
     ///
-    /// let bitfield8_1: Bitfield8 = Bitfield8::from(0b00000001);
-    /// let bitfield8_2: Bitfield8 = Bitfield8::from(0b00000011);
-    /// let bitfield16: Bitfield16 = Bitfield::fast_combine(&bitfield8_1, &bitfield8_2)?;
+    /// let bitfield8_1 = Bitfield8::from(0b00000001);
+    /// let bitfield8_2 = Bitfield8::from(0b00000011);
+    /// let bitfield16: Bitfield16 = bitfield8_1.fast_combine(&bitfield8_2)?;
     ///
     /// assert_eq!(bitfield16.into_inner(), 0b0000001100000001);
     /// #   Ok(())
@@ -843,8 +843,8 @@ pub trait Bitfield:
     /// # fn main() -> Result<(), Box<dyn Error>> {
     /// use simple_bitfield::prelude::{Bitfield, Bitfield8, Bitfield16};
     ///
-    /// let bitfield16: Bitfield16 = Bitfield16::from(0b0000001100000001);
-    /// let (bitfield8_1, bitfield8_2): (Bitfield8, Bitfield8) = Bitfield::fast_split(&bitfield16)?;
+    /// let bitfield16 = Bitfield16::from(0b0000001100000001);
+    /// let (bitfield8_1, bitfield8_2): (Bitfield8, Bitfield8) = bitfield16.fast_split()?;
     ///
     /// assert_eq!(bitfield8_1.into_inner(), 0b00000001);
     /// assert_eq!(bitfield8_2.into_inner(), 0b00000011);
@@ -892,7 +892,7 @@ pub trait Bitfield:
     /// use simple_bitfield::prelude::{Bitfield, Bitfield8};
     ///
     /// let bitfield = Bitfield8::from(0b01010100);
-    /// let mut iter = Bitfield::bits(&bitfield);
+    /// let mut iter = bitfield.bits();
     ///
     /// assert_eq!(iter.next(), Some(false)); // 0
     /// assert_eq!(iter.next(), Some(false)); // 0
@@ -924,7 +924,7 @@ pub trait Bitfield:
     /// use simple_bitfield::prelude::{Bitfield, Bitfield8};
     ///
     /// let bitfield = Bitfield8::from(0b01010100);
-    /// let mut iter = Bitfield::bits_ref(&bitfield);
+    /// let mut iter = bitfield.bits_ref();
     ///
     /// assert_eq!(iter.next().as_deref(), Some(&false)); // 0
     /// assert_eq!(iter.next().as_deref(), Some(&false)); // 0
@@ -956,7 +956,7 @@ pub trait Bitfield:
     /// use simple_bitfield::prelude::{Bitfield, Bitfield8};
     ///
     /// let mut bitfield = Bitfield8::from(0b01010100);
-    /// let mut iter = Bitfield::bits_mut(&mut bitfield);
+    /// let mut iter = bitfield.bits_mut();
     ///
     /// for mut bit in iter {
     ///     *bit = !*bit;
@@ -984,7 +984,7 @@ pub trait Bitfield:
     /// use simple_bitfield::prelude::{Bitfield, Bitfield8};
     ///
     /// let bitfield = Bitfield8::from(0b01010100);
-    /// let mut iter = Bitfield::ones(&bitfield);
+    /// let mut iter = bitfield.ones();
     ///
     /// assert_eq!(iter.next(), Some(2.try_into()?));
     /// assert_eq!(iter.next(), Some(4.try_into()?));
@@ -1014,7 +1014,7 @@ pub trait Bitfield:
     /// use simple_bitfield::prelude::{Bitfield, Bitfield8};
     ///
     /// let bitfield = Bitfield8::from(0b01010100);
-    /// let mut iter = Bitfield::zeros(&bitfield);
+    /// let mut iter = bitfield.zeros();
     ///
     /// assert_eq!(iter.next(), Some(0.try_into()?));
     /// assert_eq!(iter.next(), Some(1.try_into()?));
@@ -1080,7 +1080,7 @@ pub trait Bitfield:
     ///
     ///                                // E D _ B A
     /// let bitfield = Bitfield8::from(0b_0_1_1_0_1);
-    /// let mut iter = Bitfield::selected_variants::<E>(&bitfield);
+    /// let mut iter = bitfield.selected_variants::<E>();
     ///
     /// assert_eq!(iter.next(), Some(E::A));
     /// assert_eq!(iter.next(), Some(E::D));
@@ -1141,7 +1141,7 @@ pub trait Bitfield:
     ///
     ///                                // E D _ B A
     /// let bitfield = Bitfield8::from(0b_0_1_1_0_1);
-    /// let mut iter = Bitfield::unselected_variants::<E>(&bitfield);
+    /// let mut iter = bitfield.unselected_variants::<E>();
     ///
     /// assert_eq!(iter.next(), Some(E::B));
     /// assert_eq!(iter.next(), Some(E::E));
