@@ -238,7 +238,7 @@ pub trait Bitfield:
         }
     }
 
-    /// Expands `Bitfield` to a bigger one. Uses [`unsafe`] optimizations.
+    /// Expands `Bitfield` to a bigger one. Uses `unsafe` optimizations.
     ///
     /// # Errors
     /// Size of `Res` is smaller, than size of `Self`.
@@ -781,7 +781,7 @@ pub trait Bitfield:
         }
     }
 
-    /// Combines two `Bitfield`s to create a bigger one. Uses [`unsafe`] optimizations.
+    /// Combines two `Bitfield`s to create a bigger one. Uses `unsafe` optimizations.
     ///
     /// # Errors
     /// Size of `Res` is smaller, than the sum of size of `Self` and size of `Other`.
@@ -831,7 +831,7 @@ pub trait Bitfield:
         }
     }
 
-    /// Splits `Bitfield` into two smaller ones. Uses [`unsafe`] optimizations.
+    /// Splits `Bitfield` into two smaller ones. Uses `unsafe` optimizations.
     ///
     /// # Errors
     /// Size of `Self` is smaller, than the sum of size of `Res1` and size of `Res2`.
@@ -1166,14 +1166,14 @@ pub trait Bitfield:
 /// * [`Bitfield::fast_combine()`]
 /// * [`Bitfield::fast_split()`]
 ///
-/// All the methods above have corresponding versions without `fast_` prefix, which contains no [`unsafe`] code
+/// All the methods above have corresponding versions without `fast_` prefix, which contains no `unsafe` code
 /// and aren't restricted to only `Simple` types.
 ///
 /// # Safety
 /// If you implement this trait, you are responsible for making sure, that memory representation of the implementor
 /// only contains the bitfield itself and no additional data (e.g. other fields in a struct).
 ///
-/// In general, any one-field tuple structs or one-field C-like structs are good implementors of this trait,
+/// In general, any `one-field tuple struct`s or `one-field C-like struct`s are good implementors of this trait,
 /// but only if the data in that field has consistent memory layout:<br/>
 /// E.g. any [`Sized`] owned primitive types or arrays of them, but not tuples, references, pointers etc.<br/>
 /// It is `unsafe` to implement this trait for second kind of structs and will lead to memory violations or
