@@ -66,6 +66,7 @@ use crate::{bitfield::Bitfield, index::BitfieldIndex};
 pub trait FlagsEnum: Sized + Clone + TryFrom<BitfieldIndex<Self::Bitfield>>
 where
     Self::Bitfield: Bitfield,
+    BitfieldIndex<Self::Bitfield>: From<Self>,
 {
     type Bitfield;
 }

@@ -723,7 +723,7 @@ pub trait Bitfield:
     /// use simple_bitfield::prelude::{Bitfield, Bitfield8};
     ///
     /// let bitfield = Bitfield8::from(0b01010100);
-    /// let mut iter = Bitfield::set_indeces(&bitfield);
+    /// let mut iter = Bitfield::ones(&bitfield);
     ///
     /// assert_eq!(iter.next(), Some(2.try_into()?));
     /// assert_eq!(iter.next(), Some(4.try_into()?));
@@ -733,7 +733,7 @@ pub trait Bitfield:
     /// # }
     /// ```
     #[inline(always)]
-    fn set_indeces(&self) -> impl Iterator<Item = BitfieldIndex<Self>> {
+    fn ones(&self) -> impl Iterator<Item = BitfieldIndex<Self>> {
         self.bits().enumerate().filter_map(|(i, bit)| {
             if bit {
                 Some(i.try_into().unwrap())
@@ -753,7 +753,7 @@ pub trait Bitfield:
     /// use simple_bitfield::prelude::{Bitfield, Bitfield8};
     ///
     /// let bitfield = Bitfield8::from(0b01010100);
-    /// let mut iter = Bitfield::unset_indeces(&bitfield);
+    /// let mut iter = Bitfield::zeros(&bitfield);
     ///
     /// assert_eq!(iter.next(), Some(0.try_into()?));
     /// assert_eq!(iter.next(), Some(1.try_into()?));
@@ -765,7 +765,7 @@ pub trait Bitfield:
     /// # }
     /// ```
     #[inline(always)]
-    fn unset_indeces(&self) -> impl Iterator<Item = BitfieldIndex<Self>> {
+    fn zeros(&self) -> impl Iterator<Item = BitfieldIndex<Self>> {
         self.bits().enumerate().filter_map(|(i, bit)| {
             if !bit {
                 Some(i.try_into().unwrap())
@@ -833,7 +833,7 @@ pub trait Bitfield:
         T: FlagsEnum<Bitfield = Self>,
         BitfieldIndex<Self>: From<T>,
     {
-        self.set_indeces().filter_map(|i| T::try_from(i).ok())
+        self.ones().filter_map(|i| T::try_from(i).ok())
     }
 
     /// Returns iterator over unset bit indeces of the bitfield
@@ -894,7 +894,7 @@ pub trait Bitfield:
         T: FlagsEnum<Bitfield = Self>,
         BitfieldIndex<Self>: From<T>,
     {
-        self.unset_indeces().filter_map(|i| T::try_from(i).ok())
+        self.zeros().filter_map(|i| T::try_from(i).ok())
     }
 }
 
