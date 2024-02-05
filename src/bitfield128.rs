@@ -1,7 +1,7 @@
 //! Module containing Bitfield128.
 
 use crate::{
-    bitfield::Bitfield,
+    bitfield::{Bitfield, Simple},
     // iter::Bits,
     prelude::{Bitfield16, Bitfield32, Bitfield64, Bitfield8, BitfieldIndex, FlagsEnum},
 };
@@ -62,6 +62,8 @@ impl Bitfield for Bitfield128 {
         self.0.count_zeros() as usize
     }
 }
+
+unsafe impl Simple for Bitfield128 {}
 
 impl From<Inner> for Bitfield128 {
     #[inline(always)]
@@ -200,17 +202,6 @@ impl ShrAssign<BIndex> for Bitfield128 {
         *self = self.shr(rhs)
     }
 }
-
-// impl IntoIterator for Bitfield128 {
-//     type Item = bool;
-
-//     type IntoIter = Bits<Self>;
-
-//     #[inline(always)]
-//     fn into_iter(self) -> Self::IntoIter {
-//         Self::IntoIter::new(self)
-//     }
-// }
 
 impl FromIterator<bool> for Bitfield128 {
     fn from_iter<T: IntoIterator<Item = bool>>(iter: T) -> Self {

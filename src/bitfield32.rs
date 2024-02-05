@@ -1,7 +1,7 @@
 //! Module containing Bitfield32.
 
 use crate::{
-    bitfield::Bitfield,
+    bitfield::{Bitfield, Simple},
     error::{ConvError, ConvTarget},
     // iter::Bits,
     prelude::{Bitfield128, Bitfield16, Bitfield64, Bitfield8, BitfieldIndex, FlagsEnum},
@@ -63,6 +63,8 @@ impl Bitfield for Bitfield32 {
         self.0.count_zeros() as usize
     }
 }
+
+unsafe impl Simple for Bitfield32 {}
 
 impl From<Inner> for Bitfield32 {
     #[inline(always)]
@@ -209,17 +211,6 @@ impl ShrAssign<BIndex> for Bitfield32 {
         *self = self.shr(rhs)
     }
 }
-
-// impl IntoIterator for Bitfield32 {
-//     type Item = bool;
-
-//     type IntoIter = Bits<Self>;
-
-//     #[inline(always)]
-//     fn into_iter(self) -> Self::IntoIter {
-//         Self::IntoIter::new(self)
-//     }
-// }
 
 impl FromIterator<bool> for Bitfield32 {
     fn from_iter<T: IntoIterator<Item = bool>>(iter: T) -> Self {
@@ -615,5 +606,91 @@ mod tests {
     fn test_sync() {
         fn assert_sync<T: Sync>() {}
         assert_sync::<Tested>();
+    }
+
+    #[test]
+    fn expand() -> TestResult {
+        let bitfield1 = Bitfield32::from(0b00011011);
+        let bitfield2: Bitfield64 = bitfield1.expand()?;
+
+        assert_eq!(bitfield2, Bitfield64::from(0b00011011));
+
+        let bitfield1 = Bitfield32::from(0b00011011);
+        let bitfield2: Bitfield128 = bitfield1.expand()?;
+
+        assert_eq!(bitfield2, Bitfield128::from(0b00011011));
+
+        Ok(())
+    }
+
+    #[test]
+    fn fast_expand() -> TestResult {
+        let bitfield1 = Bitfield32::from(0b00011011);
+        let bitfield2: Bitfield64 = bitfield1.fast_expand()?;
+
+        assert_eq!(bitfield2, Bitfield64::from(0b00011011));
+
+        let bitfield1 = Bitfield32::from(0b00011011);
+        let bitfield2: Bitfield128 = bitfield1.fast_expand()?;
+
+        assert_eq!(bitfield2, Bitfield128::from(0b00011011));
+
+        Ok(())
+    }
+
+    #[test]
+    fn combine() -> TestResult {
+        let bitfield1 = Bitfield32::new().set_bit(1.try_into()?, true);
+        let bitfield2 = Bitfield32::new().set_bit(1.try_into()?, true);
+
+        let bitfield3: Bitfield64 = bitfield1.combine(&bitfield2)?;
+
+        assert_eq!(
+            bitfield3,
+            Bitfield64::new()
+                .set_bit(1.try_into()?, true)
+                .set_bit((32 + 1).try_into()?, true)
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn split() -> TestResult {
+        let bitfield1 = Bitfield64::new()
+            .set_bit(1.try_into()?, true)
+            .set_bit((32 + 1).try_into()?, true);
+        let (bitfield2, bitfield3): (Bitfield32, Bitfield32) = bitfield1.split()?;
+
+        assert_eq!(bitfield2, Bitfield32::new().set_bit(1.try_into()?, true));
+        assert_eq!(bitfield3, Bitfield32::new().set_bit(1.try_into()?, true));
+        Ok(())
+    }
+
+    #[test]
+    fn fast_combine() -> TestResult {
+        let bitfield1 = Bitfield32::new().set_bit(1.try_into()?, true);
+        let bitfield2 = Bitfield32::new().set_bit(1.try_into()?, true);
+
+        let bitfield3: Bitfield64 = bitfield1.fast_combine(&bitfield2)?;
+
+        assert_eq!(
+            bitfield3,
+            Bitfield64::new()
+                .set_bit(1.try_into()?, true)
+                .set_bit((32 + 1).try_into()?, true)
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn fast_split() -> TestResult {
+        let bitfield1 = Bitfield64::new()
+            .set_bit(1.try_into()?, true)
+            .set_bit((32 + 1).try_into()?, true);
+        let (bitfield2, bitfield3): (Bitfield32, Bitfield32) = bitfield1.fast_split()?;
+
+        assert_eq!(bitfield2, Bitfield32::new().set_bit(1.try_into()?, true));
+        assert_eq!(bitfield3, Bitfield32::new().set_bit(1.try_into()?, true));
+        Ok(())
     }
 }

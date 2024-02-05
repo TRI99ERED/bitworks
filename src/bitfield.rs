@@ -2,6 +2,7 @@
 
 use crate::{
     bit_ref::{BitMut, BitRef},
+    error::{ConvError, ConvResult, ConvTarget},
     flags_enum::FlagsEnum,
     index::BitfieldIndex,
 };
@@ -98,6 +99,48 @@ pub trait Bitfield:
     #[inline(always)]
     fn from_index(index: BitfieldIndex<Self>) -> Self {
         Self::ONE << index
+    }
+
+    fn expand<Res>(&self) -> ConvResult<Res>
+    where
+        Res: Bitfield,
+    {
+        if Self::BIT_SIZE <= Res::BIT_SIZE {
+            let result = self
+                .bits()
+                .enumerate()
+                .map(|(i, bit)| (BitfieldIndex::<Res>::try_from(i).unwrap(), bit))
+                .fold(Res::new(), |mut acc, (i, bit)| acc.set_bit(i, bit));
+
+            Ok(result)
+        } else {
+            Err(ConvError::new(
+                ConvTarget::Field(Self::BIT_SIZE),
+                ConvTarget::Field(Res::BIT_SIZE),
+            ))
+        }
+    }
+
+    fn fast_expand<Res>(&self) -> ConvResult<Res>
+    where
+        Self: Simple,
+        Res: Bitfield + Simple,
+    {
+        if std::mem::size_of::<Self>() <= std::mem::size_of::<Res>() {
+            let mut result = Res::new();
+
+            let result_ptr = unsafe { std::mem::transmute(&mut result as *mut Res) };
+            let self_ptr = self as *const Self;
+            unsafe {
+                std::ptr::copy_nonoverlapping(self_ptr, result_ptr, 1);
+            }
+            Ok(result)
+        } else {
+            Err(ConvError::new(
+                ConvTarget::Field(Self::BIT_SIZE),
+                ConvTarget::Field(Res::BIT_SIZE),
+            ))
+        }
     }
 
     /// Builds Bitfield from slice over boolean values.<br/>
@@ -501,6 +544,129 @@ pub trait Bitfield:
         self ^ other
     }
 
+    fn combine<Other, Res>(&self, other: &Other) -> ConvResult<Res>
+    where
+        Other: Bitfield,
+        Res: Bitfield,
+    {
+        let combined = Self::BIT_SIZE + Other::BIT_SIZE;
+        if Res::BIT_SIZE == combined {
+            let result = self
+                .bits()
+                .enumerate()
+                .map(|(i, bit)| (BitfieldIndex::<Res>::try_from(i).unwrap(), bit))
+                .fold(Res::new(), |mut acc, (i, bit)| acc.set_bit(i, bit));
+
+            let result = other
+                .bits()
+                .enumerate()
+                .map(|(i, bit)| {
+                    (
+                        BitfieldIndex::<Res>::try_from(i + Self::BIT_SIZE).unwrap(),
+                        bit,
+                    )
+                })
+                .fold(result, |mut acc, (i, bit)| acc.set_bit(i, bit));
+            Ok(result)
+        } else {
+            Err(ConvError::new(
+                ConvTarget::Field(combined),
+                ConvTarget::Field(Res::BIT_SIZE),
+            ))
+        }
+    }
+
+    fn split<Res1, Res2>(&self) -> ConvResult<(Res1, Res2)>
+    where
+        Res1: Bitfield,
+        Res2: Bitfield,
+    {
+        let combined = Res1::BIT_SIZE + Res2::BIT_SIZE;
+        if Self::BIT_SIZE == combined {
+            let result1 = self
+                .bits()
+                .take(Res1::BIT_SIZE)
+                .enumerate()
+                .map(|(i, bit)| (BitfieldIndex::<Res1>::try_from(i).unwrap(), bit))
+                .fold(Res1::new(), |mut acc, (i, bit)| acc.set_bit(i, bit));
+
+            let result2 = self
+                .bits()
+                .skip(Res1::BIT_SIZE)
+                .enumerate()
+                .map(|(i, bit)| (BitfieldIndex::<Res2>::try_from(i).unwrap(), bit))
+                .fold(Res2::new(), |mut acc, (i, bit)| acc.set_bit(i, bit));
+
+            Ok((result1, result2))
+        } else {
+            Err(ConvError::new(
+                ConvTarget::Field(Self::BIT_SIZE),
+                ConvTarget::Field(combined),
+            ))
+        }
+    }
+
+    fn fast_combine<Other, Res>(&self, other: &Other) -> ConvResult<Res>
+    where
+        Self: Simple,
+        Other: Bitfield + Simple,
+        Res: Bitfield + Simple,
+    {
+        let combined = std::mem::size_of::<Self>() + std::mem::size_of::<Other>();
+        if std::mem::size_of::<Res>() == combined {
+            let mut result = Res::new();
+
+            let result_ptr = unsafe { std::mem::transmute(&mut result as *mut Res) };
+            let self_ptr = self as *const Self;
+            unsafe {
+                std::ptr::copy_nonoverlapping(self_ptr, result_ptr, 1);
+            }
+
+            let result_ptr = unsafe { std::mem::transmute(result_ptr.add(1)) };
+            let other_ptr = other as *const Other;
+            unsafe {
+                std::ptr::copy_nonoverlapping(other_ptr, result_ptr, 1);
+            }
+            Ok(result)
+        } else {
+            Err(ConvError::new(
+                ConvTarget::Field(combined),
+                ConvTarget::Field(Res::BIT_SIZE),
+            ))
+        }
+    }
+
+    fn fast_split<Res1, Res2>(&self) -> ConvResult<(Res1, Res2)>
+    where
+        Self: Simple,
+        Res1: Bitfield + Simple,
+        Res2: Bitfield + Simple,
+    {
+        let combined = std::mem::size_of::<Res1>() + std::mem::size_of::<Res2>();
+        if std::mem::size_of::<Self>() == combined {
+            let mut result1 = Res1::new();
+            let mut result2 = Res2::new();
+
+            let result1_ptr = &mut result1 as *mut Res1;
+            let self_ptr = unsafe { std::mem::transmute(self as *const Self) };
+            unsafe {
+                std::ptr::copy_nonoverlapping(self_ptr, result1_ptr, 1);
+            }
+
+            let result2_ptr = &mut result2 as *mut Res2;
+            let self_ptr = unsafe { std::mem::transmute(self_ptr.add(1)) };
+            unsafe {
+                std::ptr::copy_nonoverlapping(self_ptr, result2_ptr, 1);
+            }
+            Ok((result1, result2))
+        } else {
+            Err(ConvError::new(
+                ConvTarget::Field(Self::BIT_SIZE),
+                ConvTarget::Field(combined),
+            ))
+        }
+    }
+
     /// Returns iterator over bits of the bitfield in boolean representation.
     ///
     /// # Examples
@@ -731,3 +897,27 @@ pub trait Bitfield:
         self.unset_indeces().filter_map(|i| T::try_from(i).ok())
     }
 }
+
+/// Marker trait for simple [`Bitfield`]s.
+///
+/// Implementors of this trait get access to these methods defined on `Bitfield`:
+/// * [`Bitfield::fast_expand()`]
+/// * [`Bitfield::fast_combine()`]
+/// * [`Bitfield::fast_split()`]
+///
+/// All the methods above have corresponding versions without `fast_` prefix, which contains no unsafe code
+/// and aren't restricted to only `Simple` types.
+///
+/// # Safety
+/// If you implement this trait, you are responsible for making sure, that memory representation of the implementor
+/// only contains the bitfield itself and no additional data (e.g. other fields in a struct).
+///
+/// In general, any one-field tuple structs or one-field C-like structs are good implementors of this trait,
+/// but only if the data in that field has consistent memory layout:<br/>
+/// E.g. any [`Sized`] owned primitive types or arrays of them, but not tuples, references, pointers etc.<br/>
+/// It is `unsafe` to implement this trait for second kind of structs and will lead to memory violations or
+/// unintended and undefined behaviour.
+///
+/// If you're unsure about what this means, use built-in `Bitfield`s (they all implement `Simple`)
+/// or do not implement this trait for your custom `Bitfield` (the trade-off should be minimal).
+pub unsafe trait Simple: Bitfield {}
