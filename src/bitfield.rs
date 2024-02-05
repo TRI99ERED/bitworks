@@ -40,6 +40,21 @@ pub trait Bitfield:
     /// ```
     const BIT_SIZE: usize;
 
+    /// Value of the bitfield with the least significant bit set.
+    ///
+    /// # Examples
+    /// ```rust
+    /// # use std::error::Error;
+    /// #
+    /// # fn main() -> Result<(), Box<dyn Error>> {
+    /// use simple_bitfield::prelude::{Bitfield, Bitfield8};
+    ///
+    /// let bitfield: Bitfield8 = Bitfield::ONE;
+    ///
+    /// assert_eq!(bitfield.into_inner(), 0b00000001);
+    /// #   Ok(())
+    /// # }
+    /// ```
     const ONE: Self;
 
     /// Value of the bitfield with every bit unset.
@@ -96,11 +111,113 @@ pub trait Bitfield:
         Self::NONE
     }
 
+    /// Constructs Bitfield from BitfieldIndex.
+    ///
+    /// # Examples
+    /// ```rust
+    /// # use std::error::Error;
+    /// #
+    /// # fn main() -> Result<(), Box<dyn Error>> {
+    /// use simple_bitfield::prelude::{Bitfield, Bitfield8, BitfieldIndex};
+    ///
+    /// let index: BitfieldIndex<Bitfield8> = 0.try_into()?;
+    /// let bitfield: Bitfield8 = Bitfield::from_index(&index);
+    ///
+    /// assert_eq!(bitfield.into_inner(), 0b00000001);
+    ///
+    /// let index: BitfieldIndex<Bitfield8> = 3.try_into()?;
+    /// let bitfield: Bitfield8 = Bitfield::from_index(&index);
+    ///
+    /// assert_eq!(bitfield.into_inner(), 0b00001000);
+    /// #   Ok(())
+    /// # }
+    /// ```
     #[inline(always)]
-    fn from_index(index: BitfieldIndex<Self>) -> Self {
-        Self::ONE << index
+    fn from_index(index: &BitfieldIndex<Self>) -> Self {
+        Self::ONE << *index
     }
 
+    /// Constructs Bitfield from FlagsEnum.
+    ///
+    /// # Examples
+    /// ```rust
+    /// # use std::error::Error;
+    /// #
+    /// # fn main() -> Result<(), Box<dyn Error>> {
+    /// use simple_bitfield::{prelude::{Bitfield, Bitfield8, FlagsEnum, BitfieldIndex}, error::{ConvError, ConvTarget}};
+    ///
+    /// #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+    /// enum E {
+    ///     A, // 0
+    ///     B, // 1
+    ///     D  =  3,
+    ///     E, // 4
+    /// }
+    ///
+    /// impl TryFrom<BitfieldIndex<Bitfield8>> for E {
+    ///     type Error = ConvError;
+    ///
+    ///     fn try_from(index: BitfieldIndex<Bitfield8>) -> Result<Self, Self::Error> {
+    ///         match index.into_inner() {
+    ///             0 => Ok(E::A),
+    ///             1 => Ok(E::B),
+    ///             3 => Ok(E::D),
+    ///             4 => Ok(E::E),
+    ///             _ => Err(ConvError::new(ConvTarget::Index(8), ConvTarget::Enum(8))),
+    ///         }
+    ///     }
+    /// }
+    ///
+    /// impl From<E> for BitfieldIndex<Bitfield8> {
+    ///     fn from(value: E) -> Self {
+    ///         Self::try_from(value as usize).expect("Enum E should always be a valid index")
+    ///     }
+    /// }
+    ///
+    /// impl FlagsEnum for E {
+    ///     type Bitfield = Bitfield8;
+    /// }
+    ///
+    /// let flag = E::A;
+    /// let bitfield: Bitfield8 = Bitfield::from_flag(&flag);
+    ///
+    /// assert_eq!(bitfield.into_inner(), 0b00000001);
+    ///
+    /// let flag = E::D;
+    /// let bitfield: Bitfield8 = Bitfield::from_flag(&flag);
+    ///
+    /// assert_eq!(bitfield.into_inner(), 0b00001000);
+    /// # Ok(())
+    /// # }
+    /// ```
+    #[inline(always)]
+    fn from_flag<T>(flag: &T) -> Self
+    where
+        T: FlagsEnum<Bitfield = Self> + Copy,
+        BitfieldIndex<Self>: From<T>,
+    {
+        Self::ONE << BitfieldIndex::<Self>::from(*flag)
+    }
+
+    /// Expands Bitfield to a bigger one.
+    ///
+    /// # Errors
+    /// Size of Res is smaller, than size of Self.
+    ///
+    /// # Examples
+    /// ```rust
+    /// # use std::error::Error;
+    /// #
+    /// # fn main() -> Result<(), Box<dyn Error>> {
+    /// use simple_bitfield::prelude::{Bitfield, Bitfield8, Bitfield16};
+    ///
+    /// let bitfield8: Bitfield8 = Bitfield8::from(0b00000001);
+    /// let bitfield16: Bitfield16 = Bitfield::expand(&bitfield8)?;
+    ///
+    /// assert_eq!(bitfield16.into_inner(), 0b0000000000000001);
+    /// #   Ok(())
+    /// # }
+    /// ```
     fn expand<Res>(&self) -> ConvResult<Res>
     where
         Res: Bitfield,
@@ -121,6 +238,25 @@ pub trait Bitfield:
         }
     }
 
+    /// Expands Bitfield to a bigger one. Uses unsafe optimizations.
+    ///
+    /// # Errors
+    /// Size of Res is smaller, than size of Self.
+    ///
+    /// # Examples
+    /// ```rust
+    /// # use std::error::Error;
+    /// #
+    /// # fn main() -> Result<(), Box<dyn Error>> {
+    /// use simple_bitfield::prelude::{Bitfield, Bitfield8, Bitfield16};
+    ///
+    /// let bitfield8: Bitfield8 = Bitfield8::from(0b00000001);
+    /// let bitfield16: Bitfield16 = Bitfield::fast_expand(&bitfield8)?;
+    ///
+    /// assert_eq!(bitfield16.into_inner(), 0b0000000000000001);
+    /// #   Ok(())
+    /// # }
+    /// ```
     fn fast_expand<Res>(&self) -> ConvResult<Res>
     where
         Self: Simple,
@@ -333,7 +469,7 @@ pub trait Bitfield:
         (self.clone() & bit) != Self::NONE
     }
 
-    /// Returns a BitRef holding an immutable reference to the bit at index.
+    /// Returns a [`BitRef`] holding an immutable reference to the bit at index.
     ///
     /// # Examples
     /// ```rust
@@ -354,7 +490,7 @@ pub trait Bitfield:
         BitRef(self.bit(index), index, self)
     }
 
-    /// Returns a BitMut holding a mutable reference to the bit at index.
+    /// Returns a [`BitMut`] holding a mutable reference to the bit at index.
     ///
     /// # Examples
     /// ```rust
@@ -544,6 +680,26 @@ pub trait Bitfield:
         self ^ other
     }
 
+    /// Combines two Bitfields to create a bigger one.
+    ///
+    /// # Errors
+    /// Size of Res is smaller, than the sum of size of Self and size of Other.
+    ///
+    /// # Examples
+    /// ```rust
+    /// # use std::error::Error;
+    /// #
+    /// # fn main() -> Result<(), Box<dyn Error>> {
+    /// use simple_bitfield::prelude::{Bitfield, Bitfield8, Bitfield16};
+    ///
+    /// let bitfield8_1: Bitfield8 = Bitfield8::from(0b00000001);
+    /// let bitfield8_2: Bitfield8 = Bitfield8::from(0b00000011);
+    /// let bitfield16: Bitfield16 = Bitfield::combine(&bitfield8_1, &bitfield8_2)?;
+    ///
+    /// assert_eq!(bitfield16.into_inner(), 0b0000001100000001);
+    /// #   Ok(())
+    /// # }
+    /// ```
     fn combine<Other, Res>(&self, other: &Other) -> ConvResult<Res>
     where
         Other: Bitfield,
@@ -576,6 +732,26 @@ pub trait Bitfield:
         }
     }
 
+    /// Splits Bitfield into two smaller ones.
+    ///
+    /// # Errors
+    /// Size of Self is smaller, than the sum of size of Res1 and size of Res2.
+    ///
+    /// # Examples
+    /// ```rust
+    /// # use std::error::Error;
+    /// #
+    /// # fn main() -> Result<(), Box<dyn Error>> {
+    /// use simple_bitfield::prelude::{Bitfield, Bitfield8, Bitfield16};
+    ///
+    /// let bitfield16: Bitfield16 = Bitfield16::from(0b0000001100000001);
+    /// let (bitfield8_1, bitfield8_2): (Bitfield8, Bitfield8) = Bitfield::split(&bitfield16)?;
+    ///
+    /// assert_eq!(bitfield8_1.into_inner(), 0b00000001);
+    /// assert_eq!(bitfield8_2.into_inner(), 0b00000011);
+    /// #   Ok(())
+    /// # }
+    /// ```
     fn split<Res1, Res2>(&self) -> ConvResult<(Res1, Res2)>
     where
         Res1: Bitfield,
@@ -606,6 +782,26 @@ pub trait Bitfield:
         }
     }
 
+    /// Combines two Bitfields to create a bigger one. Uses unsafe optimizations.
+    ///
+    /// # Errors
+    /// Size of Res is smaller, than the sum of size of Self and size of Other.
+    ///
+    /// # Examples
+    /// ```rust
+    /// # use std::error::Error;
+    /// #
+    /// # fn main() -> Result<(), Box<dyn Error>> {
+    /// use simple_bitfield::prelude::{Bitfield, Bitfield8, Bitfield16};
+    ///
+    /// let bitfield8_1: Bitfield8 = Bitfield8::from(0b00000001);
+    /// let bitfield8_2: Bitfield8 = Bitfield8::from(0b00000011);
+    /// let bitfield16: Bitfield16 = Bitfield::fast_combine(&bitfield8_1, &bitfield8_2)?;
+    ///
+    /// assert_eq!(bitfield16.into_inner(), 0b0000001100000001);
+    /// #   Ok(())
+    /// # }
+    /// ```
     fn fast_combine<Other, Res>(&self, other: &Other) -> ConvResult<Res>
     where
         Self: Simple,
@@ -636,6 +832,26 @@ pub trait Bitfield:
         }
     }
 
+    /// Splits Bitfield into two smaller ones. Uses unsafe optimizations.
+    ///
+    /// # Errors
+    /// Size of Self is smaller, than the sum of size of Res1 and size of Res2.
+    ///
+    /// # Examples
+    /// ```rust
+    /// # use std::error::Error;
+    /// #
+    /// # fn main() -> Result<(), Box<dyn Error>> {
+    /// use simple_bitfield::prelude::{Bitfield, Bitfield8, Bitfield16};
+    ///
+    /// let bitfield16: Bitfield16 = Bitfield16::from(0b0000001100000001);
+    /// let (bitfield8_1, bitfield8_2): (Bitfield8, Bitfield8) = Bitfield::fast_split(&bitfield16)?;
+    ///
+    /// assert_eq!(bitfield8_1.into_inner(), 0b00000001);
+    /// assert_eq!(bitfield8_2.into_inner(), 0b00000011);
+    /// #   Ok(())
+    /// # }
+    /// ```
     fn fast_split<Res1, Res2>(&self) -> ConvResult<(Res1, Res2)>
     where
         Self: Simple,
@@ -698,6 +914,31 @@ pub trait Bitfield:
             .map(|i| self.bit(i))
     }
 
+    /// Returns iterator over [`BitRef`] holding immutable references
+    /// to bits of the bitfield in boolean representation.
+    ///
+    /// # Examples
+    /// ```rust
+    /// # use std::error::Error;
+    /// #
+    /// # fn main() -> Result<(), Box<dyn Error>> {
+    /// use simple_bitfield::prelude::{Bitfield, Bitfield8};
+    ///
+    /// let bitfield = Bitfield8::from(0b01010100);
+    /// let mut iter = Bitfield::bits_ref(&bitfield);
+    ///
+    /// assert_eq!(iter.next().as_deref(), Some(&false)); // 0
+    /// assert_eq!(iter.next().as_deref(), Some(&false)); // 0
+    /// assert_eq!(iter.next().as_deref(), Some(&true));  // 1
+    /// assert_eq!(iter.next().as_deref(), Some(&false)); // 0
+    /// assert_eq!(iter.next().as_deref(), Some(&true));  // 1
+    /// assert_eq!(iter.next().as_deref(), Some(&false)); // 0
+    /// assert_eq!(iter.next().as_deref(), Some(&true));  // 1
+    /// assert_eq!(iter.next().as_deref(), Some(&false)); // 0
+    /// assert_eq!(iter.next(), None);
+    /// #   Ok(())
+    /// # }
+    /// ```
     #[inline(always)]
     fn bits_ref(&self) -> impl Iterator<Item = BitRef<'_, Self>> {
         (0..Self::BIT_SIZE)
@@ -705,6 +946,27 @@ pub trait Bitfield:
             .map(|i| self.bit_ref(i))
     }
 
+    /// Returns iterator over [`BitMut`] holding mutable references
+    /// to bits of the bitfield in boolean representation.
+    ///
+    /// # Examples
+    /// ```rust
+    /// # use std::error::Error;
+    /// #
+    /// # fn main() -> Result<(), Box<dyn Error>> {
+    /// use simple_bitfield::prelude::{Bitfield, Bitfield8};
+    ///
+    /// let mut bitfield = Bitfield8::from(0b01010100);
+    /// let mut iter = Bitfield::bits_mut(&mut bitfield);
+    ///
+    /// for mut bit in iter {
+    ///     *bit = !*bit;
+    /// }
+    ///
+    /// assert_eq!(bitfield.into_inner(), 0b10101011);
+    /// #   Ok(())
+    /// # }
+    /// ```
     #[inline(always)]
     fn bits_mut(&mut self) -> impl Iterator<Item = BitMut<'_, Self>> {
         let p = self as *mut Self;

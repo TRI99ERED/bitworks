@@ -4,7 +4,7 @@ use std::{
     ops::{Deref, DerefMut},
 };
 
-/// Immutable access to a bit in Bitfield.
+/// Smart pointer granting immutable access to a bit in [`Bitfield`].
 #[derive(PartialEq, Eq)]
 pub struct BitRef<'a, T: Bitfield + 'a>(
     pub(crate) bool,
@@ -17,6 +17,7 @@ where
     T: Bitfield,
     Self: 'a,
 {
+    /// Returns index of the bit, referenced by `BitRef`.
     pub fn index(&'a self) -> BitfieldIndex<T> {
         self.1
     }
@@ -69,7 +70,7 @@ where
     }
 }
 
-/// Mutable access to a bit in Bitfield.
+/// Smart pointer granting mutable access to a bit in [`Bitfield`].
 #[derive(PartialEq, Eq)]
 pub struct BitMut<'a, T: Bitfield + 'a>(
     pub(crate) bool,
@@ -82,6 +83,7 @@ where
     T: Bitfield,
     Self: 'a,
 {
+    /// Returns index of the bit, referenced by `BitMut`.
     pub fn index(&'a self) -> BitfieldIndex<T> {
         self.1
     }

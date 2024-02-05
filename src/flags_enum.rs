@@ -2,7 +2,7 @@
 
 use crate::{bitfield::Bitfield, index::BitfieldIndex};
 
-/// Marker trait for enum, whose variants represent the different indeces of Bitfield.
+/// Marker trait for `enum`s, whose variants represent the different indeces of [`Bitfield`].
 ///
 /// # Examples
 /// ```

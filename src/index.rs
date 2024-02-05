@@ -6,7 +6,7 @@ use crate::{
 };
 use std::{cmp::Ordering, fmt::Debug, hash::Hash, marker::PhantomData};
 
-/// Struct meant to safely index the T, where T implements Bitfield.
+/// Struct meant to safely index the `T`, where `T` implements [`Bitfield`].
 #[derive(Default)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct BitfieldIndex<T: Bitfield>(usize, PhantomData<T>);
@@ -152,6 +152,9 @@ where
     }
 
     /// Attempted conversion between BifieldIndeces.
+    ///
+    /// # Errors
+    /// U::BIT_SIZE is smaller, than T::BIT_SIZE
     #[inline(always)]
     pub fn try_to_other<U>(self) -> ConvResult<BitfieldIndex<U>>
     where
