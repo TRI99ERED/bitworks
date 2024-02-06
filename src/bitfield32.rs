@@ -3,7 +3,7 @@
 use crate::{
     bitfield::{Bitfield, Simple},
     error::{ConvError, ConvTarget},
-    prelude::{Bitfield128, Bitfield16, Bitfield64, Bitfield8, BitfieldBytes, FlagsEnum, Index},
+    prelude::{Bitfield128, Bitfield16, Bitfield64, Bitfield8, ByteField, FlagsEnum, Index},
 };
 use std::{
     collections::BTreeSet,
@@ -97,11 +97,10 @@ where
     }
 }
 
-impl From<BitfieldBytes<4>> for Bitfield32 {
+impl From<ByteField<4>> for Bitfield32 {
     #[inline(always)]
-    fn from(value: BitfieldBytes<4>) -> Self {
-        let result = unsafe { std::mem::transmute_copy(&value) };
-        result
+    fn from(value: ByteField<4>) -> Self {
+        unsafe { std::mem::transmute_copy(&value) }
     }
 }
 
@@ -376,7 +375,6 @@ where
                 bitfield |= Self(1) << index;
             }
         }
-
         bitfield
     }
 }

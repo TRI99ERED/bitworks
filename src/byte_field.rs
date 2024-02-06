@@ -2,19 +2,25 @@ use crate::{
     bitfield::Simple,
     prelude::{Bitfield, FlagsEnum, Index},
 };
-use std::ops::{
-    BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Not, Shl, ShlAssign, Shr,
-    ShrAssign,
+use std::{
+    collections::BTreeSet,
+    fmt::{Binary, Display, LowerHex, Octal, UpperHex},
+    ops::{
+        BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Not, Shl, ShlAssign, Shr,
+        ShrAssign,
+    },
 };
 
 type Inner<const N: usize> = [u8; N];
-type BIndex<const N: usize> = Index<BitfieldBytes<N>>;
+type BIndex<const N: usize> = Index<ByteField<N>>;
 
+/// [`Bitfield`] of variable `size`.
+/// `N` is size in bytes of the `ByteField`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct BitfieldBytes<const N: usize>(pub(crate) Inner<N>);
+pub struct ByteField<const N: usize>(pub(crate) Inner<N>);
 
-impl<const N: usize> BitfieldBytes<N> {
+impl<const N: usize> ByteField<N> {
     #[inline(always)]
     pub fn into_inner(&self) -> Inner<N> {
         self.0
@@ -27,7 +33,7 @@ impl<const N: usize> BitfieldBytes<N> {
     }
 }
 
-impl<const N: usize> Bitfield for BitfieldBytes<N> {
+impl<const N: usize> Bitfield for ByteField<N> {
     const BIT_SIZE: usize = N * 8;
 
     const ONE: Self = Self::__one();
@@ -93,23 +99,23 @@ impl<const N: usize> Bitfield for BitfieldBytes<N> {
     }
 }
 
-unsafe impl<const N: usize> Simple for BitfieldBytes<N> {}
+unsafe impl<const N: usize> Simple for ByteField<N> {}
 
-impl<const N: usize> From<Inner<N>> for BitfieldBytes<N> {
+impl<const N: usize> From<Inner<N>> for ByteField<N> {
     #[inline(always)]
     fn from(value: Inner<N>) -> Self {
         Self(value)
     }
 }
 
-impl<const N: usize> From<BitfieldBytes<N>> for Inner<N> {
+impl<const N: usize> From<ByteField<N>> for Inner<N> {
     #[inline(always)]
-    fn from(value: BitfieldBytes<N>) -> Self {
+    fn from(value: ByteField<N>) -> Self {
         value.0
     }
 }
 
-impl<const N: usize> From<BIndex<N>> for BitfieldBytes<N> {
+impl<const N: usize> From<BIndex<N>> for ByteField<N> {
     fn from(Index::<Self>(index, ..): BIndex<N>) -> Self {
         let byte_index = index / 8;
         let bit_index = index % 8;
@@ -119,7 +125,7 @@ impl<const N: usize> From<BIndex<N>> for BitfieldBytes<N> {
     }
 }
 
-impl<const N: usize, T> From<T> for BitfieldBytes<N>
+impl<const N: usize, T> From<T> for ByteField<N>
 where
     T: FlagsEnum<Bitfield = Self>,
     BIndex<N>: From<T>,
@@ -130,147 +136,151 @@ where
     }
 }
 
-impl<const N: usize> Not for BitfieldBytes<N> {
+impl<const N: usize> Not for ByteField<N> {
     type Output = Self;
 
     fn not(mut self) -> Self::Output {
-        for num in &mut self.0 {
-            *num = !*num;
+        for chunk in &mut self.0 {
+            *chunk = !*chunk;
         }
         self
     }
 }
 
-impl<const N: usize> BitAnd for BitfieldBytes<N> {
+impl<const N: usize> BitAnd for ByteField<N> {
     type Output = Self;
 
     fn bitand(mut self, rhs: Self) -> Self::Output {
-        for (i, num) in self.0.iter_mut().enumerate() {
-            *num &= rhs.0[i];
+        for (i, chunk) in self.0.iter_mut().enumerate() {
+            *chunk &= rhs.0[i];
         }
         self
     }
 }
 
-impl<const N: usize> BitAndAssign for BitfieldBytes<N> {
+impl<const N: usize> BitAndAssign for ByteField<N> {
     fn bitand_assign(&mut self, rhs: Self) {
-        for (i, num) in self.0.iter_mut().enumerate() {
-            *num &= rhs.0[i];
+        for (i, chunk) in self.0.iter_mut().enumerate() {
+            *chunk &= rhs.0[i];
         }
     }
 }
 
-impl<const N: usize> BitOr for BitfieldBytes<N> {
+impl<const N: usize> BitOr for ByteField<N> {
     type Output = Self;
 
     fn bitor(mut self, rhs: Self) -> Self::Output {
-        for (i, num) in self.0.iter_mut().enumerate() {
-            *num |= rhs.0[i];
+        for (i, chunk) in self.0.iter_mut().enumerate() {
+            *chunk |= rhs.0[i];
         }
         self
     }
 }
 
-impl<const N: usize> BitOrAssign for BitfieldBytes<N> {
+impl<const N: usize> BitOrAssign for ByteField<N> {
     fn bitor_assign(&mut self, rhs: Self) {
-        for (i, num) in self.0.iter_mut().enumerate() {
-            *num |= rhs.0[i];
+        for (i, chunk) in self.0.iter_mut().enumerate() {
+            *chunk |= rhs.0[i];
         }
     }
 }
 
-impl<const N: usize> BitXor for BitfieldBytes<N> {
+impl<const N: usize> BitXor for ByteField<N> {
     type Output = Self;
 
     fn bitxor(mut self, rhs: Self) -> Self::Output {
-        for (i, num) in self.0.iter_mut().enumerate() {
-            *num ^= rhs.0[i];
+        for (i, chunk) in self.0.iter_mut().enumerate() {
+            *chunk ^= rhs.0[i];
         }
         self
     }
 }
 
-impl<const N: usize> BitXorAssign for BitfieldBytes<N> {
+impl<const N: usize> BitXorAssign for ByteField<N> {
     fn bitxor_assign(&mut self, rhs: Self) {
-        for (i, num) in self.0.iter_mut().enumerate() {
-            *num ^= rhs.0[i];
+        for (i, chunk) in self.0.iter_mut().enumerate() {
+            *chunk ^= rhs.0[i];
         }
     }
 }
 
-impl<const N: usize> Shl<BIndex<N>> for BitfieldBytes<N> {
+impl<const N: usize> Shl<BIndex<N>> for ByteField<N> {
     type Output = Self;
 
     fn shl(self, Index::<Self>(index, ..): BIndex<N>) -> Self::Output {
-        let mut inner = self.0.clone();
+        let mut inner = self.0;
 
         let byte_shift = index / 8;
         let bit_shift = index % 8;
 
         if byte_shift > 0 {
-            for i in 0..N - byte_shift {
-                inner[i] = self.0[i + byte_shift];
-            }
-            for i in N - byte_shift..N {
-                inner[i] = 0;
+            unsafe {
+                std::ptr::copy(
+                    inner.as_ptr().add(byte_shift),
+                    inner.as_mut_ptr(),
+                    N - byte_shift,
+                );
+                std::ptr::write_bytes(inner.as_mut_ptr().add(N - byte_shift), 0, byte_shift);
             }
         }
 
         if bit_shift > 0 {
             let mut carry = 0;
-            for i in 0..N {
-                let shifted = self.0[i] << bit_shift | carry;
-                carry = self.0[i] >> (8 - bit_shift);
-                inner[i] = shifted;
+            for chunk in inner.iter_mut().rev() {
+                let shifted = *chunk << bit_shift | carry;
+                carry = *chunk >> (8 - bit_shift);
+                *chunk = shifted;
             }
         }
         Self(inner)
     }
 }
 
-impl<const N: usize> ShlAssign<BIndex<N>> for BitfieldBytes<N> {
+impl<const N: usize> ShlAssign<BIndex<N>> for ByteField<N> {
     fn shl_assign(&mut self, rhs: BIndex<N>) {
-        *self = self.clone().shl(rhs);
+        *self = self.shl(rhs);
     }
 }
 
-impl<const N: usize> Shr<BIndex<N>> for BitfieldBytes<N> {
+impl<const N: usize> Shr<BIndex<N>> for ByteField<N> {
     type Output = Self;
 
     fn shr(self, Index::<Self>(index, ..): BIndex<N>) -> Self::Output {
-        let mut inner = self.0.clone();
+        let mut inner = self.0;
 
         let byte_shift = index / 8;
         let bit_shift = index % 8;
 
         if byte_shift > 0 {
-            for i in 0..N - byte_shift {
-                inner[i + byte_shift] = self.0[i];
-            }
-            for i in 0..byte_shift {
-                inner[i] = 0;
+            unsafe {
+                std::ptr::copy(
+                    inner.as_ptr(),
+                    inner.as_mut_ptr().add(byte_shift),
+                    N - byte_shift,
+                );
+                std::ptr::write_bytes(inner.as_mut_ptr(), 0, byte_shift);
             }
         }
 
         if bit_shift > 0 {
             let mut carry = 0;
-            for i in (0..N).rev() {
-                let shifted = self.0[i] >> bit_shift | carry;
-                carry = self.0[i] << (8 - bit_shift);
-                inner[i] = shifted;
+            for chunk in inner.iter_mut() {
+                let shifted = *chunk >> bit_shift | carry;
+                carry = *chunk << (8 - bit_shift);
+                *chunk = shifted;
             }
         }
         Self(inner)
     }
 }
 
-impl<const N: usize> ShrAssign<BIndex<N>> for BitfieldBytes<N> {
+impl<const N: usize> ShrAssign<BIndex<N>> for ByteField<N> {
     fn shr_assign(&mut self, rhs: BIndex<N>) {
-        *self = self.clone().shr(rhs);
+        *self = self.shr(rhs);
     }
 }
 
-impl<const N: usize> BitAnd<BIndex<N>> for BitfieldBytes<N> {
+impl<const N: usize> BitAnd<BIndex<N>> for ByteField<N> {
     type Output = Self;
 
     #[inline(always)]
@@ -279,14 +289,14 @@ impl<const N: usize> BitAnd<BIndex<N>> for BitfieldBytes<N> {
     }
 }
 
-impl<const N: usize> BitAndAssign<BIndex<N>> for BitfieldBytes<N> {
+impl<const N: usize> BitAndAssign<BIndex<N>> for ByteField<N> {
     #[inline(always)]
     fn bitand_assign(&mut self, rhs: BIndex<N>) {
         *self &= Self::from(rhs);
     }
 }
 
-impl<const N: usize> BitOr<BIndex<N>> for BitfieldBytes<N> {
+impl<const N: usize> BitOr<BIndex<N>> for ByteField<N> {
     type Output = Self;
 
     #[inline(always)]
@@ -295,14 +305,14 @@ impl<const N: usize> BitOr<BIndex<N>> for BitfieldBytes<N> {
     }
 }
 
-impl<const N: usize> BitOrAssign<BIndex<N>> for BitfieldBytes<N> {
+impl<const N: usize> BitOrAssign<BIndex<N>> for ByteField<N> {
     #[inline(always)]
     fn bitor_assign(&mut self, rhs: BIndex<N>) {
         *self |= Self::from(rhs);
     }
 }
 
-impl<const N: usize> BitXor<BIndex<N>> for BitfieldBytes<N> {
+impl<const N: usize> BitXor<BIndex<N>> for ByteField<N> {
     type Output = Self;
 
     #[inline(always)]
@@ -311,14 +321,14 @@ impl<const N: usize> BitXor<BIndex<N>> for BitfieldBytes<N> {
     }
 }
 
-impl<const N: usize> BitXorAssign<BIndex<N>> for BitfieldBytes<N> {
+impl<const N: usize> BitXorAssign<BIndex<N>> for ByteField<N> {
     #[inline(always)]
     fn bitxor_assign(&mut self, rhs: BIndex<N>) {
         *self ^= Self::from(rhs);
     }
 }
 
-impl<const N: usize, T> BitAnd<T> for BitfieldBytes<N>
+impl<const N: usize, T> BitAnd<T> for ByteField<N>
 where
     T: FlagsEnum<Bitfield = Self>,
     BIndex<N>: From<T>,
@@ -331,7 +341,7 @@ where
     }
 }
 
-impl<const N: usize, T> BitAndAssign<T> for BitfieldBytes<N>
+impl<const N: usize, T> BitAndAssign<T> for ByteField<N>
 where
     T: FlagsEnum<Bitfield = Self>,
     BIndex<N>: From<T>,
@@ -342,7 +352,7 @@ where
     }
 }
 
-impl<const N: usize, T> BitOr<T> for BitfieldBytes<N>
+impl<const N: usize, T> BitOr<T> for ByteField<N>
 where
     T: FlagsEnum<Bitfield = Self>,
     BIndex<N>: From<T>,
@@ -355,7 +365,7 @@ where
     }
 }
 
-impl<const N: usize, T> BitOrAssign<T> for BitfieldBytes<N>
+impl<const N: usize, T> BitOrAssign<T> for ByteField<N>
 where
     T: FlagsEnum<Bitfield = Self>,
     BIndex<N>: From<T>,
@@ -366,7 +376,7 @@ where
     }
 }
 
-impl<const N: usize, T> BitXor<T> for BitfieldBytes<N>
+impl<const N: usize, T> BitXor<T> for ByteField<N>
 where
     T: FlagsEnum<Bitfield = Self>,
     BIndex<N>: From<T>,
@@ -379,7 +389,7 @@ where
     }
 }
 
-impl<const N: usize, T> BitXorAssign<T> for BitfieldBytes<N>
+impl<const N: usize, T> BitXorAssign<T> for ByteField<N>
 where
     T: FlagsEnum<Bitfield = Self>,
     BIndex<N>: From<T>,
@@ -390,8 +400,7 @@ where
     }
 }
 
-
-impl<const N: usize> FromIterator<bool> for BitfieldBytes<N> {
+impl<const N: usize> FromIterator<bool> for ByteField<N> {
     fn from_iter<T: IntoIterator<Item = bool>>(iter: T) -> Self {
         iter.into_iter()
             .take(N * 8)
@@ -402,18 +411,102 @@ impl<const N: usize> FromIterator<bool> for BitfieldBytes<N> {
     }
 }
 
+impl<const N: usize, A> FromIterator<A> for ByteField<N>
+where
+    A: FlagsEnum<Bitfield = Self>,
+    BIndex<N>: From<A>,
+{
+    fn from_iter<T: IntoIterator<Item = A>>(iter: T) -> Self {
+        let mut bitfield = Self::NONE;
+        let mut seen_indices = BTreeSet::new();
+
+        for e in iter {
+            let index = BIndex::from(e);
+            if !seen_indices.contains(&index) {
+                seen_indices.insert(index);
+                bitfield |= Self::from(index);
+            }
+        }
+        bitfield
+    }
+}
+
+impl<const N: usize> Display for ByteField<N> {
+    #[inline(always)]
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut s = self
+            .0
+            .iter()
+            .enumerate()
+            .fold("\n[".to_owned(), |mut acc, (i, &chunk)| {
+                acc.push_str(&format!(" {:08b} ", chunk));
+                if (i + 1) % 4 == 0 && i != N - 1 {
+                    acc.push_str(" \n ")
+                }
+                acc
+            });
+        if N > 4 && N % 4 > 0 {
+            let padding = (4 - N % 4) * 10 + 1;
+            s.push_str(&format!("{:>padding$}", "]"));
+        } else {
+            s.push(']');
+        }
+        write!(f, "{s}")
+    }
+}
+
+impl<const N: usize> Binary for ByteField<N> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let s = self.0.iter().fold("".to_owned(), |mut acc, &chunk| {
+            acc.push_str(&format!("{:08b}", chunk));
+            acc
+        });
+        write!(f, "{s}")
+    }
+}
+
+impl<const N: usize> Octal for ByteField<N> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let s = self.0.iter().fold("".to_owned(), |mut acc, &chunk| {
+            acc.push_str(&format!("{:03o}", chunk));
+            acc
+        });
+        write!(f, "{s}")
+    }
+}
+
+impl<const N: usize> UpperHex for ByteField<N> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let s = self.0.iter().fold("".to_owned(), |mut acc, &chunk| {
+            acc.push_str(&format!("{:02X}", chunk));
+            acc
+        });
+        write!(f, "{s}")
+    }
+}
+
+impl<const N: usize> LowerHex for ByteField<N> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let s = self.0.iter().fold("".to_owned(), |mut acc, &chunk| {
+            acc.push_str(&format!("{:02x}", chunk));
+            acc
+        });
+        write!(f, "{s}")
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::error::Error;
 
     use super::*;
-    type Tested1 = BitfieldBytes<1>;
-    type Tested2 = BitfieldBytes<2>;
-    type Tested4 = BitfieldBytes<4>;
-    type Tested8 = BitfieldBytes<8>;
-    type Tested16 = BitfieldBytes<16>;
+    type Tested1 = ByteField<1>;
+    type Tested2 = ByteField<2>;
+    type Tested4 = ByteField<4>;
+    type Tested8 = ByteField<8>;
+    type Tested16 = ByteField<16>;
 
-    type TestedOdd = BitfieldBytes<3>;
+    type TestedOdd = ByteField<3>;
 
     type TestResult = Result<(), Box<dyn Error>>;
 
@@ -539,6 +632,7 @@ mod tests {
 
     #[test]
     fn shl() -> TestResult {
+        // 1 bit shift, easy case
         let bitfield: Tested1 = [0b00000001].into();
 
         assert_eq!(bitfield << 1.try_into()?, [0b00000010].into());
@@ -547,11 +641,32 @@ mod tests {
         bitfield <<= 1.try_into()?;
 
         assert_eq!(bitfield, [0b00000010].into());
+
+        // 7 bit shift, crossing the boundary case
+        let bitfield: Tested2 = [0b00011011, 0b11101000].into();
+
+        assert_eq!(bitfield << 7.try_into()?, [0b11110100, 0b00000000].into());
+
+        let mut bitfield: Tested2 = [0b00011011, 0b11101000].into();
+        bitfield <<= 7.try_into()?;
+
+        assert_eq!(bitfield, [0b11110100, 0b00000000].into());
+
+        // 9 bit shift, bigger, than chunk length
+        let bitfield: Tested2 = [0b00011011, 0b11101000].into();
+
+        assert_eq!(bitfield << 9.try_into()?, [0b11010000, 0b00000000].into());
+
+        let mut bitfield: Tested2 = [0b00011011, 0b11101000].into();
+        bitfield <<= 9.try_into()?;
+
+        assert_eq!(bitfield, [0b11010000, 0b00000000].into());
         Ok(())
     }
 
     #[test]
     fn shr() -> TestResult {
+        // 1 bit shift, easy case
         let bitfield: Tested1 = [0b00000010].into();
 
         assert_eq!(bitfield >> 1.try_into()?, [0b00000001].into());
@@ -560,6 +675,26 @@ mod tests {
         bitfield >>= 1.try_into()?;
 
         assert_eq!(bitfield, [0b00000001].into());
+
+        // 7 bit shift, crossing the boundary case
+        let bitfield: Tested2 = [0b11110100, 0b00000000].into();
+
+        assert_eq!(bitfield >> 7.try_into()?, [0b00000001, 0b11101000].into());
+
+        let mut bitfield: Tested2 = [0b11110100, 0b00000000].into();
+        bitfield >>= 7.try_into()?;
+
+        assert_eq!(bitfield, [0b00000001, 0b11101000].into());
+
+        // 9 bit shift, bigger, than chunk length
+        let bitfield: Tested2 = [0b11010000, 0b00000000].into();
+
+        assert_eq!(bitfield >> 9.try_into()?, [0b00000000, 0b01101000].into());
+
+        let mut bitfield: Tested2 = [0b11010000, 0b00000000].into();
+        bitfield >>= 9.try_into()?;
+
+        assert_eq!(bitfield, [0b00000000, 0b01101000].into());
         Ok(())
     }
 
@@ -936,5 +1071,31 @@ mod tests {
         assert_eq!(bitfield2, Tested1::from([0b00011011]));
         assert_eq!(bitfield3, Tested2::from([0b11011011, 0b11101000]));
         Ok(())
+    }
+
+    #[test]
+    fn display() {
+        let bytefield = ByteField::<1>::from([170; 1]);
+        println!("{bytefield}");
+
+        println!("Binary representation: {:#0b}", bytefield);
+        println!("Octal representation: {:#0o}", bytefield);
+        println!("LowerHex representation: {:#0x}", bytefield);
+        println!("UpperHex representation: {:#0X}", bytefield);
+
+        let bytefield = ByteField::<2>::from([170; 2]);
+        println!("{bytefield}");
+        let bytefield = ByteField::<3>::from([170; 3]);
+        println!("{bytefield}");
+        let bytefield = ByteField::<4>::from([170; 4]);
+        println!("{bytefield}");
+        let bytefield = ByteField::<5>::from([170; 5]);
+        println!("{bytefield}");
+        let bytefield = ByteField::<6>::from([170; 6]);
+        println!("{bytefield}");
+        let bytefield = ByteField::<7>::from([170; 7]);
+        println!("{bytefield}");
+        let bytefield = ByteField::<8>::from([170; 8]);
+        println!("{bytefield}");
     }
 }
