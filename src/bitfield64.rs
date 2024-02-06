@@ -782,7 +782,7 @@ mod tests {
     fn from_slice_bool() {
         // Same index order
         let slice: &[bool] = &[true, false, true, false, true, false, true, false];
-        let bitfield: Tested = Tested::from_slice_bool(slice);
+        let bitfield: Tested = Tested::from_bits_ref(slice);
 
         assert_eq!(bitfield, 0b01010101.into());
     }

@@ -6,7 +6,10 @@ use crate::{
     flags_enum::FlagsEnum,
     index::Index,
 };
-use std::ops::{BitAnd, BitOr, BitXor, Not, Shl, Shr};
+use std::{
+    collections::BTreeSet,
+    ops::{BitAnd, BitOr, BitXor, Not, Shl, Shr},
+};
 
 /// Trait defining common bitfield logic.
 pub trait Bitfield:
@@ -290,17 +293,21 @@ pub trait Bitfield:
     ///
     /// // Same index order
     /// let slice: &[bool] = &[true, false, true, false, true, false, true, false];
-    /// let bitfield = Bitfield8::from_slice_bool(slice);
+    /// let bitfield = Bitfield8::from_bits_ref(slice);
     ///
     /// assert_eq!(bitfield.into_inner(), 0b01010101);
     /// #   Ok(())
     /// # }
     /// ```
-    fn from_slice_bool(slice: &[bool]) -> Self
+    fn from_bits_ref<'a, I>(iter: I) -> Self
     where
-        Self: FromIterator<bool>,
+        I: IntoIterator<Item = &'a bool>,
     {
-        slice.iter().take(Self::BIT_SIZE).copied().collect()
+        iter.into_iter()
+            .take(Self::BIT_SIZE)
+            .enumerate()
+            .map(|(i, &b)| (Index::<Self>::try_from(i).unwrap(), b))
+            .fold(Self::NONE, |mut acc, (i, b)| acc.set_bit(i, b))
     }
 
     /// Builds `Bitfield` from slice over `T` values, where `T` implements [`FlagsEnum`].<br/>
@@ -346,19 +353,99 @@ pub trait Bitfield:
     /// }
     ///
     /// let slice: &[E] = &[E::A, E::E, E::D];
-    /// let bitfield = Bitfield8::from_slice_flags(slice);
+    /// let bitfield = Bitfield8::from_selected_variants_ref(slice);
     ///
     /// assert_eq!(bitfield.into_inner(), 0b00011001);
     /// #   Ok(())
     /// # }
     /// ```
-    fn from_slice_flags<T>(slice: &[T]) -> Self
+    fn from_selected_variants_ref<'a, I, T>(iter: I) -> Self
     where
-        T: FlagsEnum<Bitfield = Self>,
+        I: IntoIterator<Item = &'a T>,
+        T: FlagsEnum<Bitfield = Self> + Copy + 'a,
         Index<Self>: From<T>,
         Self: FromIterator<T>,
     {
-        slice.iter().take(Self::BIT_SIZE).cloned().collect()
+        let mut bitfield = Self::NONE;
+        let mut seen_indices = BTreeSet::new();
+
+        for &e in iter {
+            let index = Index::<Self>::from(e);
+            if !seen_indices.contains(&index) {
+                seen_indices.insert(index);
+                bitfield.check_bit(index);
+            }
+        }
+        bitfield
+    }
+
+    /// Builds `Bitfield` from slice over `T` values, where `T` implements [`FlagsEnum`].<br/>
+    /// Considers contained variants as unset bits.
+    ///
+    /// # Examples
+    /// ```rust
+    /// # use std::error::Error;
+    /// #
+    /// # fn main() -> Result<(), Box<dyn Error>> {
+    /// use simple_bitfield::{prelude::{Bitfield, Bitfield8, FlagsEnum, Index}, error::{ConvError, ConvTarget}};
+    ///
+    /// #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+    /// enum E {
+    ///     A, // 0
+    ///     B, // 1
+    ///     D  =  3,
+    ///     E, // 4
+    /// }
+    ///
+    /// impl TryFrom<Index<Bitfield8>> for E {
+    ///     type Error = ConvError;
+    ///
+    ///     fn try_from(index: Index<Bitfield8>) -> Result<Self, Self::Error> {
+    ///         match index.into_inner() {
+    ///             0 => Ok(E::A),
+    ///             1 => Ok(E::B),
+    ///             3 => Ok(E::D),
+    ///             4 => Ok(E::E),
+    ///             _ => Err(ConvError::new(ConvTarget::Index(8), ConvTarget::Enum(8))),
+    ///         }
+    ///     }
+    /// }
+    ///
+    /// impl From<E> for Index<Bitfield8> {
+    ///     fn from(value: E) -> Self {
+    ///         Self::try_from(value as usize).expect("Enum E should always be a valid index")
+    ///     }
+    /// }
+    ///
+    /// impl FlagsEnum for E {
+    ///     type Bitfield = Bitfield8;
+    /// }
+    ///
+    /// let slice: &[E] = &[E::A, E::E, E::D];
+    /// let bitfield = Bitfield8::from_unselected_variants_ref(slice);
+    ///
+    /// assert_eq!(bitfield.into_inner(), 0b11100110);
+    /// #   Ok(())
+    /// # }
+    /// ```
+    fn from_unselected_variants_ref<'a, I, T>(iter: I) -> Self
+    where
+        I: IntoIterator<Item = &'a T>,
+        T: FlagsEnum<Bitfield = Self> + Copy + 'a,
+        Index<Self>: From<T>,
+        Self: FromIterator<T>,
+    {
+        let mut bitfield = Self::ALL;
+        let mut seen_indices = BTreeSet::new();
+
+        for &e in iter {
+            let index = Index::<Self>::from(e);
+            if !seen_indices.contains(&index) {
+                seen_indices.insert(index);
+                bitfield.uncheck_bit(index);
+            }
+        }
+        bitfield
     }
 
     /// Count the number of all set bits.
