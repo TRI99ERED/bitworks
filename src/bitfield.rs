@@ -115,7 +115,26 @@ pub trait Bitfield:
     fn new() -> Self {
         Self::NONE
     }
-
+    /// Build `Bitfield` from a mutable reference.<br/>
+    /// Useful for chaining bit modifications.
+    ///
+    /// # Examples
+    /// ```rust
+    /// # use std::error::Error;
+    /// #
+    /// # fn main() -> Result<(), Box<dyn Error>> {
+    /// use simple_bitfield::prelude::{Bitfield, Bitfield8};
+    ///
+    /// let bitfield = Bitfield8::new()
+    ///     .set_bit(0.try_into()?, true)
+    ///     .check_bit(6.try_into()?)
+    ///     .uncheck_bit(0.try_into()?)
+    ///     .build();
+    ///
+    /// assert_eq!(bitfield.into_inner(), 0b01000000);
+    /// #   Ok(())
+    /// # }
+    /// ```
     #[inline(always)]
     fn build(&mut self) -> Self {
         self.clone()
@@ -209,7 +228,8 @@ pub trait Bitfield:
         Self::ONE << Index::<Self>::from(*flag)
     }
 
-    /// Expands `Bitfield` to a bigger one.
+    /// Expands `Bitfield` to a bigger one.<br/>
+    /// If available, you should prefer using [`Bitfield::fast_expand`].
     ///
     /// # Errors
     /// Size of `Res` is smaller, than size of `Self`.
@@ -780,7 +800,8 @@ pub trait Bitfield:
         self ^ other
     }
 
-    /// Combines two `Bitfield`s to create a bigger one.
+    /// Combines two `Bitfield`s to create a bigger one.<br/>
+    /// If available, you should prefer using [`Bitfield::fast_combine`].
     ///
     /// # Errors
     /// Size of `Res` is smaller, than the sum of size of `Self` and size of `Other`.
@@ -829,7 +850,8 @@ pub trait Bitfield:
         }
     }
 
-    /// Splits `Bitfield` into two smaller ones.
+    /// Splits `Bitfield` into two smaller ones.<br/>
+    /// If available, you should prefer using [`Bitfield::fast_split`].
     ///
     /// # Errors
     /// Size of `Self` is smaller, than the sum of size of `Res1` and size of `Res2`.

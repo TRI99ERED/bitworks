@@ -9,7 +9,7 @@ use std::{cmp::Ordering, fmt::Debug, hash::Hash, marker::PhantomData};
 /// Struct meant to safely index the `T`, where `T` implements [`Bitfield`].
 #[derive(Default)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct Index<T: Bitfield>(usize, PhantomData<T>);
+pub struct Index<T: Bitfield>(pub(crate) usize, pub(crate) PhantomData<T>);
 
 impl<T> Index<T>
 where

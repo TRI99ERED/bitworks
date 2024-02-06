@@ -3,7 +3,7 @@
 use crate::{
     bitfield::{Bitfield, Simple},
     error::{ConvError, ConvTarget},
-    prelude::{Bitfield128, Bitfield16, Bitfield64, Bitfield8, FlagsEnum, Index},
+    prelude::{Bitfield128, Bitfield16, Bitfield64, Bitfield8, BitfieldBytes, FlagsEnum, Index},
 };
 use std::{
     collections::BTreeSet,
@@ -21,7 +21,7 @@ const BITS: usize = 32;
 /// [`Bitfield`] of size 32.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Default, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct Bitfield32(Inner);
+pub struct Bitfield32(pub(crate) Inner);
 
 impl Bitfield32 {
     /// Returns the inner representation of `Bitfield32`.
@@ -94,6 +94,14 @@ where
     #[inline(always)]
     fn from(value: T) -> Self {
         Self(1) << BIndex::from(value)
+    }
+}
+
+impl From<BitfieldBytes<4>> for Bitfield32 {
+    #[inline(always)]
+    fn from(value: BitfieldBytes<4>) -> Self {
+        let result = unsafe { std::mem::transmute_copy(&value) };
+        result
     }
 }
 

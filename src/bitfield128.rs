@@ -2,7 +2,7 @@
 
 use crate::{
     bitfield::{Bitfield, Simple},
-    prelude::{Bitfield16, Bitfield32, Bitfield64, Bitfield8, FlagsEnum, Index},
+    prelude::{Bitfield16, Bitfield32, Bitfield64, Bitfield8, BitfieldBytes, FlagsEnum, Index},
 };
 use std::{
     collections::BTreeSet,
@@ -20,7 +20,7 @@ const BITS: usize = 128;
 /// [`Bitfield`] of size 128.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Default, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct Bitfield128(Inner);
+pub struct Bitfield128(pub(crate) Inner);
 
 impl Bitfield128 {
     /// Returns the inner representation of `Bitfield128`.
@@ -93,6 +93,14 @@ where
     #[inline(always)]
     fn from(value: T) -> Self {
         Self(1) << BIndex::from(value)
+    }
+}
+
+impl From<BitfieldBytes<16>> for Bitfield128 {
+    #[inline(always)]
+    fn from(value: BitfieldBytes<16>) -> Self {
+        let result = unsafe { std::mem::transmute_copy(&value) };
+        result
     }
 }
 
@@ -409,7 +417,7 @@ mod tests {
             .set_bit(0.try_into()?, true)
             .check_bit(1.try_into()?)
             .uncheck_bit(0.try_into()?)
-                .build();
+            .build();
 
         assert_eq!(bitfield, 0b00000010.into());
         Ok(())
