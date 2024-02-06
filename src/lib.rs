@@ -24,5 +24,5 @@ pub mod prelude {
     pub use bitfield8::Bitfield8;
 
     pub use flags_enum::FlagsEnum;
-    pub use index::BitfieldIndex;
+    pub use index::Index;
 }

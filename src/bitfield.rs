@@ -4,9 +4,9 @@ use crate::{
     bit_ref::{BitMut, BitRef},
     error::{ConvError, ConvResult, ConvTarget},
     flags_enum::FlagsEnum,
-    index::BitfieldIndex,
+    index::Index,
 };
-use std::ops::{BitAnd, BitAndAssign, BitOr, BitXor, Not, Shl, Shr};
+use std::ops::{BitAnd, BitOr, BitXor, Not, Shl, Shr};
 
 /// Trait defining common bitfield logic.
 pub trait Bitfield:
@@ -16,12 +16,11 @@ pub trait Bitfield:
     + Eq
     + Not<Output = Self>
     + BitAnd<Output = Self>
-    + BitAndAssign
     + BitOr<Output = Self>
     + BitXor<Output = Self>
-    + Shl<BitfieldIndex<Self>, Output = Self>
-    + Shr<BitfieldIndex<Self>, Output = Self>
-    + From<BitfieldIndex<Self>>
+    + Shl<Index<Self>, Output = Self>
+    + Shr<Index<Self>, Output = Self>
+    + From<Index<Self>>
 {
     /// Number of bits (`size` in bits) of the `Bitfield`.
     ///
@@ -111,14 +110,14 @@ pub trait Bitfield:
         Self::NONE
     }
 
-    /// Constructs `Bitfield` from [`BitfieldIndex`].
+    /// Constructs `Bitfield` from [`Index`].
     ///
     /// # Examples
     /// ```rust
     /// # use std::error::Error;
     /// #
     /// # fn main() -> Result<(), Box<dyn Error>> {
-    /// use simple_bitfield::prelude::{Bitfield, Bitfield8, BitfieldIndex};
+    /// use simple_bitfield::prelude::{Bitfield, Bitfield8, Index};
     ///
     /// let index = 0.try_into()?;
     /// let bitfield = Bitfield8::from_index(&index);
@@ -133,7 +132,7 @@ pub trait Bitfield:
     /// # }
     /// ```
     #[inline(always)]
-    fn from_index(index: &BitfieldIndex<Self>) -> Self {
+    fn from_index(index: &Index<Self>) -> Self {
         Self::ONE << *index
     }
 
@@ -144,7 +143,7 @@ pub trait Bitfield:
     /// # use std::error::Error;
     /// #
     /// # fn main() -> Result<(), Box<dyn Error>> {
-    /// use simple_bitfield::{prelude::{Bitfield, Bitfield8, FlagsEnum, BitfieldIndex}, error::{ConvError, ConvTarget}};
+    /// use simple_bitfield::{prelude::{Bitfield, Bitfield8, FlagsEnum, Index}, error::{ConvError, ConvTarget}};
     ///
     /// #[derive(Clone, Copy, Debug, PartialEq, Eq)]
     /// enum E {
@@ -154,10 +153,10 @@ pub trait Bitfield:
     ///     E, // 4
     /// }
     ///
-    /// impl TryFrom<BitfieldIndex<Bitfield8>> for E {
+    /// impl TryFrom<Index<Bitfield8>> for E {
     ///     type Error = ConvError;
     ///
-    ///     fn try_from(index: BitfieldIndex<Bitfield8>) -> Result<Self, Self::Error> {
+    ///     fn try_from(index: Index<Bitfield8>) -> Result<Self, Self::Error> {
     ///         match index.into_inner() {
     ///             0 => Ok(E::A),
     ///             1 => Ok(E::B),
@@ -168,7 +167,7 @@ pub trait Bitfield:
     ///     }
     /// }
     ///
-    /// impl From<E> for BitfieldIndex<Bitfield8> {
+    /// impl From<E> for Index<Bitfield8> {
     ///     fn from(value: E) -> Self {
     ///         Self::try_from(value as usize).expect("Enum E should always be a valid index")
     ///     }
@@ -194,9 +193,9 @@ pub trait Bitfield:
     fn from_flag<T>(flag: &T) -> Self
     where
         T: FlagsEnum<Bitfield = Self> + Copy,
-        BitfieldIndex<Self>: From<T>,
+        Index<Self>: From<T>,
     {
-        Self::ONE << BitfieldIndex::<Self>::from(*flag)
+        Self::ONE << Index::<Self>::from(*flag)
     }
 
     /// Expands `Bitfield` to a bigger one.
@@ -226,7 +225,7 @@ pub trait Bitfield:
             let result = self
                 .bits()
                 .enumerate()
-                .map(|(i, bit)| (BitfieldIndex::<Res>::try_from(i).unwrap(), bit))
+                .map(|(i, bit)| (Index::<Res>::try_from(i).unwrap(), bit))
                 .fold(Res::new(), |mut acc, (i, bit)| acc.set_bit(i, bit));
 
             Ok(result)
@@ -312,7 +311,7 @@ pub trait Bitfield:
     /// # use std::error::Error;
     /// #
     /// # fn main() -> Result<(), Box<dyn Error>> {
-    /// use simple_bitfield::{prelude::{Bitfield, Bitfield8, FlagsEnum, BitfieldIndex}, error::{ConvError, ConvTarget}};
+    /// use simple_bitfield::{prelude::{Bitfield, Bitfield8, FlagsEnum, Index}, error::{ConvError, ConvTarget}};
     ///
     /// #[derive(Clone, Copy, Debug, PartialEq, Eq)]
     /// enum E {
@@ -322,10 +321,10 @@ pub trait Bitfield:
     ///     E, // 4
     /// }
     ///
-    /// impl TryFrom<BitfieldIndex<Bitfield8>> for E {
+    /// impl TryFrom<Index<Bitfield8>> for E {
     ///     type Error = ConvError;
     ///
-    ///     fn try_from(index: BitfieldIndex<Bitfield8>) -> Result<Self, Self::Error> {
+    ///     fn try_from(index: Index<Bitfield8>) -> Result<Self, Self::Error> {
     ///         match index.into_inner() {
     ///             0 => Ok(E::A),
     ///             1 => Ok(E::B),
@@ -336,7 +335,7 @@ pub trait Bitfield:
     ///     }
     /// }
     ///
-    /// impl From<E> for BitfieldIndex<Bitfield8> {
+    /// impl From<E> for Index<Bitfield8> {
     ///     fn from(value: E) -> Self {
     ///         Self::try_from(value as usize).expect("Enum E should always be a valid index")
     ///     }
@@ -356,7 +355,7 @@ pub trait Bitfield:
     fn from_slice_flags<T>(slice: &[T]) -> Self
     where
         T: FlagsEnum<Bitfield = Self>,
-        BitfieldIndex<Self>: From<T>,
+        Index<Self>: From<T>,
         Self: FromIterator<T>,
     {
         slice.iter().take(Self::BIT_SIZE).cloned().collect()
@@ -414,7 +413,7 @@ pub trait Bitfield:
         })
     }
 
-    /// Sets bit at [`index`][BitfieldIndex] to value. Returns copy of the resulting `Bitfield`.
+    /// Sets bit at [`index`][Index] to value. Returns copy of the resulting `Bitfield`.
     ///
     /// # Examples
     /// ```rust
@@ -437,16 +436,16 @@ pub trait Bitfield:
     /// # }
     /// ```
     #[inline(always)]
-    fn set_bit(&mut self, index: BitfieldIndex<Self>, value: bool) -> Self {
+    fn set_bit(&mut self, index: Index<Self>, value: bool) -> Self {
         if value {
-            *self = self.clone() | Self::from(BitfieldIndex::<Self>::MIN) << index;
+            *self = self.clone() | Self::from(Index::<Self>::MIN) << index;
         } else {
-            *self = self.clone() & !(Self::from(BitfieldIndex::<Self>::MIN) << index);
+            *self = self.clone() & !(Self::from(Index::<Self>::MIN) << index);
         }
         self.clone()
     }
 
-    /// Returns a copy of a bit at [`index`][BitfieldIndex].
+    /// Returns a copy of a bit at [`index`][Index].
     ///
     /// # Examples
     /// ```rust
@@ -463,12 +462,12 @@ pub trait Bitfield:
     /// # }
     /// ```
     #[inline(always)]
-    fn bit(&self, index: BitfieldIndex<Self>) -> bool {
-        let bit = Self::from(BitfieldIndex::<Self>::MIN) << index;
+    fn bit(&self, index: Index<Self>) -> bool {
+        let bit = Self::from(Index::<Self>::MIN) << index;
         (self.clone() & bit) != Self::NONE
     }
 
-    /// Returns a [`BitRef`] holding an immutable reference to the bit at [`index`][BitfieldIndex].
+    /// Returns a [`BitRef`] holding an immutable reference to the bit at [`index`][Index].
     ///
     /// # Examples
     /// ```rust
@@ -485,11 +484,11 @@ pub trait Bitfield:
     /// # }
     /// ```
     #[inline(always)]
-    fn bit_ref(&self, index: BitfieldIndex<Self>) -> BitRef<'_, Self> {
+    fn bit_ref(&self, index: Index<Self>) -> BitRef<'_, Self> {
         BitRef(self.bit(index), index, self)
     }
 
-    /// Returns a [`BitMut`] holding a mutable reference to the bit at [`index`][BitfieldIndex].
+    /// Returns a [`BitMut`] holding a mutable reference to the bit at [`index`][Index].
     ///
     /// # Examples
     /// ```rust
@@ -511,11 +510,11 @@ pub trait Bitfield:
     /// # }
     /// ```
     #[inline(always)]
-    fn bit_mut(&mut self, index: BitfieldIndex<Self>) -> BitMut<'_, Self> {
+    fn bit_mut(&mut self, index: Index<Self>) -> BitMut<'_, Self> {
         BitMut(self.bit(index), index, self)
     }
 
-    /// Sets bit at [`index`][BitfieldIndex] to 1. Returns copy of the resulting `Bitfield`.
+    /// Sets bit at [`index`][Index] to 1. Returns copy of the resulting `Bitfield`.
     ///
     /// # Examples
     /// ```rust
@@ -535,12 +534,12 @@ pub trait Bitfield:
     /// # }
     /// ```
     #[inline(always)]
-    fn check_bit(&mut self, index: BitfieldIndex<Self>) -> Self {
-        *self = self.clone() | Self::from(BitfieldIndex::<Self>::MIN) << index;
+    fn check_bit(&mut self, index: Index<Self>) -> Self {
+        *self = self.clone() | Self::from(Index::<Self>::MIN) << index;
         self.clone()
     }
 
-    /// Sets bit at [`index`][BitfieldIndex] to 0. Returns copy of the resulting `Bitfield`.
+    /// Sets bit at [`index`][Index] to 0. Returns copy of the resulting `Bitfield`.
     ///
     /// # Examples
     /// ```rust
@@ -560,8 +559,8 @@ pub trait Bitfield:
     /// # }
     /// ```
     #[inline(always)]
-    fn uncheck_bit(&mut self, index: BitfieldIndex<Self>) -> Self {
-        *self = self.clone() & !(Self::from(BitfieldIndex::<Self>::MIN) << index);
+    fn uncheck_bit(&mut self, index: Index<Self>) -> Self {
+        *self = self.clone() & !(Self::from(Index::<Self>::MIN) << index);
         self.clone()
     }
 
@@ -709,18 +708,13 @@ pub trait Bitfield:
             let result = self
                 .bits()
                 .enumerate()
-                .map(|(i, bit)| (BitfieldIndex::<Res>::try_from(i).unwrap(), bit))
+                .map(|(i, bit)| (Index::<Res>::try_from(i).unwrap(), bit))
                 .fold(Res::new(), |mut acc, (i, bit)| acc.set_bit(i, bit));
 
             let result = other
                 .bits()
                 .enumerate()
-                .map(|(i, bit)| {
-                    (
-                        BitfieldIndex::<Res>::try_from(i + Self::BIT_SIZE).unwrap(),
-                        bit,
-                    )
-                })
+                .map(|(i, bit)| (Index::<Res>::try_from(i + Self::BIT_SIZE).unwrap(), bit))
                 .fold(result, |mut acc, (i, bit)| acc.set_bit(i, bit));
             Ok(result)
         } else {
@@ -762,14 +756,14 @@ pub trait Bitfield:
                 .bits()
                 .take(Res1::BIT_SIZE)
                 .enumerate()
-                .map(|(i, bit)| (BitfieldIndex::<Res1>::try_from(i).unwrap(), bit))
+                .map(|(i, bit)| (Index::<Res1>::try_from(i).unwrap(), bit))
                 .fold(Res1::new(), |mut acc, (i, bit)| acc.set_bit(i, bit));
 
             let result2 = self
                 .bits()
                 .skip(Res1::BIT_SIZE)
                 .enumerate()
-                .map(|(i, bit)| (BitfieldIndex::<Res2>::try_from(i).unwrap(), bit))
+                .map(|(i, bit)| (Index::<Res2>::try_from(i).unwrap(), bit))
                 .fold(Res2::new(), |mut acc, (i, bit)| acc.set_bit(i, bit));
 
             Ok((result1, result2))
@@ -909,7 +903,7 @@ pub trait Bitfield:
     #[inline(always)]
     fn bits(&self) -> impl Iterator<Item = bool> {
         (0..Self::BIT_SIZE)
-            .map(|i| BitfieldIndex::<Self>::try_from(i).unwrap())
+            .map(|i| Index::<Self>::try_from(i).unwrap())
             .map(|i| self.bit(i))
     }
 
@@ -941,7 +935,7 @@ pub trait Bitfield:
     #[inline(always)]
     fn bits_ref(&self) -> impl Iterator<Item = BitRef<'_, Self>> {
         (0..Self::BIT_SIZE)
-            .map(|i| BitfieldIndex::<Self>::try_from(i).unwrap())
+            .map(|i| Index::<Self>::try_from(i).unwrap())
             .map(|i| self.bit_ref(i))
     }
 
@@ -970,11 +964,11 @@ pub trait Bitfield:
     fn bits_mut(&mut self) -> impl Iterator<Item = BitMut<'_, Self>> {
         let p = self as *mut Self;
         (0..Self::BIT_SIZE)
-            .map(|i| BitfieldIndex::<Self>::try_from(i).unwrap())
+            .map(|i| Index::<Self>::try_from(i).unwrap())
             .map(move |i| unsafe { p.as_mut().unwrap().bit_mut(i) })
     }
 
-    /// Returns iterator over [`indeces`][BitfieldIndex] of the set bits of the `Bitfield`.
+    /// Returns iterator over [`indeces`][Index] of the set bits of the `Bitfield`.
     ///
     /// # Examples
     /// ```rust
@@ -994,7 +988,7 @@ pub trait Bitfield:
     /// # }
     /// ```
     #[inline(always)]
-    fn ones(&self) -> impl Iterator<Item = BitfieldIndex<Self>> {
+    fn ones(&self) -> impl Iterator<Item = Index<Self>> {
         self.bits().enumerate().filter_map(|(i, bit)| {
             if bit {
                 Some(i.try_into().unwrap())
@@ -1004,7 +998,7 @@ pub trait Bitfield:
         })
     }
 
-    /// Returns iterator over [`indeces`][BitfieldIndex] of the unset bits of the `Bitfield`.
+    /// Returns iterator over [`indeces`][Index] of the unset bits of the `Bitfield`.
     ///
     /// # Examples
     /// ```rust
@@ -1026,7 +1020,7 @@ pub trait Bitfield:
     /// # }
     /// ```
     #[inline(always)]
-    fn zeros(&self) -> impl Iterator<Item = BitfieldIndex<Self>> {
+    fn zeros(&self) -> impl Iterator<Item = Index<Self>> {
         self.bits().enumerate().filter_map(|(i, bit)| {
             if !bit {
                 Some(i.try_into().unwrap())
@@ -1036,7 +1030,7 @@ pub trait Bitfield:
         })
     }
 
-    /// Returns iterator over set bit [`indeces`][BitfieldIndex] of the `Bitfield`
+    /// Returns iterator over set bit [`indeces`][Index] of the `Bitfield`
     /// converted to target type `T`, where `T` implements [`FlagsEnum`].
     ///
     /// # Examples
@@ -1044,7 +1038,7 @@ pub trait Bitfield:
     /// # use std::error::Error;
     /// #
     /// # fn main() -> Result<(), Box<dyn Error>> {
-    /// use simple_bitfield::{prelude::{Bitfield, Bitfield8, FlagsEnum, BitfieldIndex}, error::{ConvError, ConvTarget}};
+    /// use simple_bitfield::{prelude::{Bitfield, Bitfield8, FlagsEnum, Index}, error::{ConvError, ConvTarget}};
     ///
     /// #[derive(Clone, Copy, Debug, PartialEq, Eq)]
     /// enum E {
@@ -1054,10 +1048,10 @@ pub trait Bitfield:
     ///     E, // 4
     /// }
     ///
-    /// impl TryFrom<BitfieldIndex<Bitfield8>> for E {
+    /// impl TryFrom<Index<Bitfield8>> for E {
     ///     type Error = ConvError;
     ///
-    ///     fn try_from(index: BitfieldIndex<Bitfield8>) -> Result<Self, Self::Error> {
+    ///     fn try_from(index: Index<Bitfield8>) -> Result<Self, Self::Error> {
     ///         match index.into_inner() {
     ///             0 => Ok(E::A),
     ///             1 => Ok(E::B),
@@ -1068,7 +1062,7 @@ pub trait Bitfield:
     ///     }
     /// }
     ///
-    /// impl From<E> for BitfieldIndex<Bitfield8> {
+    /// impl From<E> for Index<Bitfield8> {
     ///     fn from(value: E) -> Self {
     ///         Self::try_from(value as usize).expect("Enum E should always be a valid index")
     ///     }
@@ -1092,12 +1086,12 @@ pub trait Bitfield:
     fn selected_variants<T>(&self) -> impl Iterator<Item = T>
     where
         T: FlagsEnum<Bitfield = Self>,
-        BitfieldIndex<Self>: From<T>,
+        Index<Self>: From<T>,
     {
         self.ones().filter_map(|i| T::try_from(i).ok())
     }
 
-    /// Returns iterator over unset bit [`indeces`][BitfieldIndex] of the `Bitfield`
+    /// Returns iterator over unset bit [`indeces`][Index] of the `Bitfield`
     /// converted to target type `T`, where `T` implements [`FlagsEnum`].
     ///
     /// # Examples
@@ -1105,7 +1099,7 @@ pub trait Bitfield:
     /// # use std::error::Error;
     /// #
     /// # fn main() -> Result<(), Box<dyn Error>> {
-    /// use simple_bitfield::{prelude::{Bitfield, Bitfield8, FlagsEnum, BitfieldIndex}, error::{ConvError, ConvTarget}};
+    /// use simple_bitfield::{prelude::{Bitfield, Bitfield8, FlagsEnum, Index}, error::{ConvError, ConvTarget}};
     ///
     /// #[derive(Clone, Copy, Debug, PartialEq, Eq)]
     /// enum E {
@@ -1115,10 +1109,10 @@ pub trait Bitfield:
     ///     E, // 4
     /// }
     ///
-    /// impl TryFrom<BitfieldIndex<Bitfield8>> for E {
+    /// impl TryFrom<Index<Bitfield8>> for E {
     ///     type Error = ConvError;
     ///
-    ///     fn try_from(index: BitfieldIndex<Bitfield8>) -> Result<Self, Self::Error> {
+    ///     fn try_from(index: Index<Bitfield8>) -> Result<Self, Self::Error> {
     ///         match index.into_inner() {
     ///             0 => Ok(E::A),
     ///             1 => Ok(E::B),
@@ -1129,7 +1123,7 @@ pub trait Bitfield:
     ///     }
     /// }
     ///
-    /// impl From<E> for BitfieldIndex<Bitfield8> {
+    /// impl From<E> for Index<Bitfield8> {
     ///     fn from(value: E) -> Self {
     ///         Self::try_from(value as usize).expect("Enum E should always be a valid index")
     ///     }
@@ -1153,7 +1147,7 @@ pub trait Bitfield:
     fn unselected_variants<T>(&self) -> impl Iterator<Item = T>
     where
         T: FlagsEnum<Bitfield = Self>,
-        BitfieldIndex<Self>: From<T>,
+        Index<Self>: From<T>,
     {
         self.zeros().filter_map(|i| T::try_from(i).ok())
     }

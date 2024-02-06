@@ -1,6 +1,6 @@
 //! Module containing [`BitRef`] and [`BitMut`] smart pointers.
 
-use crate::{bitfield::Bitfield, prelude::BitfieldIndex};
+use crate::{bitfield::Bitfield, prelude::Index};
 use std::{
     fmt::Debug,
     ops::{Deref, DerefMut},
@@ -8,11 +8,7 @@ use std::{
 
 /// Smart pointer granting immutable access to a bit in [`Bitfield`].
 #[derive(PartialEq, Eq)]
-pub struct BitRef<'a, T: Bitfield + 'a>(
-    pub(crate) bool,
-    pub(crate) BitfieldIndex<T>,
-    pub(crate) &'a T,
-);
+pub struct BitRef<'a, T: Bitfield + 'a>(pub(crate) bool, pub(crate) Index<T>, pub(crate) &'a T);
 
 impl<'a, T: 'a> BitRef<'a, T>
 where
@@ -20,7 +16,7 @@ where
     Self: 'a,
 {
     /// Returns index of the bit, referenced by `BitRef`.
-    pub fn index(&'a self) -> BitfieldIndex<T> {
+    pub fn index(&'a self) -> Index<T> {
         self.1
     }
 }
@@ -74,11 +70,7 @@ where
 
 /// Smart pointer granting mutable access to a bit in [`Bitfield`].
 #[derive(PartialEq, Eq)]
-pub struct BitMut<'a, T: Bitfield + 'a>(
-    pub(crate) bool,
-    pub(crate) BitfieldIndex<T>,
-    pub(crate) &'a mut T,
-);
+pub struct BitMut<'a, T: Bitfield + 'a>(pub(crate) bool, pub(crate) Index<T>, pub(crate) &'a mut T);
 
 impl<'a, T: 'a> BitMut<'a, T>
 where
@@ -86,7 +78,7 @@ where
     Self: 'a,
 {
     /// Returns index of the bit, referenced by `BitMut`.
-    pub fn index(&'a self) -> BitfieldIndex<T> {
+    pub fn index(&'a self) -> Index<T> {
         self.1
     }
 }

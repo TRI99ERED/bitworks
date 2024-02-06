@@ -3,7 +3,7 @@
 use crate::{
     bitfield::{Bitfield, Simple},
     error::{ConvError, ConvTarget},
-    prelude::{Bitfield128, Bitfield16, Bitfield32, Bitfield64, BitfieldIndex, FlagsEnum},
+    prelude::{Bitfield128, Bitfield16, Bitfield32, Bitfield64, FlagsEnum, Index},
 };
 use std::{
     collections::BTreeSet,
@@ -15,7 +15,7 @@ use std::{
 };
 
 type Inner = u8;
-type BIndex = BitfieldIndex<Bitfield8>;
+type BIndex = Index<Bitfield8>;
 const BITS: usize = 8;
 
 /// [`Bitfield`] of size 8.
@@ -441,7 +441,7 @@ mod tests {
 
     #[test]
     fn conversion_from_index() {
-        let bitfield = Tested::from(BitfieldIndex::<Tested>::MIN);
+        let bitfield = Tested::from(Index::<Tested>::MIN);
 
         assert_eq!(bitfield.0, 1);
     }

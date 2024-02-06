@@ -29,7 +29,7 @@ impl Debug for ConvTarget {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Field(size) => write!(f, "Bitfield{size}"),
-            Self::Index(size) => write!(f, "BitfieldIndex<Bitfield{size}>"),
+            Self::Index(size) => write!(f, "Index<Bitfield{size}>"),
             Self::Enum(size) => write!(f, "FlagsEnum<Bitfield = Bitfield{size}>"),
             Self::Raw(n) => write!(f, "{n}usize"),
         }
@@ -40,7 +40,7 @@ impl Display for ConvTarget {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match *self {
             Self::Field(size) => write!(f, "Bitfield (size {size})"),
-            Self::Index(max) => write!(f, "BitfieldIndex (max = {max})"),
+            Self::Index(max) => write!(f, "Index (max = {max})"),
             Self::Enum(size) => write!(f, "FlagsEnum (Bitfield (size {size}))"),
             Self::Raw(n) => write!(f, "{n}usize"),
         }

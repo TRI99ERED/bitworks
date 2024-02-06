@@ -1,4 +1,4 @@
-//! Module containing [`BitfieldIndex`].
+//! Module containing [`Index`].
 
 use crate::{
     error::{ConvError, ConvResult, ConvTarget},
@@ -9,32 +9,32 @@ use std::{cmp::Ordering, fmt::Debug, hash::Hash, marker::PhantomData};
 /// Struct meant to safely index the `T`, where `T` implements [`Bitfield`].
 #[derive(Default)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct BitfieldIndex<T: Bitfield>(usize, PhantomData<T>);
+pub struct Index<T: Bitfield>(usize, PhantomData<T>);
 
-impl<T> BitfieldIndex<T>
+impl<T> Index<T>
 where
     T: Bitfield,
 {
-    /// Value of 1 for `BitfieldIndex`.<br/>
-    /// Shortcut from having to use `BitfieldIndex::<T>::try_from(1).unwrap()`
+    /// Value of 1 for `Index`.<br/>
+    /// Shortcut from having to use `Index::<T>::try_from(1).unwrap()`
     pub const ONE: Self = Self(1, PhantomData);
 
-    /// Minimum value for `BitfieldIndex`.<br/>
-    /// Shortcut from having to use `BitfieldIndex::<T>::try_from(usize::MIN).unwrap()`
+    /// Minimum value for `Index`.<br/>
+    /// Shortcut from having to use `Index::<T>::try_from(usize::MIN).unwrap()`
     pub const MIN: Self = Self(0, PhantomData);
 
-    /// Maximum value for `BitfieldIndex`.<br/>
-    /// Shortcut from having to use `BitfieldIndex::<T>::try_from(T::BITS - 1).unwrap()`
+    /// Maximum value for `Index`.<br/>
+    /// Shortcut from having to use `Index::<T>::try_from(T::BITS - 1).unwrap()`
     pub const MAX: Self = Self(T::BIT_SIZE - 1, PhantomData);
 
-    /// Returns value of `BitfieldIndex` as [`usize`].
+    /// Returns value of `Index` as [`usize`].
     ///
     /// # Examples
     /// ```
-    /// use simple_bitfield::prelude::{Bitfield8, BitfieldIndex};
+    /// use simple_bitfield::prelude::{Bitfield8, Index};
     ///
     /// fn example() {
-    ///     let index = BitfieldIndex::<Bitfield8>::MAX;
+    ///     let index = Index::<Bitfield8>::MAX;
     ///     assert_eq!(index.into_inner(), 7);
     /// }
     /// ```
@@ -43,20 +43,20 @@ where
         self.0
     }
 
-    /// Returns [`Some`] `BitfieldIndex`, that is sum of `self` and `other`, or [`None`] on overflow.
+    /// Returns [`Some`] `Index`, that is sum of `self` and `other`, or [`None`] on overflow.
     ///
     /// # Examples
     /// ```
-    /// use simple_bitfield::prelude::{Bitfield8, BitfieldIndex};
+    /// use simple_bitfield::prelude::{Bitfield8, Index};
     ///
     /// fn example() {
-    ///     let a = BitfieldIndex::<Bitfield8>::ONE;
-    ///     let b = BitfieldIndex::<Bitfield8>::ONE;
+    ///     let a = Index::<Bitfield8>::ONE;
+    ///     let b = Index::<Bitfield8>::ONE;
     ///     let c = a.checked_add(b);
     ///     assert_eq!(c.unwrap().into_inner(), 2);
     ///
-    ///     let d = BitfieldIndex::<Bitfield8>::MAX;
-    ///     let e = BitfieldIndex::<Bitfield8>::ONE;
+    ///     let d = Index::<Bitfield8>::MAX;
+    ///     let e = Index::<Bitfield8>::ONE;
     ///     let f = d.checked_add(e);
     ///     assert_eq!(f, None);
     /// }
@@ -69,20 +69,20 @@ where
             .map(|i| Self(i, PhantomData))
     }
 
-    /// Returns [`Some`] `BitfieldIndex`, that is difference of `self` and `other`, or [`None`] on overflow.
+    /// Returns [`Some`] `Index`, that is difference of `self` and `other`, or [`None`] on overflow.
     ///
     /// # Examples
     /// ```
-    /// use simple_bitfield::prelude::{Bitfield8, BitfieldIndex};
+    /// use simple_bitfield::prelude::{Bitfield8, Index};
     ///
     /// fn example() {
-    ///     let a = BitfieldIndex::<Bitfield8>::MAX;
-    ///     let b = BitfieldIndex::<Bitfield8>::ONE;
+    ///     let a = Index::<Bitfield8>::MAX;
+    ///     let b = Index::<Bitfield8>::ONE;
     ///     let c = a.checked_sub(b);
     ///     assert_eq!(c.unwrap().into_inner(), 6);
     ///
-    ///     let d = BitfieldIndex::<Bitfield8>::MIN;
-    ///     let e = BitfieldIndex::<Bitfield8>::ONE;
+    ///     let d = Index::<Bitfield8>::MIN;
+    ///     let e = Index::<Bitfield8>::ONE;
     ///     let f = d.checked_sub(e);
     ///     assert_eq!(f, None);
     /// }
@@ -92,21 +92,21 @@ where
         self.0.checked_sub(other.0).map(|i| Self(i, PhantomData))
     }
 
-    /// Returns `BitfieldIndex`, that is sum of `self` and `other`,
-    /// or [`BitfieldIndex::<T>::MAX`] on overflow.
+    /// Returns `Index`, that is sum of `self` and `other`,
+    /// or [`Index::<T>::MAX`] on overflow.
     ///
     /// # Examples
     /// ```
-    /// use simple_bitfield::prelude::{Bitfield8, BitfieldIndex};
+    /// use simple_bitfield::prelude::{Bitfield8, Index};
     ///
     /// fn example() {
-    ///     let a = BitfieldIndex::<Bitfield8>::ONE;
-    ///     let b = BitfieldIndex::<Bitfield8>::ONE;
+    ///     let a = Index::<Bitfield8>::ONE;
+    ///     let b = Index::<Bitfield8>::ONE;
     ///     let c = a.saturating_add(b);
     ///     assert_eq!(c.into_inner(), 2);
     ///
-    ///     let d = BitfieldIndex::<Bitfield8>::MAX;
-    ///     let e = BitfieldIndex::<Bitfield8>::ONE;
+    ///     let d = Index::<Bitfield8>::MAX;
+    ///     let e = Index::<Bitfield8>::ONE;
     ///     let f = d.saturating_add(e);
     ///     assert_eq!(f.into_inner(), 7);
     /// }
@@ -116,21 +116,21 @@ where
         self.checked_add(other).unwrap_or(Self::MAX)
     }
 
-    /// Returns `BitfieldIndex`, that is difference of `self` and `other`,
-    /// or [`BitfieldIndex::<T>::MIN`] on overflow.
+    /// Returns `Index`, that is difference of `self` and `other`,
+    /// or [`Index::<T>::MIN`] on overflow.
     ///
     /// # Examples
     /// ```
-    /// use simple_bitfield::prelude::{Bitfield8, BitfieldIndex};
+    /// use simple_bitfield::prelude::{Bitfield8, Index};
     ///
     /// fn example() {
-    ///     let a = BitfieldIndex::<Bitfield8>::MAX;
-    ///     let b = BitfieldIndex::<Bitfield8>::ONE;
+    ///     let a = Index::<Bitfield8>::MAX;
+    ///     let b = Index::<Bitfield8>::ONE;
     ///     let c = a.saturating_sub(b);
     ///     assert_eq!(c.into_inner(), 6);
     ///
-    ///     let d = BitfieldIndex::<Bitfield8>::MIN;
-    ///     let e = BitfieldIndex::<Bitfield8>::ONE;
+    ///     let d = Index::<Bitfield8>::MIN;
+    ///     let e = Index::<Bitfield8>::ONE;
     ///     let f = d.saturating_sub(e);
     ///     assert_eq!(f.into_inner(), 0);
     /// }
@@ -142,14 +142,14 @@ where
 
     /// Saturating conversion between `BifieldIndex`es.
     #[inline(always)]
-    pub fn to_other<U>(self) -> BitfieldIndex<U>
+    pub fn to_other<U>(self) -> Index<U>
     where
         U: Bitfield,
     {
         if U::BIT_SIZE >= T::BIT_SIZE {
-            BitfieldIndex::<U>(self.0, PhantomData)
+            Index::<U>(self.0, PhantomData)
         } else {
-            BitfieldIndex::<U>::MAX
+            Index::<U>::MAX
         }
     }
 
@@ -158,14 +158,14 @@ where
     /// # Errors
     /// `U::BIT_SIZE` is smaller, than `T::BIT_SIZE`.
     #[inline(always)]
-    pub fn try_to_other<U>(self) -> ConvResult<BitfieldIndex<U>>
+    pub fn try_to_other<U>(self) -> ConvResult<Index<U>>
     where
         U: Bitfield,
     {
         if U::BIT_SIZE >= T::BIT_SIZE {
-            Ok(BitfieldIndex::<U>(self.0, PhantomData))
+            Ok(Index::<U>(self.0, PhantomData))
         } else {
-            BitfieldIndex::<U>::try_from(self.0).map_err(|_| {
+            Index::<U>::try_from(self.0).map_err(|_| {
                 ConvError::new(
                     ConvTarget::Index(U::BIT_SIZE),
                     ConvTarget::Index(T::BIT_SIZE),
@@ -187,7 +187,7 @@ where
     }
 }
 
-impl<T> TryFrom<usize> for BitfieldIndex<T>
+impl<T> TryFrom<usize> for Index<T>
 where
     T: Bitfield,
 {
@@ -206,17 +206,17 @@ where
     }
 }
 
-impl<T> From<BitfieldIndex<T>> for usize
+impl<T> From<Index<T>> for usize
 where
     T: Bitfield,
 {
     #[inline(always)]
-    fn from(value: BitfieldIndex<T>) -> Self {
+    fn from(value: Index<T>) -> Self {
         value.0
     }
 }
 
-impl<T> Clone for BitfieldIndex<T>
+impl<T> Clone for Index<T>
 where
     T: Bitfield,
 {
@@ -225,9 +225,9 @@ where
     }
 }
 
-impl<T> Copy for BitfieldIndex<T> where T: Bitfield {}
+impl<T> Copy for Index<T> where T: Bitfield {}
 
-impl<T> PartialOrd for BitfieldIndex<T>
+impl<T> PartialOrd for Index<T>
 where
     T: Bitfield,
 {
@@ -236,7 +236,7 @@ where
     }
 }
 
-impl<T> Ord for BitfieldIndex<T>
+impl<T> Ord for Index<T>
 where
     T: Bitfield,
 {
@@ -249,7 +249,7 @@ where
     }
 }
 
-impl<T> PartialEq for BitfieldIndex<T>
+impl<T> PartialEq for Index<T>
 where
     T: Bitfield,
 {
@@ -258,18 +258,18 @@ where
     }
 }
 
-impl<T> Eq for BitfieldIndex<T> where T: Bitfield {}
+impl<T> Eq for Index<T> where T: Bitfield {}
 
-impl<T> Debug for BitfieldIndex<T>
+impl<T> Debug for Index<T>
 where
     T: Bitfield,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "BitfieldIndex<Bitfield{}>({})", T::BIT_SIZE, self.0)
+        write!(f, "Index<Bitfield{}>({})", T::BIT_SIZE, self.0)
     }
 }
 
-impl<T> Hash for BitfieldIndex<T>
+impl<T> Hash for Index<T>
 where
     T: Bitfield,
 {

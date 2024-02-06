@@ -1,12 +1,12 @@
 //! Module containing [`FlagsEnum`].
 
-use crate::{bitfield::Bitfield, index::BitfieldIndex};
+use crate::{bitfield::Bitfield, index::Index};
 
 /// Marker trait for `enum`s, whose variants represent the different indeces of [`Bitfield`].
 ///
 /// # Examples
 /// ```
-/// use simple_bitfield::{prelude::{Bitfield, Bitfield8, FlagsEnum, BitfieldIndex}, error::{ConvError, ConvTarget}};
+/// use simple_bitfield::{prelude::{Bitfield, Bitfield8, FlagsEnum, Index}, error::{ConvError, ConvTarget}};
 ///
 /// #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 /// enum WeekDay {
@@ -19,10 +19,10 @@ use crate::{bitfield::Bitfield, index::BitfieldIndex};
 ///     Sunday = 6,
 /// }
 ///
-/// impl TryFrom<BitfieldIndex<Bitfield8>> for WeekDay {
+/// impl TryFrom<Index<Bitfield8>> for WeekDay {
 ///     type Error = ConvError;
 ///
-///     fn try_from(value: BitfieldIndex<Bitfield8>) -> Result<Self, Self::Error> {
+///     fn try_from(value: Index<Bitfield8>) -> Result<Self, Self::Error> {
 ///         match value.into_inner() {
 ///             0 => Ok(WeekDay::Monday),
 ///             1 => Ok(WeekDay::Tuesday),
@@ -36,7 +36,7 @@ use crate::{bitfield::Bitfield, index::BitfieldIndex};
 ///     }
 /// }
 ///
-/// impl From<WeekDay> for BitfieldIndex<Bitfield8> {
+/// impl From<WeekDay> for Index<Bitfield8> {
 ///     fn from(value: WeekDay) -> Self {
 ///         Self::try_from(value as usize).unwrap()
 ///     }
@@ -63,10 +63,10 @@ use crate::{bitfield::Bitfield, index::BitfieldIndex};
 ///     assert_eq!(iter.collect::<Bitfield8>(), Bitfield8::from(0b00101010));
 /// }
 /// ```
-pub trait FlagsEnum: Sized + Clone + TryFrom<BitfieldIndex<Self::Bitfield>>
+pub trait FlagsEnum: Sized + Clone + TryFrom<Index<Self::Bitfield>>
 where
     Self::Bitfield: Bitfield,
-    BitfieldIndex<Self::Bitfield>: From<Self>,
+    Index<Self::Bitfield>: From<Self>,
 {
     /// [`Bitfield`] which bits `FlagsEnum` enumerates
     type Bitfield;
@@ -93,10 +93,10 @@ mod tests {
             Sunday = 6,
         }
 
-        impl TryFrom<BitfieldIndex<Bitfield8>> for WeekDay {
+        impl TryFrom<Index<Bitfield8>> for WeekDay {
             type Error = ConvError;
 
-            fn try_from(value: BitfieldIndex<Bitfield8>) -> Result<Self, Self::Error> {
+            fn try_from(value: Index<Bitfield8>) -> Result<Self, Self::Error> {
                 match value.into_inner() {
                     0 => Ok(WeekDay::Monday),
                     1 => Ok(WeekDay::Tuesday),
@@ -110,7 +110,7 @@ mod tests {
             }
         }
 
-        impl From<WeekDay> for BitfieldIndex<Bitfield8> {
+        impl From<WeekDay> for Index<Bitfield8> {
             fn from(value: WeekDay) -> Self {
                 Self::try_from(value as usize).unwrap()
             }
@@ -149,10 +149,10 @@ mod tests {
             Sunday = 0b01000000,
         }
 
-        impl TryFrom<BitfieldIndex<Bitfield8>> for WeekDay {
+        impl TryFrom<Index<Bitfield8>> for WeekDay {
             type Error = ConvError;
 
-            fn try_from(value: BitfieldIndex<Bitfield8>) -> Result<Self, Self::Error> {
+            fn try_from(value: Index<Bitfield8>) -> Result<Self, Self::Error> {
                 match value.into_inner() {
                     0 => Ok(WeekDay::Monday),
                     1 => Ok(WeekDay::Tuesday),
@@ -166,7 +166,7 @@ mod tests {
             }
         }
 
-        impl From<WeekDay> for BitfieldIndex<Bitfield8> {
+        impl From<WeekDay> for Index<Bitfield8> {
             fn from(value: WeekDay) -> Self {
                 match value {
                     WeekDay::Monday => 0.try_into().unwrap(),
