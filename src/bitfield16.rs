@@ -421,7 +421,8 @@ mod tests {
         let bitfield = Tested::new()
             .set_bit(0.try_into()?, true)
             .check_bit(1.try_into()?)
-            .uncheck_bit(0.try_into()?);
+            .uncheck_bit(0.try_into()?)
+            .build();
 
         assert_eq!(bitfield, 0b00000010.into());
         Ok(())
@@ -849,8 +850,8 @@ mod tests {
 
     #[test]
     fn combine() -> TestResult {
-        let bitfield1 = Bitfield16::new().set_bit(1.try_into()?, true);
-        let bitfield2 = Bitfield16::new().set_bit(1.try_into()?, true);
+        let bitfield1 = Bitfield16::new().set_bit(1.try_into()?, true).build();
+        let bitfield2 = Bitfield16::new().set_bit(1.try_into()?, true).build();
 
         let bitfield3: Bitfield32 = bitfield1.combine(&bitfield2)?;
 
@@ -859,6 +860,7 @@ mod tests {
             Bitfield32::new()
                 .set_bit(1.try_into()?, true)
                 .set_bit((16 + 1).try_into()?, true)
+                .build()
         );
         Ok(())
     }
@@ -867,18 +869,25 @@ mod tests {
     fn split() -> TestResult {
         let bitfield1 = Bitfield32::new()
             .set_bit(1.try_into()?, true)
-            .set_bit((16 + 1).try_into()?, true);
+            .set_bit((16 + 1).try_into()?, true)
+            .build();
         let (bitfield2, bitfield3): (Bitfield16, Bitfield16) = bitfield1.split()?;
 
-        assert_eq!(bitfield2, Bitfield16::new().set_bit(1.try_into()?, true));
-        assert_eq!(bitfield3, Bitfield16::new().set_bit(1.try_into()?, true));
+        assert_eq!(
+            bitfield2,
+            Bitfield16::new().set_bit(1.try_into()?, true).build()
+        );
+        assert_eq!(
+            bitfield3,
+            Bitfield16::new().set_bit(1.try_into()?, true).build()
+        );
         Ok(())
     }
 
     #[test]
     fn fast_combine() -> TestResult {
-        let bitfield1 = Bitfield16::new().set_bit(1.try_into()?, true);
-        let bitfield2 = Bitfield16::new().set_bit(1.try_into()?, true);
+        let bitfield1 = Bitfield16::new().set_bit(1.try_into()?, true).build();
+        let bitfield2 = Bitfield16::new().set_bit(1.try_into()?, true).build();
 
         let bitfield3: Bitfield32 = bitfield1.fast_combine(&bitfield2)?;
 
@@ -887,6 +896,7 @@ mod tests {
             Bitfield32::new()
                 .set_bit(1.try_into()?, true)
                 .set_bit((16 + 1).try_into()?, true)
+                .build()
         );
         Ok(())
     }
@@ -895,11 +905,18 @@ mod tests {
     fn fast_split() -> TestResult {
         let bitfield1 = Bitfield32::new()
             .set_bit(1.try_into()?, true)
-            .set_bit((16 + 1).try_into()?, true);
+            .set_bit((16 + 1).try_into()?, true)
+            .build();
         let (bitfield2, bitfield3): (Bitfield16, Bitfield16) = bitfield1.fast_split()?;
 
-        assert_eq!(bitfield2, Bitfield16::new().set_bit(1.try_into()?, true));
-        assert_eq!(bitfield3, Bitfield16::new().set_bit(1.try_into()?, true));
+        assert_eq!(
+            bitfield2,
+            Bitfield16::new().set_bit(1.try_into()?, true).build()
+        );
+        assert_eq!(
+            bitfield3,
+            Bitfield16::new().set_bit(1.try_into()?, true).build()
+        );
         Ok(())
     }
 }

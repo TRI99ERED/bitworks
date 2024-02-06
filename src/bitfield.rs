@@ -8,7 +8,7 @@ use crate::{
 };
 use std::{
     collections::BTreeSet,
-    ops::{BitAnd, BitOr, BitXor, Not, Shl, Shr},
+    ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Not, Shl, Shr},
 };
 
 /// Trait defining common bitfield logic.
@@ -19,8 +19,11 @@ pub trait Bitfield:
     + Eq
     + Not<Output = Self>
     + BitAnd<Output = Self>
+    + BitAndAssign
     + BitOr<Output = Self>
+    + BitOrAssign
     + BitXor<Output = Self>
+    + BitXorAssign
     + Shl<Index<Self>, Output = Self>
     + Shr<Index<Self>, Output = Self>
     + From<Index<Self>>
@@ -111,6 +114,11 @@ pub trait Bitfield:
     #[inline(always)]
     fn new() -> Self {
         Self::NONE
+    }
+
+    #[inline(always)]
+    fn build(&mut self) -> Self {
+        self.clone()
     }
 
     /// Constructs `Bitfield` from [`Index`].
@@ -229,7 +237,8 @@ pub trait Bitfield:
                 .bits()
                 .enumerate()
                 .map(|(i, bit)| (Index::<Res>::try_from(i).unwrap(), bit))
-                .fold(Res::new(), |mut acc, (i, bit)| acc.set_bit(i, bit));
+                .fold(&mut Res::new(), |acc, (i, bit)| acc.set_bit(i, bit))
+                .build();
 
             Ok(result)
         } else {
@@ -307,7 +316,8 @@ pub trait Bitfield:
             .take(Self::BIT_SIZE)
             .enumerate()
             .map(|(i, &b)| (Index::<Self>::try_from(i).unwrap(), b))
-            .fold(Self::NONE, |mut acc, (i, b)| acc.set_bit(i, b))
+            .fold(&mut Self::new(), |acc, (i, b)| acc.set_bit(i, b))
+            .build()
     }
 
     /// Builds `Bitfield` from slice over `T` values, where `T` implements [`FlagsEnum`].<br/>
@@ -516,20 +526,75 @@ pub trait Bitfield:
     ///     .set_bit(4.try_into()?, false)
     ///     .set_bit(5.try_into()?, true)
     ///     .set_bit(6.try_into()?, false)
-    ///     .set_bit(7.try_into()?, true);
+    ///     .set_bit(7.try_into()?, true)
+    ///     .build();
     ///
     /// assert_eq!(bitfield.into_inner(), 0b10101010);
     /// #   Ok(())
     /// # }
     /// ```
     #[inline(always)]
-    fn set_bit(&mut self, index: Index<Self>, value: bool) -> Self {
+    fn set_bit(&mut self, index: Index<Self>, value: bool) -> &mut Self {
         if value {
-            *self = self.clone() | Self::from(Index::<Self>::MIN) << index;
+            *self |= Self::from(Index::<Self>::MIN) << index;
         } else {
-            *self = self.clone() & !(Self::from(Index::<Self>::MIN) << index);
+            *self &= !(Self::from(Index::<Self>::MIN) << index);
         }
-        self.clone()
+        self
+    }
+
+    /// Sets bit at [`index`][Index] to 1. Returns copy of the resulting `Bitfield`.
+    ///
+    /// # Examples
+    /// ```rust
+    /// # use std::error::Error;
+    /// #
+    /// # fn main() -> Result<(), Box<dyn Error>> {
+    /// use simple_bitfield::prelude::{Bitfield, Bitfield8};
+    ///
+    /// let bitfield = Bitfield8::NONE
+    ///     .clone()
+    ///     .check_bit(1.try_into()?)
+    ///     .check_bit(3.try_into()?)
+    ///     .check_bit(5.try_into()?)
+    ///     .check_bit(7.try_into()?)
+    ///     .build();
+    ///
+    /// assert_eq!(bitfield.into_inner(), 0b10101010);
+    /// #   Ok(())
+    /// # }
+    /// ```
+    #[inline(always)]
+    fn check_bit(&mut self, index: Index<Self>) -> &mut Self {
+        *self |= Self::from(Index::<Self>::MIN) << index;
+        self
+    }
+
+    /// Sets bit at [`index`][Index] to 0. Returns copy of the resulting `Bitfield`.
+    ///
+    /// # Examples
+    /// ```rust
+    /// # use std::error::Error;
+    /// #
+    /// # fn main() -> Result<(), Box<dyn Error>> {
+    /// use simple_bitfield::prelude::{Bitfield, Bitfield8};
+    ///
+    /// let bitfield = Bitfield8::ALL
+    ///     .clone()
+    ///     .uncheck_bit(0.try_into()?)
+    ///     .uncheck_bit(2.try_into()?)
+    ///     .uncheck_bit(4.try_into()?)
+    ///     .uncheck_bit(6.try_into()?)
+    ///     .build();
+    ///
+    /// assert_eq!(bitfield.into_inner(), 0b10101010);
+    /// #   Ok(())
+    /// # }
+    /// ```
+    #[inline(always)]
+    fn uncheck_bit(&mut self, index: Index<Self>) -> &mut Self {
+        *self &= !(Self::from(Index::<Self>::MIN) << index);
+        self
     }
 
     /// Returns a copy of a bit at [`index`][Index].
@@ -541,7 +606,7 @@ pub trait Bitfield:
     /// # fn main() -> Result<(), Box<dyn Error>> {
     /// use simple_bitfield::prelude::{Bitfield, Bitfield8};
     ///
-    /// let bitfield = Bitfield8::new().set_bit(1.try_into()?, true);
+    /// let bitfield = Bitfield8::new().set_bit(1.try_into()?, true).build();
     ///
     /// assert_eq!(bitfield.bit(0.try_into()?), false);
     /// assert_eq!(bitfield.bit(1.try_into()?), true);
@@ -563,7 +628,7 @@ pub trait Bitfield:
     /// # fn main() -> Result<(), Box<dyn Error>> {
     /// use simple_bitfield::prelude::{Bitfield, Bitfield8};
     ///
-    /// let bitfield = Bitfield8::new().set_bit(1.try_into()?, true);
+    /// let bitfield = Bitfield8::new().set_bit(1.try_into()?, true).build();
     ///
     /// assert_eq!(*bitfield.bit_ref(0.try_into()?), false);
     /// assert_eq!(*bitfield.bit_ref(1.try_into()?), true);
@@ -599,56 +664,6 @@ pub trait Bitfield:
     #[inline(always)]
     fn bit_mut(&mut self, index: Index<Self>) -> BitMut<'_, Self> {
         BitMut(self.bit(index), index, self)
-    }
-
-    /// Sets bit at [`index`][Index] to 1. Returns copy of the resulting `Bitfield`.
-    ///
-    /// # Examples
-    /// ```rust
-    /// # use std::error::Error;
-    /// #
-    /// # fn main() -> Result<(), Box<dyn Error>> {
-    /// use simple_bitfield::prelude::{Bitfield, Bitfield8};
-    ///
-    /// let bitfield = Bitfield8::NONE
-    ///     .check_bit(1.try_into()?)
-    ///     .check_bit(3.try_into()?)
-    ///     .check_bit(5.try_into()?)
-    ///     .check_bit(7.try_into()?);
-    ///
-    /// assert_eq!(bitfield.into_inner(), 0b10101010);
-    /// #   Ok(())
-    /// # }
-    /// ```
-    #[inline(always)]
-    fn check_bit(&mut self, index: Index<Self>) -> Self {
-        *self = self.clone() | Self::from(Index::<Self>::MIN) << index;
-        self.clone()
-    }
-
-    /// Sets bit at [`index`][Index] to 0. Returns copy of the resulting `Bitfield`.
-    ///
-    /// # Examples
-    /// ```rust
-    /// # use std::error::Error;
-    /// #
-    /// # fn main() -> Result<(), Box<dyn Error>> {
-    /// use simple_bitfield::prelude::{Bitfield, Bitfield8};
-    ///
-    /// let bitfield = Bitfield8::ALL
-    ///     .uncheck_bit(0.try_into()?)
-    ///     .uncheck_bit(2.try_into()?)
-    ///     .uncheck_bit(4.try_into()?)
-    ///     .uncheck_bit(6.try_into()?);
-    ///
-    /// assert_eq!(bitfield.into_inner(), 0b10101010);
-    /// #   Ok(())
-    /// # }
-    /// ```
-    #[inline(always)]
-    fn uncheck_bit(&mut self, index: Index<Self>) -> Self {
-        *self = self.clone() & !(Self::from(Index::<Self>::MIN) << index);
-        self.clone()
     }
 
     /// Returns Set complement (`self′`) of `Bitfield`.<br/>
@@ -792,17 +807,19 @@ pub trait Bitfield:
     {
         let combined = Self::BIT_SIZE + Other::BIT_SIZE;
         if Res::BIT_SIZE == combined {
-            let result = self
+            let mut result = self
                 .bits()
                 .enumerate()
                 .map(|(i, bit)| (Index::<Res>::try_from(i).unwrap(), bit))
-                .fold(Res::new(), |mut acc, (i, bit)| acc.set_bit(i, bit));
+                .fold(&mut Res::new(), |acc, (i, bit)| acc.set_bit(i, bit))
+                .build();
 
             let result = other
                 .bits()
                 .enumerate()
                 .map(|(i, bit)| (Index::<Res>::try_from(i + Self::BIT_SIZE).unwrap(), bit))
-                .fold(result, |mut acc, (i, bit)| acc.set_bit(i, bit));
+                .fold(&mut result, |acc, (i, bit)| acc.set_bit(i, bit))
+                .build();
             Ok(result)
         } else {
             Err(ConvError::new(
@@ -844,14 +861,16 @@ pub trait Bitfield:
                 .take(Res1::BIT_SIZE)
                 .enumerate()
                 .map(|(i, bit)| (Index::<Res1>::try_from(i).unwrap(), bit))
-                .fold(Res1::new(), |mut acc, (i, bit)| acc.set_bit(i, bit));
+                .fold(&mut Res1::new(), |acc, (i, bit)| acc.set_bit(i, bit))
+                .build();
 
             let result2 = self
                 .bits()
                 .skip(Res1::BIT_SIZE)
                 .enumerate()
                 .map(|(i, bit)| (Index::<Res2>::try_from(i).unwrap(), bit))
-                .fold(Res2::new(), |mut acc, (i, bit)| acc.set_bit(i, bit));
+                .fold(&mut Res2::new(), |acc, (i, bit)| acc.set_bit(i, bit))
+                .build();
 
             Ok((result1, result2))
         } else {

@@ -426,7 +426,8 @@ mod tests {
         let bitfield = Tested::new()
             .set_bit(0.try_into()?, true)
             .check_bit(1.try_into()?)
-            .uncheck_bit(0.try_into()?);
+            .uncheck_bit(0.try_into()?)
+            .build();
 
         assert_eq!(bitfield, 0b00000010.into());
         Ok(())
