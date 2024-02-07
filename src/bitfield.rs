@@ -229,16 +229,16 @@ pub trait Bitfield:
     /// #   Ok(())
     /// # }
     /// ```
-    fn expand<Res>(&self) -> ConvResult<Res>
+    fn expand<Res>(self) -> ConvResult<Res>
     where
         Res: Bitfield,
     {
         if Self::BIT_SIZE <= Res::BIT_SIZE {
             let result = self
-                .bits()
+                .bits_ref()
                 .enumerate()
                 .map(|(i, bit)| (Index::<Res>::try_from(i).unwrap(), bit))
-                .fold(&mut Res::NONE.clone(), |acc, (i, bit)| acc.set_bit(i, bit))
+                .fold(&mut Res::NONE.clone(), |acc, (i, bit)| acc.set_bit(i, *bit))
                 .build();
 
             Ok(result)
@@ -269,7 +269,7 @@ pub trait Bitfield:
     /// #   Ok(())
     /// # }
     /// ```
-    fn fast_expand<Res>(&self) -> ConvResult<Res>
+    fn fast_expand<Res>(self) -> ConvResult<Res>
     where
         Self: Simple,
         Res: Bitfield + Simple,
@@ -278,7 +278,7 @@ pub trait Bitfield:
             let mut result = Res::NONE.clone();
 
             let result_ptr = unsafe { std::mem::transmute(&mut result as *mut Res) };
-            let self_ptr = self as *const Self;
+            let self_ptr = &self as *const Self;
             unsafe {
                 std::ptr::copy_nonoverlapping(self_ptr, result_ptr, 1);
             }
@@ -477,7 +477,7 @@ pub trait Bitfield:
     #[inline(always)]
     fn count_ones(&self) -> usize {
         (0..Self::BIT_SIZE).fold(0, |acc, i| {
-            acc + if self.bit(i.try_into().unwrap()) {
+            acc + if *self.bit_ref(i.try_into().unwrap()) {
                 1
             } else {
                 0
@@ -503,7 +503,7 @@ pub trait Bitfield:
     #[inline(always)]
     fn count_zeros(&self) -> usize {
         (0..Self::BIT_SIZE).fold(0, |acc, i| {
-            acc + (if self.bit(i.try_into().unwrap()) {
+            acc + (if *self.bit_ref(i.try_into().unwrap()) {
                 0
             } else {
                 1
@@ -615,9 +615,12 @@ pub trait Bitfield:
     /// # }
     /// ```
     #[inline(always)]
-    fn bit(&self, index: Index<Self>) -> bool {
-        let bit = Self::from(Index::<Self>::MIN) << index;
-        (self.clone() & bit) != Self::NONE
+    fn bit(self, index: Index<Self>) -> bool
+    where
+        Self: Copy,
+    {
+        let mask = Self::from(Index::<Self>::MIN) << index;
+        (self & mask) != Self::NONE
     }
 
     /// Returns a [`BitRef`] holding an immutable reference to the bit at [`index`][Index].
@@ -636,10 +639,7 @@ pub trait Bitfield:
     /// #   Ok(())
     /// # }
     /// ```
-    #[inline(always)]
-    fn bit_ref(&self, index: Index<Self>) -> BitRef<'_, Self> {
-        BitRef(self.bit(index), index, self)
-    }
+    fn bit_ref(&self, index: Index<Self>) -> BitRef<'_, Self>;
 
     /// Returns a [`BitMut`] holding a mutable reference to the bit at [`index`][Index].
     ///
@@ -662,10 +662,7 @@ pub trait Bitfield:
     /// #   Ok(())
     /// # }
     /// ```
-    #[inline(always)]
-    fn bit_mut(&mut self, index: Index<Self>) -> BitMut<'_, Self> {
-        BitMut(self.bit(index), index, self)
-    }
+    fn bit_mut(&mut self, index: Index<Self>) -> BitMut<'_, Self>;
 
     /// Returns Set complement (`self′`) of `Bitfield`.<br/>
     /// Alias for [`!`] operator
@@ -806,13 +803,13 @@ pub trait Bitfield:
     ///
     /// let bitfield8_1 = Bitfield8::from(0b00000001);
     /// let bitfield8_2 = Bitfield8::from(0b00000011);
-    /// let bitfield16: Bitfield16 = bitfield8_1.combine(&bitfield8_2)?;
+    /// let bitfield16: Bitfield16 = bitfield8_1.combine(bitfield8_2)?;
     ///
     /// assert_eq!(bitfield16.into_inner(), 0b0000001100000001);
     /// #   Ok(())
     /// # }
     /// ```
-    fn combine<Other, Res>(&self, other: &Other) -> ConvResult<Res>
+    fn combine<Other, Res>(self, other: Other) -> ConvResult<Res>
     where
         Other: Bitfield,
         Res: Bitfield,
@@ -820,17 +817,17 @@ pub trait Bitfield:
         let combined = Self::BIT_SIZE + Other::BIT_SIZE;
         if Res::BIT_SIZE == combined {
             let mut result = self
-                .bits()
+                .bits_ref()
                 .enumerate()
                 .map(|(i, bit)| (Index::<Res>::try_from(i).unwrap(), bit))
-                .fold(&mut Res::NONE.clone(), |acc, (i, bit)| acc.set_bit(i, bit))
+                .fold(&mut Res::NONE.clone(), |acc, (i, bit)| acc.set_bit(i, *bit))
                 .build();
 
             let result = other
-                .bits()
+                .bits_ref()
                 .enumerate()
                 .map(|(i, bit)| (Index::<Res>::try_from(i + Self::BIT_SIZE).unwrap(), bit))
-                .fold(&mut result, |acc, (i, bit)| acc.set_bit(i, bit))
+                .fold(&mut result, |acc, (i, bit)| acc.set_bit(i, *bit))
                 .build();
             Ok(result)
         } else {
@@ -862,7 +859,7 @@ pub trait Bitfield:
     /// #   Ok(())
     /// # }
     /// ```
-    fn split<Res1, Res2>(&self) -> ConvResult<(Res1, Res2)>
+    fn split<Res1, Res2>(self) -> ConvResult<(Res1, Res2)>
     where
         Res1: Bitfield,
         Res2: Bitfield,
@@ -870,19 +867,19 @@ pub trait Bitfield:
         let combined = Res1::BIT_SIZE + Res2::BIT_SIZE;
         if Self::BIT_SIZE == combined {
             let result1 = self
-                .bits()
+                .bits_ref()
                 .take(Res1::BIT_SIZE)
                 .enumerate()
                 .map(|(i, bit)| (Index::<Res1>::try_from(i).unwrap(), bit))
-                .fold(&mut Res1::NONE.clone(), |acc, (i, bit)| acc.set_bit(i, bit))
+                .fold(&mut Res1::NONE.clone(), |acc, (i, bit)| acc.set_bit(i, *bit))
                 .build();
 
             let result2 = self
-                .bits()
+                .bits_ref()
                 .skip(Res1::BIT_SIZE)
                 .enumerate()
                 .map(|(i, bit)| (Index::<Res2>::try_from(i).unwrap(), bit))
-                .fold(&mut Res2::NONE.clone(), |acc, (i, bit)| acc.set_bit(i, bit))
+                .fold(&mut Res2::NONE.clone(), |acc, (i, bit)| acc.set_bit(i, *bit))
                 .build();
 
             Ok((result1, result2))
@@ -908,13 +905,13 @@ pub trait Bitfield:
     ///
     /// let bitfield8_1 = Bitfield8::from(0b00000001);
     /// let bitfield8_2 = Bitfield8::from(0b00000011);
-    /// let bitfield16: Bitfield16 = bitfield8_1.fast_combine(&bitfield8_2)?;
+    /// let bitfield16: Bitfield16 = bitfield8_1.fast_combine(bitfield8_2)?;
     ///
     /// assert_eq!(bitfield16.into_inner(), 0b0000001100000001);
     /// #   Ok(())
     /// # }
     /// ```
-    fn fast_combine<Other, Res>(&self, other: &Other) -> ConvResult<Res>
+    fn fast_combine<Other, Res>(self, other: Other) -> ConvResult<Res>
     where
         Self: Simple,
         Other: Bitfield + Simple,
@@ -925,13 +922,13 @@ pub trait Bitfield:
             let mut result = Res::NONE.clone();
 
             let result_ptr = unsafe { std::mem::transmute(&mut result as *mut Res) };
-            let self_ptr = self as *const Self;
+            let self_ptr = &self as *const Self;
             unsafe {
                 std::ptr::copy_nonoverlapping(self_ptr, result_ptr, 1);
             }
 
             let result_ptr = unsafe { std::mem::transmute(result_ptr.add(1)) };
-            let other_ptr = other as *const Other;
+            let other_ptr = &other as *const Other;
             unsafe {
                 std::ptr::copy_nonoverlapping(other_ptr, result_ptr, 1);
             }
@@ -964,7 +961,7 @@ pub trait Bitfield:
     /// #   Ok(())
     /// # }
     /// ```
-    fn fast_split<Res1, Res2>(&self) -> ConvResult<(Res1, Res2)>
+    fn fast_split<Res1, Res2>(self) -> ConvResult<(Res1, Res2)>
     where
         Self: Simple,
         Res1: Bitfield + Simple,
@@ -976,7 +973,7 @@ pub trait Bitfield:
             let mut result2 = Res2::NONE.clone();
 
             let result1_ptr = &mut result1 as *mut Res1;
-            let self_ptr = unsafe { std::mem::transmute(self as *const Self) };
+            let self_ptr = unsafe { std::mem::transmute(&self as *const Self) };
             unsafe {
                 std::ptr::copy_nonoverlapping(self_ptr, result1_ptr, 1);
             }
@@ -1020,10 +1017,13 @@ pub trait Bitfield:
     /// # }
     /// ```
     #[inline(always)]
-    fn bits(&self) -> impl Iterator<Item = bool> {
+    fn bits(self) -> impl Iterator<Item = bool>
+    where
+        Self: Copy,
+    {
         (0..Self::BIT_SIZE)
             .map(|i| Index::<Self>::try_from(i).unwrap())
-            .map(|i| self.bit(i))
+            .map(move |i| self.bit(i))
     }
 
     /// Returns iterator over [`BitRef`] holding immutable references
@@ -1108,8 +1108,8 @@ pub trait Bitfield:
     /// ```
     #[inline(always)]
     fn ones(&self) -> impl Iterator<Item = Index<Self>> {
-        self.bits().enumerate().filter_map(|(i, bit)| {
-            if bit {
+        self.bits_ref().enumerate().filter_map(|(i, bit)| {
+            if *bit {
                 Some(i.try_into().unwrap())
             } else {
                 None
@@ -1140,8 +1140,8 @@ pub trait Bitfield:
     /// ```
     #[inline(always)]
     fn zeros(&self) -> impl Iterator<Item = Index<Self>> {
-        self.bits().enumerate().filter_map(|(i, bit)| {
-            if !bit {
+        self.bits_ref().enumerate().filter_map(|(i, bit)| {
+            if !*bit {
                 Some(i.try_into().unwrap())
             } else {
                 None

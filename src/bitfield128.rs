@@ -1,8 +1,7 @@
 //! Module containing [`Bitfield128`].
 
 use crate::{
-    bitfield::{Bitfield, Simple},
-    prelude::{Bitfield16, Bitfield32, Bitfield64, Bitfield8, ByteField, FlagsEnum, Index},
+    bit_ref::{BitMut, BitRef}, bitfield::{Bitfield, Simple}, prelude::{Bitfield16, Bitfield32, Bitfield64, Bitfield8, ByteField, FlagsEnum, Index}
 };
 use std::{
     collections::BTreeSet,
@@ -64,6 +63,18 @@ impl Bitfield for Bitfield128 {
     #[inline(always)]
     fn count_zeros(&self) -> usize {
         self.0.count_zeros() as usize
+    }
+
+    #[inline(always)]
+    fn bit_ref(&self, index: BIndex) -> BitRef<'_, Self> {
+        let mask = Self::from(BIndex::MIN) << index;
+        BitRef((*self & mask) != Self::NONE, index, self)
+    }
+
+    #[inline(always)]
+    fn bit_mut(&mut self, index: BIndex) -> BitMut<'_, Self> {
+        let mask = Self::from(BIndex::MIN) << index;
+        BitMut((*self & mask) != Self::NONE, index, self)
     }
 }
 

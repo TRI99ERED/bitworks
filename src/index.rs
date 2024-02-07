@@ -174,13 +174,13 @@ where
         }
     }
 
-    /// Range unsafe sum of `self` and `other`.
+    // Range unsafe sum of `self` and `other`.
     #[inline(always)]
     pub(crate) fn __add(&self, other: Self) -> Self {
         Self(self.0 + other.0, PhantomData)
     }
 
-    /// Range unsafe difference of `self` and `other`.
+    // Range unsafe difference of `self` and `other`.
     #[inline(always)]
     pub(crate) fn __sub(&self, other: Self) -> Self {
         Self(self.0 - other.0, PhantomData)

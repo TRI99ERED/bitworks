@@ -1,4 +1,5 @@
 use crate::{
+    bit_ref::{BitMut, BitRef},
     bitfield::Simple,
     prelude::{Bitfield, FlagsEnum, Index},
 };
@@ -13,6 +14,18 @@ use std::{
 
 type Inner<const N: usize> = [u8; N];
 type BIndex<const N: usize> = Index<ByteField<N>>;
+
+const fn byte_index(index: usize) -> usize {
+    index / 8
+}
+
+const fn bit_index(index: usize) -> usize {
+    index % 8
+}
+
+const fn bitmask(index: usize) -> u8 {
+    1 << bit_index(index)
+}
 
 /// [`Bitfield`] of variable `size`.
 /// `N` is size in bytes of the `ByteField`.
@@ -47,10 +60,12 @@ impl<const N: usize> Bitfield for ByteField<N> {
 
     const ALL: Self = Self([255; N]);
 
+    #[inline(always)]
     fn from_index(index: &BIndex<N>) -> Self {
         Self::from(*index)
     }
 
+    #[inline(always)]
     fn from_flag<T>(flag: &T) -> Self
     where
         T: FlagsEnum<Bitfield = Self> + Copy,
@@ -59,48 +74,63 @@ impl<const N: usize> Bitfield for ByteField<N> {
         Self::from(BIndex::<N>::from(*flag))
     }
 
+    #[inline(always)]
     fn count_ones(&self) -> usize {
         self.0
             .iter()
             .fold(0usize, |acc, &e| acc + e.count_ones() as usize)
     }
 
+    #[inline(always)]
     fn count_zeros(&self) -> usize {
         self.0
             .iter()
             .fold(0usize, |acc, &e| acc + e.count_zeros() as usize)
     }
 
+    #[inline(always)]
     fn set_bit(&mut self, Index::<Self>(index, ..): BIndex<N>, value: bool) -> &mut Self {
-        let byte_index = index / 8;
-        let bit_index = index % 8;
         if value {
-            self.0[byte_index] |= 1 << bit_index;
+            self.0[byte_index(index)] |= bitmask(index);
         } else {
-            self.0[byte_index] &= !(1 << bit_index);
+            self.0[byte_index(index)] &= !(bitmask(index));
         }
         self
     }
 
+    #[inline(always)]
     fn check_bit(&mut self, Index::<Self>(index, ..): BIndex<N>) -> &mut Self {
-        let byte_index = index / 8;
-        let bit_index = index % 8;
-        self.0[byte_index] |= 1 << bit_index;
+        self.0[byte_index(index)] |= bitmask(index);
         self
     }
 
+    #[inline(always)]
     fn uncheck_bit(&mut self, Index::<Self>(index, ..): BIndex<N>) -> &mut Self {
-        let byte_index = index / 8;
-        let bit_index = index % 8;
-        self.0[byte_index] &= !(1 << bit_index);
+        self.0[byte_index(index)] &= !(bitmask(index));
         self
     }
 
-    fn bit(&self, Index::<Self>(index, ..): BIndex<N>) -> bool {
-        let byte_index = index / 8;
-        let bit_index = index % 8;
-        let bit = 1 << bit_index;
-        (self.0[byte_index] & bit) != 0
+    #[inline(always)]
+    fn bit(self, Index::<Self>(index, ..): BIndex<N>) -> bool {
+        (self.0[byte_index(index)] & bitmask(index)) != 0
+    }
+
+    #[inline(always)]
+    fn bit_ref(&self, index: BIndex<N>) -> BitRef<'_, Self> {
+        BitRef(
+            (self.0[byte_index(index.into_inner())] & bitmask(index.into_inner())) != 0,
+            index,
+            self,
+        )
+    }
+
+    #[inline(always)]
+    fn bit_mut(&mut self, index: BIndex<N>) -> BitMut<'_, Self> {
+        BitMut(
+            (self.0[byte_index(index.into_inner())] & bitmask(index.into_inner())) != 0,
+            index,
+            self,
+        )
     }
 }
 
@@ -122,10 +152,8 @@ impl<const N: usize> From<ByteField<N>> for Inner<N> {
 
 impl<const N: usize> From<BIndex<N>> for ByteField<N> {
     fn from(Index::<Self>(index, ..): BIndex<N>) -> Self {
-        let byte_index = index / 8;
-        let bit_index = index % 8;
         let mut inner = [0; N];
-        inner[byte_index] = 1 << bit_index;
+        inner[byte_index(index)] = bitmask(index);
         Self(inner)
     }
 }
@@ -215,8 +243,8 @@ impl<const N: usize> Shl<BIndex<N>> for ByteField<N> {
     fn shl(self, Index::<Self>(index, ..): BIndex<N>) -> Self::Output {
         let mut inner = self.0;
 
-        let byte_shift = index / 8;
-        let bit_shift = index % 8;
+        let byte_shift = byte_index(index);
+        let bit_shift = bit_index(index);
 
         if byte_shift > 0 {
             unsafe {
@@ -253,8 +281,8 @@ impl<const N: usize> Shr<BIndex<N>> for ByteField<N> {
     fn shr(self, Index::<Self>(index, ..): BIndex<N>) -> Self::Output {
         let mut inner = self.0;
 
-        let byte_shift = index / 8;
-        let bit_shift = index % 8;
+        let byte_shift = byte_index(index);
+        let bit_shift = bit_index(index);
 
         if byte_shift > 0 {
             unsafe {
@@ -517,7 +545,8 @@ mod tests {
 
     #[test]
     fn construction() -> TestResult {
-        let bitfield = Tested1::NONE.clone()
+        let bitfield = Tested1::NONE
+            .clone()
             .set_bit(0.try_into()?, true)
             .check_bit(1.try_into()?)
             .uncheck_bit(0.try_into()?)
@@ -1009,14 +1038,14 @@ mod tests {
         let bitfield1 = Tested1::from([0b00011011]);
         let bitfield2 = Tested1::from([0b11101000]);
 
-        let bitfield3: Tested2 = bitfield1.combine(&bitfield2)?;
+        let bitfield3: Tested2 = bitfield1.combine(bitfield2)?;
 
         assert_eq!(bitfield3, Tested2::from([0b00011011, 0b11101000]));
 
         let bitfield1 = Tested1::from([0b00011011]);
         let bitfield2 = Tested2::from([0b11011011, 0b11101000]);
 
-        let bitfield3: TestedOdd = bitfield1.combine(&bitfield2)?;
+        let bitfield3: TestedOdd = bitfield1.combine(bitfield2)?;
 
         assert_eq!(
             bitfield3,
@@ -1046,14 +1075,14 @@ mod tests {
         let bitfield1 = Tested1::from([0b00011011]);
         let bitfield2 = Tested1::from([0b11101000]);
 
-        let bitfield3: Tested2 = bitfield1.fast_combine(&bitfield2)?;
+        let bitfield3: Tested2 = bitfield1.fast_combine(bitfield2)?;
 
         assert_eq!(bitfield3, Tested2::from([0b00011011, 0b11101000]));
 
         let bitfield1 = Tested1::from([0b00011011]);
         let bitfield2 = Tested2::from([0b11011011, 0b11101000]);
 
-        let bitfield3: TestedOdd = bitfield1.fast_combine(&bitfield2)?;
+        let bitfield3: TestedOdd = bitfield1.fast_combine(bitfield2)?;
 
         assert_eq!(
             bitfield3,
