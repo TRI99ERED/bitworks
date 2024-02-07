@@ -4,7 +4,7 @@ use crate::{
     bit_ref::{BitMut, BitRef},
     error::{ConvError, ConvResult, ConvTarget},
     flags_enum::FlagsEnum,
-    index::Index,
+    index::Index, private::Sealed,
 };
 use std::{
     collections::BTreeSet,
@@ -14,6 +14,7 @@ use std::{
 /// Trait defining common bitfield logic.
 pub trait Bitfield:
     Sized
+    + Sealed
     + Clone
     + PartialEq
     + Eq
@@ -1294,4 +1295,4 @@ pub trait Bitfield:
 ///
 /// If you're unsure about what this means, use built-in `Bitfield`s (they all implement `Simple`)
 /// or do not implement this trait for your custom `Bitfield` (the trade-off should be minimal).
-pub unsafe trait Simple: Bitfield {}
+pub(crate) unsafe trait Simple: Bitfield {}

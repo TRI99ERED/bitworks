@@ -1,7 +1,7 @@
 //! Module containing [`Bitfield32`].
 
 use crate::{
-    bit_ref::{BitMut, BitRef}, bitfield::{Bitfield, Simple}, error::{ConvError, ConvTarget}, prelude::{Bitfield128, Bitfield16, Bitfield64, Bitfield8, ByteField, FlagsEnum, Index}
+    bit_ref::{BitMut, BitRef}, bitfield::{Bitfield, Simple}, error::{ConvError, ConvTarget}, prelude::{Bitfield128, Bitfield16, Bitfield64, Bitfield8, ByteField, FlagsEnum, Index}, private::Sealed
 };
 use std::{
     collections::BTreeSet,
@@ -49,6 +49,8 @@ impl Bitfield32 {
     }
 }
 
+impl Sealed for Bitfield32 {}
+
 impl Bitfield for Bitfield32 {
     const BIT_SIZE: usize = BITS;
     const ONE: Self = Self(1);
@@ -79,6 +81,7 @@ impl Bitfield for Bitfield32 {
 }
 
 unsafe impl Simple for Bitfield32 {}
+
 
 impl From<Inner> for Bitfield32 {
     #[inline(always)]

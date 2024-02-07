@@ -15,11 +15,6 @@ where
     T: Bitfield,
     Self: 'a,
 {
-    /// Creates new instance of `BitRef`.
-    pub fn new(value: bool, index: Index<T>, reference: &'a T) -> Self {
-        Self(value, index, reference)
-    }
-
     /// Returns index of the bit, referenced by `BitRef`.
     pub fn index(&'a self) -> Index<T> {
         self.1
@@ -82,11 +77,6 @@ where
     T: Bitfield,
     Self: 'a,
 {
-    /// Creates new instance of `BitMut`.
-    pub fn new(value: bool, index: Index<T>, reference: &'a mut T) -> Self {
-        Self(value, index, reference)
-    }
-
     /// Returns index of the bit, referenced by `BitMut`.
     pub fn index(&'a self) -> Index<T> {
         self.1

@@ -28,3 +28,7 @@ pub mod prelude {
     pub use flags_enum::FlagsEnum;
     pub use index::Index;
 }
+
+mod private {
+    pub(crate) trait Sealed {}
+}
