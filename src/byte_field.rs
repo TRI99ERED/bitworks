@@ -1,3 +1,5 @@
+//! Module containing [`ByteField`].
+
 use crate::{
     bit_ref::{BitMut, BitRef},
     bitfield::Simple,

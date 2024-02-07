@@ -1,4 +1,4 @@
-//! Module containing [`ConvError`].
+//! Module containing [`ConvError`] and [`ConvTarget`].
 
 use std::{
     error::Error,
