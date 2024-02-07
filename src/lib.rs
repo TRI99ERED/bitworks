@@ -10,7 +10,7 @@ pub mod byte_field;
 
 pub mod bit_ref;
 pub mod error;
-pub mod flags_enum;
+// pub mod flags_enum;
 pub mod index;
 
 /// Prelude.
@@ -25,7 +25,7 @@ pub mod prelude {
     pub use bitfield8::Bitfield8;
     pub use byte_field::ByteField;
 
-    pub use flags_enum::FlagsEnum;
+    // pub use flags_enum::FlagsEnum;
     pub use index::Index;
 }
 

@@ -3,11 +3,12 @@
 use crate::{
     bit_ref::{BitMut, BitRef},
     bitfield::{Bitfield, Simple},
-    prelude::{Bitfield16, Bitfield32, Bitfield64, Bitfield8, ByteField, FlagsEnum, Index},
+    prelude::{Bitfield16, Bitfield32, Bitfield64, Bitfield8, ByteField, Index},
     private::Sealed,
 };
+// use crate::prelude::FlagsEnum;
 use std::{
-    collections::BTreeSet,
+    // collections::BTreeSet,
     fmt::{Binary, Display, LowerHex, Octal, UpperHex},
     ops::{
         BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Not, Shl, ShlAssign, Shr,
@@ -106,16 +107,16 @@ impl From<BIndex> for Bitfield128 {
     }
 }
 
-impl<T> From<T> for Bitfield128
-where
-    T: FlagsEnum<Bitfield = Self>,
-    BIndex: From<T>,
-{
-    #[inline(always)]
-    fn from(value: T) -> Self {
-        Self(1) << BIndex::from(value)
-    }
-}
+// impl<T> From<T> for Bitfield128
+// where
+//     T: FlagsEnum<Bitfield = Self>,
+//     BIndex: From<T>,
+// {
+//     #[inline(always)]
+//     fn from(value: T) -> Self {
+//         Self(1) << BIndex::from(value)
+//     }
+// }
 
 impl From<ByteField<16>> for Bitfield128 {
     #[inline(always)]
@@ -289,77 +290,77 @@ impl BitXorAssign<BIndex> for Bitfield128 {
     }
 }
 
-impl<T> BitAnd<T> for Bitfield128
-where
-    T: FlagsEnum<Bitfield = Self>,
-    BIndex: From<T>,
-{
-    type Output = Self;
+// impl<T> BitAnd<T> for Bitfield128
+// where
+//     T: FlagsEnum<Bitfield = Self>,
+//     BIndex: From<T>,
+// {
+//     type Output = Self;
 
-    #[inline(always)]
-    fn bitand(self, rhs: T) -> Self::Output {
-        Self(self.0 & Self::from(rhs).0)
-    }
-}
+//     #[inline(always)]
+//     fn bitand(self, rhs: T) -> Self::Output {
+//         Self(self.0 & Self::from(rhs).0)
+//     }
+// }
 
-impl<T> BitAndAssign<T> for Bitfield128
-where
-    T: FlagsEnum<Bitfield = Self>,
-    BIndex: From<T>,
-{
-    #[inline(always)]
-    fn bitand_assign(&mut self, rhs: T) {
-        self.0 &= Self::from(rhs).0;
-    }
-}
+// impl<T> BitAndAssign<T> for Bitfield128
+// where
+//     T: FlagsEnum<Bitfield = Self>,
+//     BIndex: From<T>,
+// {
+//     #[inline(always)]
+//     fn bitand_assign(&mut self, rhs: T) {
+//         self.0 &= Self::from(rhs).0;
+//     }
+// }
 
-impl<T> BitOr<T> for Bitfield128
-where
-    T: FlagsEnum<Bitfield = Self>,
-    BIndex: From<T>,
-{
-    type Output = Self;
+// impl<T> BitOr<T> for Bitfield128
+// where
+//     T: FlagsEnum<Bitfield = Self>,
+//     BIndex: From<T>,
+// {
+//     type Output = Self;
 
-    #[inline(always)]
-    fn bitor(self, rhs: T) -> Self::Output {
-        Self(self.0 | Self::from(rhs).0)
-    }
-}
+//     #[inline(always)]
+//     fn bitor(self, rhs: T) -> Self::Output {
+//         Self(self.0 | Self::from(rhs).0)
+//     }
+// }
 
-impl<T> BitOrAssign<T> for Bitfield128
-where
-    T: FlagsEnum<Bitfield = Self>,
-    BIndex: From<T>,
-{
-    #[inline(always)]
-    fn bitor_assign(&mut self, rhs: T) {
-        self.0 |= Self::from(rhs).0;
-    }
-}
+// impl<T> BitOrAssign<T> for Bitfield128
+// where
+//     T: FlagsEnum<Bitfield = Self>,
+//     BIndex: From<T>,
+// {
+//     #[inline(always)]
+//     fn bitor_assign(&mut self, rhs: T) {
+//         self.0 |= Self::from(rhs).0;
+//     }
+// }
 
-impl<T> BitXor<T> for Bitfield128
-where
-    T: FlagsEnum<Bitfield = Self>,
-    BIndex: From<T>,
-{
-    type Output = Self;
+// impl<T> BitXor<T> for Bitfield128
+// where
+//     T: FlagsEnum<Bitfield = Self>,
+//     BIndex: From<T>,
+// {
+//     type Output = Self;
 
-    #[inline(always)]
-    fn bitxor(self, rhs: T) -> Self::Output {
-        Self(self.0 ^ Self::from(rhs).0)
-    }
-}
+//     #[inline(always)]
+//     fn bitxor(self, rhs: T) -> Self::Output {
+//         Self(self.0 ^ Self::from(rhs).0)
+//     }
+// }
 
-impl<T> BitXorAssign<T> for Bitfield128
-where
-    T: FlagsEnum<Bitfield = Self>,
-    BIndex: From<T>,
-{
-    #[inline(always)]
-    fn bitxor_assign(&mut self, rhs: T) {
-        self.0 ^= Self::from(rhs).0;
-    }
-}
+// impl<T> BitXorAssign<T> for Bitfield128
+// where
+//     T: FlagsEnum<Bitfield = Self>,
+//     BIndex: From<T>,
+// {
+//     #[inline(always)]
+//     fn bitxor_assign(&mut self, rhs: T) {
+//         self.0 ^= Self::from(rhs).0;
+//     }
+// }
 
 impl FromIterator<bool> for Bitfield128 {
     fn from_iter<T: IntoIterator<Item = bool>>(iter: T) -> Self {
@@ -371,25 +372,25 @@ impl FromIterator<bool> for Bitfield128 {
     }
 }
 
-impl<A> FromIterator<A> for Bitfield128
-where
-    A: FlagsEnum<Bitfield = Self>,
-    BIndex: From<A>,
-{
-    fn from_iter<T: IntoIterator<Item = A>>(iter: T) -> Self {
-        let mut bitfield = Self::NONE;
-        let mut seen_indices = BTreeSet::new();
+// impl<A> FromIterator<A> for Bitfield128
+// where
+//     A: FlagsEnum<Bitfield = Self>,
+//     BIndex: From<A>,
+// {
+//     fn from_iter<T: IntoIterator<Item = A>>(iter: T) -> Self {
+//         let mut bitfield = Self::NONE;
+//         let mut seen_indices = BTreeSet::new();
 
-        for e in iter {
-            let index = BIndex::from(e);
-            if !seen_indices.contains(&index) {
-                seen_indices.insert(index);
-                bitfield |= Self(1) << index;
-            }
-        }
-        bitfield
-    }
-}
+//         for e in iter {
+//             let index = BIndex::from(e);
+//             if !seen_indices.contains(&index) {
+//                 seen_indices.insert(index);
+//                 bitfield |= Self(1) << index;
+//             }
+//         }
+//         bitfield
+//     }
+// }
 
 impl Display for Bitfield128 {
     #[inline(always)]

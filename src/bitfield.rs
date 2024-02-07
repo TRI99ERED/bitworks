@@ -3,12 +3,12 @@
 use crate::{
     bit_ref::{BitMut, BitRef},
     error::{ConvError, ConvResult, ConvTarget},
-    flags_enum::FlagsEnum,
+    // flags_enum::FlagsEnum,
     index::Index,
     private::Sealed,
 };
 use std::{
-    collections::BTreeSet,
+    // collections::BTreeSet,
     ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Not, Shl, Shr},
 };
 
@@ -149,67 +149,67 @@ pub trait Bitfield:
         Self::ONE << *index
     }
 
-    /// Constructs `Bitfield` from `T`, where `T` implements [`FlagsEnum`].
-    ///
-    /// # Examples
-    /// ```rust
-    /// # use std::error::Error;
-    /// #
-    /// # fn main() -> Result<(), Box<dyn Error>> {
-    /// use simple_bitfield::{prelude::{Bitfield, Bitfield8, FlagsEnum, Index}, error::{ConvError, ConvTarget}};
-    ///
-    /// #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-    /// enum E {
-    ///     A, // 0
-    ///     B, // 1
-    ///     D  =  3,
-    ///     E, // 4
-    /// }
-    ///
-    /// impl TryFrom<Index<Bitfield8>> for E {
-    ///     type Error = ConvError;
-    ///
-    ///     fn try_from(index: Index<Bitfield8>) -> Result<Self, Self::Error> {
-    ///         match index.into_inner() {
-    ///             0 => Ok(E::A),
-    ///             1 => Ok(E::B),
-    ///             3 => Ok(E::D),
-    ///             4 => Ok(E::E),
-    ///             _ => Err(ConvError::new(ConvTarget::Index(8), ConvTarget::Enum(8))),
-    ///         }
-    ///     }
-    /// }
-    ///
-    /// impl From<E> for Index<Bitfield8> {
-    ///     fn from(value: E) -> Self {
-    ///         Self::try_from(value as usize).expect("Enum E should always be a valid index")
-    ///     }
-    /// }
-    ///
-    /// impl FlagsEnum for E {
-    ///     type Bitfield = Bitfield8;
-    /// }
-    ///
-    /// let flag = E::A;
-    /// let bitfield = Bitfield8::from_flag(&flag);
-    ///
-    /// assert_eq!(bitfield.into_inner(), 0b00000001);
-    ///
-    /// let flag = E::D;
-    /// let bitfield = Bitfield8::from_flag(&flag);
-    ///
-    /// assert_eq!(bitfield.into_inner(), 0b00001000);
-    /// # Ok(())
-    /// # }
-    /// ```
-    #[inline(always)]
-    fn from_flag<T>(flag: &T) -> Self
-    where
-        T: FlagsEnum<Bitfield = Self> + Copy,
-        Index<Self>: From<T>,
-    {
-        Self::ONE << Index::<Self>::from(*flag)
-    }
+    // /// Constructs `Bitfield` from `T`, where `T` implements [`FlagsEnum`].
+    // ///
+    // /// # Examples
+    // /// ```rust
+    // /// # use std::error::Error;
+    // /// #
+    // /// # fn main() -> Result<(), Box<dyn Error>> {
+    // /// use simple_bitfield::{prelude::{Bitfield, Bitfield8, FlagsEnum, Index}, error::{ConvError, ConvTarget}};
+    // ///
+    // /// #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+    // /// enum E {
+    // ///     A, // 0
+    // ///     B, // 1
+    // ///     D  =  3,
+    // ///     E, // 4
+    // /// }
+    // ///
+    // /// impl TryFrom<Index<Bitfield8>> for E {
+    // ///     type Error = ConvError;
+    // ///
+    // ///     fn try_from(index: Index<Bitfield8>) -> Result<Self, Self::Error> {
+    // ///         match index.into_inner() {
+    // ///             0 => Ok(E::A),
+    // ///             1 => Ok(E::B),
+    // ///             3 => Ok(E::D),
+    // ///             4 => Ok(E::E),
+    // ///             _ => Err(ConvError::new(ConvTarget::Index(8), ConvTarget::Enum(8))),
+    // ///         }
+    // ///     }
+    // /// }
+    // ///
+    // /// impl From<E> for Index<Bitfield8> {
+    // ///     fn from(value: E) -> Self {
+    // ///         Self::try_from(value as usize).expect("Enum E should always be a valid index")
+    // ///     }
+    // /// }
+    // ///
+    // /// impl FlagsEnum for E {
+    // ///     type Bitfield = Bitfield8;
+    // /// }
+    // ///
+    // /// let flag = E::A;
+    // /// let bitfield = Bitfield8::from_flag(&flag);
+    // ///
+    // /// assert_eq!(bitfield.into_inner(), 0b00000001);
+    // ///
+    // /// let flag = E::D;
+    // /// let bitfield = Bitfield8::from_flag(&flag);
+    // ///
+    // /// assert_eq!(bitfield.into_inner(), 0b00001000);
+    // /// # Ok(())
+    // /// # }
+    // /// ```
+    // #[inline(always)]
+    // fn from_flag<T>(flag: &T) -> Self
+    // where
+    //     T: FlagsEnum<Bitfield = Self> + Copy,
+    //     Index<Self>: From<T>,
+    // {
+    //     Self::ONE << Index::<Self>::from(*flag)
+    // }
 
     /// Expands `Bitfield` to a bigger one.<br/>
     /// If available, you should prefer using [`Bitfield::fast_expand`].
@@ -323,143 +323,143 @@ pub trait Bitfield:
             .build()
     }
 
-    /// Builds `Bitfield` from slice over `T` values, where `T` implements [`FlagsEnum`].<br/>
-    /// Considers contained variants as set bits.
-    ///
-    /// # Examples
-    /// ```rust
-    /// # use std::error::Error;
-    /// #
-    /// # fn main() -> Result<(), Box<dyn Error>> {
-    /// use simple_bitfield::{prelude::{Bitfield, Bitfield8, FlagsEnum, Index}, error::{ConvError, ConvTarget}};
-    ///
-    /// #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-    /// enum E {
-    ///     A, // 0
-    ///     B, // 1
-    ///     D  =  3,
-    ///     E, // 4
-    /// }
-    ///
-    /// impl TryFrom<Index<Bitfield8>> for E {
-    ///     type Error = ConvError;
-    ///
-    ///     fn try_from(index: Index<Bitfield8>) -> Result<Self, Self::Error> {
-    ///         match index.into_inner() {
-    ///             0 => Ok(E::A),
-    ///             1 => Ok(E::B),
-    ///             3 => Ok(E::D),
-    ///             4 => Ok(E::E),
-    ///             _ => Err(ConvError::new(ConvTarget::Index(8), ConvTarget::Enum(8))),
-    ///         }
-    ///     }
-    /// }
-    ///
-    /// impl From<E> for Index<Bitfield8> {
-    ///     fn from(value: E) -> Self {
-    ///         Self::try_from(value as usize).expect("Enum E should always be a valid index")
-    ///     }
-    /// }
-    ///
-    /// impl FlagsEnum for E {
-    ///     type Bitfield = Bitfield8;
-    /// }
-    ///
-    /// let slice: &[E] = &[E::A, E::E, E::D];
-    /// let bitfield = Bitfield8::from_selected_variants_ref(slice);
-    ///
-    /// assert_eq!(bitfield.into_inner(), 0b00011001);
-    /// #   Ok(())
-    /// # }
-    /// ```
-    fn from_selected_variants_ref<'a, I, T>(iter: I) -> Self
-    where
-        I: IntoIterator<Item = &'a T>,
-        T: FlagsEnum<Bitfield = Self> + Copy + 'a,
-        Index<Self>: From<T>,
-        Self: FromIterator<T>,
-    {
-        let mut bitfield = Self::NONE;
-        let mut seen_indices = BTreeSet::new();
+    // /// Builds `Bitfield` from slice over `T` values, where `T` implements [`FlagsEnum`].<br/>
+    // /// Considers contained variants as set bits.
+    // ///
+    // /// # Examples
+    // /// ```rust
+    // /// # use std::error::Error;
+    // /// #
+    // /// # fn main() -> Result<(), Box<dyn Error>> {
+    // /// use simple_bitfield::{prelude::{Bitfield, Bitfield8, FlagsEnum, Index}, error::{ConvError, ConvTarget}};
+    // ///
+    // /// #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+    // /// enum E {
+    // ///     A, // 0
+    // ///     B, // 1
+    // ///     D  =  3,
+    // ///     E, // 4
+    // /// }
+    // ///
+    // /// impl TryFrom<Index<Bitfield8>> for E {
+    // ///     type Error = ConvError;
+    // ///
+    // ///     fn try_from(index: Index<Bitfield8>) -> Result<Self, Self::Error> {
+    // ///         match index.into_inner() {
+    // ///             0 => Ok(E::A),
+    // ///             1 => Ok(E::B),
+    // ///             3 => Ok(E::D),
+    // ///             4 => Ok(E::E),
+    // ///             _ => Err(ConvError::new(ConvTarget::Index(8), ConvTarget::Enum(8))),
+    // ///         }
+    // ///     }
+    // /// }
+    // ///
+    // /// impl From<E> for Index<Bitfield8> {
+    // ///     fn from(value: E) -> Self {
+    // ///         Self::try_from(value as usize).expect("Enum E should always be a valid index")
+    // ///     }
+    // /// }
+    // ///
+    // /// impl FlagsEnum for E {
+    // ///     type Bitfield = Bitfield8;
+    // /// }
+    // ///
+    // /// let slice: &[E] = &[E::A, E::E, E::D];
+    // /// let bitfield = Bitfield8::from_selected_variants_ref(slice);
+    // ///
+    // /// assert_eq!(bitfield.into_inner(), 0b00011001);
+    // /// #   Ok(())
+    // /// # }
+    // /// ```
+    // fn from_selected_variants_ref<'a, I, T>(iter: I) -> Self
+    // where
+    //     I: IntoIterator<Item = &'a T>,
+    //     T: FlagsEnum<Bitfield = Self> + Copy + 'a,
+    //     Index<Self>: From<T>,
+    //     Self: FromIterator<T>,
+    // {
+    //     let mut bitfield = Self::NONE;
+    //     let mut seen_indices = BTreeSet::new();
 
-        for &e in iter {
-            let index = Index::<Self>::from(e);
-            if !seen_indices.contains(&index) {
-                seen_indices.insert(index);
-                bitfield.check_bit(index);
-            }
-        }
-        bitfield
-    }
+    //     for &e in iter {
+    //         let index = Index::<Self>::from(e);
+    //         if !seen_indices.contains(&index) {
+    //             seen_indices.insert(index);
+    //             bitfield.check_bit(index);
+    //         }
+    //     }
+    //     bitfield
+    // }
 
-    /// Builds `Bitfield` from slice over `T` values, where `T` implements [`FlagsEnum`].<br/>
-    /// Considers contained variants as unset bits.
-    ///
-    /// # Examples
-    /// ```rust
-    /// # use std::error::Error;
-    /// #
-    /// # fn main() -> Result<(), Box<dyn Error>> {
-    /// use simple_bitfield::{prelude::{Bitfield, Bitfield8, FlagsEnum, Index}, error::{ConvError, ConvTarget}};
-    ///
-    /// #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-    /// enum E {
-    ///     A, // 0
-    ///     B, // 1
-    ///     D  =  3,
-    ///     E, // 4
-    /// }
-    ///
-    /// impl TryFrom<Index<Bitfield8>> for E {
-    ///     type Error = ConvError;
-    ///
-    ///     fn try_from(index: Index<Bitfield8>) -> Result<Self, Self::Error> {
-    ///         match index.into_inner() {
-    ///             0 => Ok(E::A),
-    ///             1 => Ok(E::B),
-    ///             3 => Ok(E::D),
-    ///             4 => Ok(E::E),
-    ///             _ => Err(ConvError::new(ConvTarget::Index(8), ConvTarget::Enum(8))),
-    ///         }
-    ///     }
-    /// }
-    ///
-    /// impl From<E> for Index<Bitfield8> {
-    ///     fn from(value: E) -> Self {
-    ///         Self::try_from(value as usize).expect("Enum E should always be a valid index")
-    ///     }
-    /// }
-    ///
-    /// impl FlagsEnum for E {
-    ///     type Bitfield = Bitfield8;
-    /// }
-    ///
-    /// let slice: &[E] = &[E::A, E::E, E::D];
-    /// let bitfield = Bitfield8::from_unselected_variants_ref(slice);
-    ///
-    /// assert_eq!(bitfield.into_inner(), 0b11100110);
-    /// #   Ok(())
-    /// # }
-    /// ```
-    fn from_unselected_variants_ref<'a, I, T>(iter: I) -> Self
-    where
-        I: IntoIterator<Item = &'a T>,
-        T: FlagsEnum<Bitfield = Self> + Copy + 'a,
-        Index<Self>: From<T>,
-        Self: FromIterator<T>,
-    {
-        let mut bitfield = Self::ALL;
-        let mut seen_indices = BTreeSet::new();
+    // /// Builds `Bitfield` from slice over `T` values, where `T` implements [`FlagsEnum`].<br/>
+    // /// Considers contained variants as unset bits.
+    // ///
+    // /// # Examples
+    // /// ```rust
+    // /// # use std::error::Error;
+    // /// #
+    // /// # fn main() -> Result<(), Box<dyn Error>> {
+    // /// use simple_bitfield::{prelude::{Bitfield, Bitfield8, FlagsEnum, Index}, error::{ConvError, ConvTarget}};
+    // ///
+    // /// #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+    // /// enum E {
+    // ///     A, // 0
+    // ///     B, // 1
+    // ///     D  =  3,
+    // ///     E, // 4
+    // /// }
+    // ///
+    // /// impl TryFrom<Index<Bitfield8>> for E {
+    // ///     type Error = ConvError;
+    // ///
+    // ///     fn try_from(index: Index<Bitfield8>) -> Result<Self, Self::Error> {
+    // ///         match index.into_inner() {
+    // ///             0 => Ok(E::A),
+    // ///             1 => Ok(E::B),
+    // ///             3 => Ok(E::D),
+    // ///             4 => Ok(E::E),
+    // ///             _ => Err(ConvError::new(ConvTarget::Index(8), ConvTarget::Enum(8))),
+    // ///         }
+    // ///     }
+    // /// }
+    // ///
+    // /// impl From<E> for Index<Bitfield8> {
+    // ///     fn from(value: E) -> Self {
+    // ///         Self::try_from(value as usize).expect("Enum E should always be a valid index")
+    // ///     }
+    // /// }
+    // ///
+    // /// impl FlagsEnum for E {
+    // ///     type Bitfield = Bitfield8;
+    // /// }
+    // ///
+    // /// let slice: &[E] = &[E::A, E::E, E::D];
+    // /// let bitfield = Bitfield8::from_unselected_variants_ref(slice);
+    // ///
+    // /// assert_eq!(bitfield.into_inner(), 0b11100110);
+    // /// #   Ok(())
+    // /// # }
+    // /// ```
+    // fn from_unselected_variants_ref<'a, I, T>(iter: I) -> Self
+    // where
+    //     I: IntoIterator<Item = &'a T>,
+    //     T: FlagsEnum<Bitfield = Self> + Copy + 'a,
+    //     Index<Self>: From<T>,
+    //     Self: FromIterator<T>,
+    // {
+    //     let mut bitfield = Self::ALL;
+    //     let mut seen_indices = BTreeSet::new();
 
-        for &e in iter {
-            let index = Index::<Self>::from(e);
-            if !seen_indices.contains(&index) {
-                seen_indices.insert(index);
-                bitfield.uncheck_bit(index);
-            }
-        }
-        bitfield
-    }
+    //     for &e in iter {
+    //         let index = Index::<Self>::from(e);
+    //         if !seen_indices.contains(&index) {
+    //             seen_indices.insert(index);
+    //             bitfield.uncheck_bit(index);
+    //         }
+    //     }
+    //     bitfield
+    // }
 
     /// Count the number of all set bits.
     ///
@@ -1155,127 +1155,127 @@ pub trait Bitfield:
         })
     }
 
-    /// Returns iterator over set bit [`indeces`][Index] of the `Bitfield`
-    /// converted to target type `T`, where `T` implements [`FlagsEnum`].
-    ///
-    /// # Examples
-    /// ```rust
-    /// # use std::error::Error;
-    /// #
-    /// # fn main() -> Result<(), Box<dyn Error>> {
-    /// use simple_bitfield::{prelude::{Bitfield, Bitfield8, FlagsEnum, Index}, error::{ConvError, ConvTarget}};
-    ///
-    /// #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-    /// enum E {
-    ///     A, // 0
-    ///     B, // 1
-    ///     D  =  3,
-    ///     E, // 4
-    /// }
-    ///
-    /// impl TryFrom<Index<Bitfield8>> for E {
-    ///     type Error = ConvError;
-    ///
-    ///     fn try_from(index: Index<Bitfield8>) -> Result<Self, Self::Error> {
-    ///         match index.into_inner() {
-    ///             0 => Ok(E::A),
-    ///             1 => Ok(E::B),
-    ///             3 => Ok(E::D),
-    ///             4 => Ok(E::E),
-    ///             _ => Err(ConvError::new(ConvTarget::Index(8), ConvTarget::Enum(8))),
-    ///         }
-    ///     }
-    /// }
-    ///
-    /// impl From<E> for Index<Bitfield8> {
-    ///     fn from(value: E) -> Self {
-    ///         Self::try_from(value as usize).expect("Enum E should always be a valid index")
-    ///     }
-    /// }
-    ///
-    /// impl FlagsEnum for E {
-    ///     type Bitfield = Bitfield8;
-    /// }
-    ///
-    ///                                // E D _ B A
-    /// let bitfield = Bitfield8::from(0b_0_1_1_0_1);
-    /// let mut iter = bitfield.selected_variants::<E>();
-    ///
-    /// assert_eq!(iter.next(), Some(E::A));
-    /// assert_eq!(iter.next(), Some(E::D));
-    /// assert_eq!(iter.next(), None);
-    /// # Ok(())
-    /// # }
-    /// ```
-    #[inline(always)]
-    fn selected_variants<T>(&self) -> impl Iterator<Item = T>
-    where
-        T: FlagsEnum<Bitfield = Self>,
-        Index<Self>: From<T>,
-    {
-        self.ones().filter_map(|i| T::try_from(i).ok())
-    }
+    // /// Returns iterator over set bit [`indeces`][Index] of the `Bitfield`
+    // /// converted to target type `T`, where `T` implements [`FlagsEnum`].
+    // ///
+    // /// # Examples
+    // /// ```rust
+    // /// # use std::error::Error;
+    // /// #
+    // /// # fn main() -> Result<(), Box<dyn Error>> {
+    // /// use simple_bitfield::{prelude::{Bitfield, Bitfield8, FlagsEnum, Index}, error::{ConvError, ConvTarget}};
+    // ///
+    // /// #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+    // /// enum E {
+    // ///     A, // 0
+    // ///     B, // 1
+    // ///     D  =  3,
+    // ///     E, // 4
+    // /// }
+    // ///
+    // /// impl TryFrom<Index<Bitfield8>> for E {
+    // ///     type Error = ConvError;
+    // ///
+    // ///     fn try_from(index: Index<Bitfield8>) -> Result<Self, Self::Error> {
+    // ///         match index.into_inner() {
+    // ///             0 => Ok(E::A),
+    // ///             1 => Ok(E::B),
+    // ///             3 => Ok(E::D),
+    // ///             4 => Ok(E::E),
+    // ///             _ => Err(ConvError::new(ConvTarget::Index(8), ConvTarget::Enum(8))),
+    // ///         }
+    // ///     }
+    // /// }
+    // ///
+    // /// impl From<E> for Index<Bitfield8> {
+    // ///     fn from(value: E) -> Self {
+    // ///         Self::try_from(value as usize).expect("Enum E should always be a valid index")
+    // ///     }
+    // /// }
+    // ///
+    // /// impl FlagsEnum for E {
+    // ///     type Bitfield = Bitfield8;
+    // /// }
+    // ///
+    // ///                                // E D _ B A
+    // /// let bitfield = Bitfield8::from(0b_0_1_1_0_1);
+    // /// let mut iter = bitfield.selected_variants::<E>();
+    // ///
+    // /// assert_eq!(iter.next(), Some(E::A));
+    // /// assert_eq!(iter.next(), Some(E::D));
+    // /// assert_eq!(iter.next(), None);
+    // /// # Ok(())
+    // /// # }
+    // /// ```
+    // #[inline(always)]
+    // fn selected_variants<T>(&self) -> impl Iterator<Item = T>
+    // where
+    //     T: FlagsEnum<Bitfield = Self>,
+    //     Index<Self>: From<T>,
+    // {
+    //     self.ones().filter_map(|i| T::try_from(i).ok())
+    // }
 
-    /// Returns iterator over unset bit [`indeces`][Index] of the `Bitfield`
-    /// converted to target type `T`, where `T` implements [`FlagsEnum`].
-    ///
-    /// # Examples
-    /// ```rust
-    /// # use std::error::Error;
-    /// #
-    /// # fn main() -> Result<(), Box<dyn Error>> {
-    /// use simple_bitfield::{prelude::{Bitfield, Bitfield8, FlagsEnum, Index}, error::{ConvError, ConvTarget}};
-    ///
-    /// #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-    /// enum E {
-    ///     A, // 0
-    ///     B, // 1
-    ///     D  =  3,
-    ///     E, // 4
-    /// }
-    ///
-    /// impl TryFrom<Index<Bitfield8>> for E {
-    ///     type Error = ConvError;
-    ///
-    ///     fn try_from(index: Index<Bitfield8>) -> Result<Self, Self::Error> {
-    ///         match index.into_inner() {
-    ///             0 => Ok(E::A),
-    ///             1 => Ok(E::B),
-    ///             3 => Ok(E::D),
-    ///             4 => Ok(E::E),
-    ///             _ => Err(ConvError::new(ConvTarget::Index(8), ConvTarget::Enum(8))),
-    ///         }
-    ///     }
-    /// }
-    ///
-    /// impl From<E> for Index<Bitfield8> {
-    ///     fn from(value: E) -> Self {
-    ///         Self::try_from(value as usize).expect("Enum E should always be a valid index")
-    ///     }
-    /// }
-    ///
-    /// impl FlagsEnum for E {
-    ///     type Bitfield = Bitfield8;
-    /// }
-    ///
-    ///                                // E D _ B A
-    /// let bitfield = Bitfield8::from(0b_0_1_1_0_1);
-    /// let mut iter = bitfield.unselected_variants::<E>();
-    ///
-    /// assert_eq!(iter.next(), Some(E::B));
-    /// assert_eq!(iter.next(), Some(E::E));
-    /// assert_eq!(iter.next(), None);
-    /// #   Ok(())
-    /// # }
-    /// ```
-    #[inline(always)]
-    fn unselected_variants<T>(&self) -> impl Iterator<Item = T>
-    where
-        T: FlagsEnum<Bitfield = Self>,
-        Index<Self>: From<T>,
-    {
-        self.zeros().filter_map(|i| T::try_from(i).ok())
-    }
+    // /// Returns iterator over unset bit [`indeces`][Index] of the `Bitfield`
+    // /// converted to target type `T`, where `T` implements [`FlagsEnum`].
+    // ///
+    // /// # Examples
+    // /// ```rust
+    // /// # use std::error::Error;
+    // /// #
+    // /// # fn main() -> Result<(), Box<dyn Error>> {
+    // /// use simple_bitfield::{prelude::{Bitfield, Bitfield8, FlagsEnum, Index}, error::{ConvError, ConvTarget}};
+    // ///
+    // /// #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+    // /// enum E {
+    // ///     A, // 0
+    // ///     B, // 1
+    // ///     D  =  3,
+    // ///     E, // 4
+    // /// }
+    // ///
+    // /// impl TryFrom<Index<Bitfield8>> for E {
+    // ///     type Error = ConvError;
+    // ///
+    // ///     fn try_from(index: Index<Bitfield8>) -> Result<Self, Self::Error> {
+    // ///         match index.into_inner() {
+    // ///             0 => Ok(E::A),
+    // ///             1 => Ok(E::B),
+    // ///             3 => Ok(E::D),
+    // ///             4 => Ok(E::E),
+    // ///             _ => Err(ConvError::new(ConvTarget::Index(8), ConvTarget::Enum(8))),
+    // ///         }
+    // ///     }
+    // /// }
+    // ///
+    // /// impl From<E> for Index<Bitfield8> {
+    // ///     fn from(value: E) -> Self {
+    // ///         Self::try_from(value as usize).expect("Enum E should always be a valid index")
+    // ///     }
+    // /// }
+    // ///
+    // /// impl FlagsEnum for E {
+    // ///     type Bitfield = Bitfield8;
+    // /// }
+    // ///
+    // ///                                // E D _ B A
+    // /// let bitfield = Bitfield8::from(0b_0_1_1_0_1);
+    // /// let mut iter = bitfield.unselected_variants::<E>();
+    // ///
+    // /// assert_eq!(iter.next(), Some(E::B));
+    // /// assert_eq!(iter.next(), Some(E::E));
+    // /// assert_eq!(iter.next(), None);
+    // /// #   Ok(())
+    // /// # }
+    // /// ```
+    // #[inline(always)]
+    // fn unselected_variants<T>(&self) -> impl Iterator<Item = T>
+    // where
+    //     T: FlagsEnum<Bitfield = Self>,
+    //     Index<Self>: From<T>,
+    // {
+    //     self.zeros().filter_map(|i| T::try_from(i).ok())
+    // }
 }
 
 /// Marker trait for simple [`Bitfield`]s.
@@ -1288,6 +1288,8 @@ pub trait Bitfield:
 /// All the methods above have corresponding versions without `fast_` prefix, which contains no `unsafe` code
 /// and aren't restricted to only `Simple` types.
 ///
+/// Note: It is impossible to implement this trait outside the simple_bitfield crate.
+/// 
 /// # Safety
 /// If you implement this trait, you are responsible for making sure, that memory representation of the implementor
 /// only contains the bitfield itself and no additional data (e.g. other fields in a struct).
@@ -1300,4 +1302,4 @@ pub trait Bitfield:
 ///
 /// If you're unsure about what this means, use built-in `Bitfield`s (they all implement `Simple`)
 /// or do not implement this trait for your custom `Bitfield` (the trade-off should be minimal).
-pub(crate) unsafe trait Simple: Bitfield {}
+pub unsafe trait Simple: Bitfield {}
