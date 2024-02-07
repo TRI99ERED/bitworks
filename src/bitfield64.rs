@@ -24,6 +24,11 @@ const BITS: usize = 64;
 pub struct Bitfield64(pub(crate) Inner);
 
 impl Bitfield64 {
+    #[inline(always)]
+    pub const fn new(n: Inner) -> Self {
+        Self(n)
+    }
+
     /// Returns the inner representation of `Bitfield64`.
     ///
     /// # Examples
@@ -416,7 +421,7 @@ mod tests {
 
     #[test]
     fn construction() -> TestResult {
-        let bitfield = Tested::new()
+        let bitfield = Tested::NONE.clone()
             .set_bit(0.try_into()?, true)
             .check_bit(1.try_into()?)
             .uncheck_bit(0.try_into()?)
@@ -828,14 +833,14 @@ mod tests {
 
     #[test]
     fn combine() -> TestResult {
-        let bitfield1 = Bitfield64::new().set_bit(1.try_into()?, true).build();
-        let bitfield2 = Bitfield64::new().set_bit(1.try_into()?, true).build();
+        let bitfield1 = Bitfield64::NONE.clone().set_bit(1.try_into()?, true).build();
+        let bitfield2 = Bitfield64::NONE.clone().set_bit(1.try_into()?, true).build();
 
         let bitfield3: Bitfield128 = bitfield1.combine(&bitfield2)?;
 
         assert_eq!(
             bitfield3,
-            Bitfield128::new()
+            Bitfield128::NONE.clone()
                 .set_bit(1.try_into()?, true)
                 .set_bit((64 + 1).try_into()?, true)
                 .build()
@@ -845,7 +850,7 @@ mod tests {
 
     #[test]
     fn split() -> TestResult {
-        let bitfield1 = Bitfield128::new()
+        let bitfield1 = Bitfield128::NONE.clone()
             .set_bit(1.try_into()?, true)
             .set_bit((64 + 1).try_into()?, true)
             .build();
@@ -853,25 +858,25 @@ mod tests {
 
         assert_eq!(
             bitfield2,
-            Bitfield64::new().set_bit(1.try_into()?, true).build()
+            Bitfield64::NONE.clone().set_bit(1.try_into()?, true).build()
         );
         assert_eq!(
             bitfield3,
-            Bitfield64::new().set_bit(1.try_into()?, true).build()
+            Bitfield64::NONE.clone().set_bit(1.try_into()?, true).build()
         );
         Ok(())
     }
 
     #[test]
     fn fast_combine() -> TestResult {
-        let bitfield1 = Bitfield64::new().set_bit(1.try_into()?, true).build();
-        let bitfield2 = Bitfield64::new().set_bit(1.try_into()?, true).build();
+        let bitfield1 = Bitfield64::NONE.clone().set_bit(1.try_into()?, true).build();
+        let bitfield2 = Bitfield64::NONE.clone().set_bit(1.try_into()?, true).build();
 
         let bitfield3: Bitfield128 = bitfield1.fast_combine(&bitfield2)?;
 
         assert_eq!(
             bitfield3,
-            Bitfield128::new()
+            Bitfield128::NONE.clone()
                 .set_bit(1.try_into()?, true)
                 .set_bit((64 + 1).try_into()?, true)
                 .build()
@@ -881,7 +886,7 @@ mod tests {
 
     #[test]
     fn fast_split() -> TestResult {
-        let bitfield1 = Bitfield128::new()
+        let bitfield1 = Bitfield128::NONE.clone()
             .set_bit(1.try_into()?, true)
             .set_bit((64 + 1).try_into()?, true)
             .build();
@@ -889,11 +894,11 @@ mod tests {
 
         assert_eq!(
             bitfield2,
-            Bitfield64::new().set_bit(1.try_into()?, true).build()
+            Bitfield64::NONE.clone().set_bit(1.try_into()?, true).build()
         );
         assert_eq!(
             bitfield3,
-            Bitfield64::new().set_bit(1.try_into()?, true).build()
+            Bitfield64::NONE.clone().set_bit(1.try_into()?, true).build()
         );
         Ok(())
     }

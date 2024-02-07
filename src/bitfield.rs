@@ -96,25 +96,6 @@ pub trait Bitfield:
     /// ```
     const ALL: Self;
 
-    /// Constructs empty `Bitfield`.
-    ///
-    /// # Examples
-    /// ```rust
-    /// # use std::error::Error;
-    /// #
-    /// # fn main() -> Result<(), Box<dyn Error>> {
-    /// use simple_bitfield::prelude::{Bitfield, Bitfield8};
-    ///
-    /// let bitfield = Bitfield8::new();
-    ///
-    /// assert_eq!(bitfield.into_inner(), 0b00000000);
-    /// #   Ok(())
-    /// # }
-    /// ```
-    #[inline(always)]
-    fn new() -> Self {
-        Self::NONE
-    }
     /// Build `Bitfield` from a mutable reference.<br/>
     /// Useful for chaining bit modifications.
     ///
@@ -125,7 +106,7 @@ pub trait Bitfield:
     /// # fn main() -> Result<(), Box<dyn Error>> {
     /// use simple_bitfield::prelude::{Bitfield, Bitfield8};
     ///
-    /// let bitfield = Bitfield8::new()
+    /// let bitfield = Bitfield8::NONE
     ///     .set_bit(0.try_into()?, true)
     ///     .check_bit(6.try_into()?)
     ///     .uncheck_bit(0.try_into()?)
@@ -257,7 +238,7 @@ pub trait Bitfield:
                 .bits()
                 .enumerate()
                 .map(|(i, bit)| (Index::<Res>::try_from(i).unwrap(), bit))
-                .fold(&mut Res::new(), |acc, (i, bit)| acc.set_bit(i, bit))
+                .fold(&mut Res::NONE.clone(), |acc, (i, bit)| acc.set_bit(i, bit))
                 .build();
 
             Ok(result)
@@ -294,7 +275,7 @@ pub trait Bitfield:
         Res: Bitfield + Simple,
     {
         if std::mem::size_of::<Self>() <= std::mem::size_of::<Res>() {
-            let mut result = Res::new();
+            let mut result = Res::NONE.clone();
 
             let result_ptr = unsafe { std::mem::transmute(&mut result as *mut Res) };
             let self_ptr = self as *const Self;
@@ -336,7 +317,7 @@ pub trait Bitfield:
             .take(Self::BIT_SIZE)
             .enumerate()
             .map(|(i, &b)| (Index::<Self>::try_from(i).unwrap(), b))
-            .fold(&mut Self::new(), |acc, (i, b)| acc.set_bit(i, b))
+            .fold(&mut Self::NONE.clone(), |acc, (i, b)| acc.set_bit(i, b))
             .build()
     }
 
@@ -626,7 +607,7 @@ pub trait Bitfield:
     /// # fn main() -> Result<(), Box<dyn Error>> {
     /// use simple_bitfield::prelude::{Bitfield, Bitfield8};
     ///
-    /// let bitfield = Bitfield8::new().set_bit(1.try_into()?, true).build();
+    /// let bitfield = Bitfield8::NONE.set_bit(1.try_into()?, true).build();
     ///
     /// assert_eq!(bitfield.bit(0.try_into()?), false);
     /// assert_eq!(bitfield.bit(1.try_into()?), true);
@@ -648,7 +629,7 @@ pub trait Bitfield:
     /// # fn main() -> Result<(), Box<dyn Error>> {
     /// use simple_bitfield::prelude::{Bitfield, Bitfield8};
     ///
-    /// let bitfield = Bitfield8::new().set_bit(1.try_into()?, true).build();
+    /// let bitfield = Bitfield8::NONE.set_bit(1.try_into()?, true).build();
     ///
     /// assert_eq!(*bitfield.bit_ref(0.try_into()?), false);
     /// assert_eq!(*bitfield.bit_ref(1.try_into()?), true);
@@ -669,7 +650,7 @@ pub trait Bitfield:
     /// # fn main() -> Result<(), Box<dyn Error>> {
     /// use simple_bitfield::prelude::{Bitfield, Bitfield8};
     ///
-    /// let mut bitfield = Bitfield8::new();
+    /// let mut bitfield = Bitfield8::NONE;
     ///
     /// assert_eq!(bitfield.bit(0.try_into()?), false);
     /// assert_eq!(bitfield.bit(1.try_into()?), false);
@@ -800,6 +781,16 @@ pub trait Bitfield:
         self ^ other
     }
 
+    #[inline(always)]
+    fn super_set(self, other: Self) -> bool {
+        self & other.clone() == other
+    }
+
+    #[inline(always)]
+    fn intersects(self, other: Self) -> bool {
+        self & other != Self::NONE
+    }
+
     /// Combines two `Bitfield`s to create a bigger one.<br/>
     /// If available, you should prefer using [`Bitfield::fast_combine`].
     ///
@@ -832,7 +823,7 @@ pub trait Bitfield:
                 .bits()
                 .enumerate()
                 .map(|(i, bit)| (Index::<Res>::try_from(i).unwrap(), bit))
-                .fold(&mut Res::new(), |acc, (i, bit)| acc.set_bit(i, bit))
+                .fold(&mut Res::NONE.clone(), |acc, (i, bit)| acc.set_bit(i, bit))
                 .build();
 
             let result = other
@@ -883,7 +874,7 @@ pub trait Bitfield:
                 .take(Res1::BIT_SIZE)
                 .enumerate()
                 .map(|(i, bit)| (Index::<Res1>::try_from(i).unwrap(), bit))
-                .fold(&mut Res1::new(), |acc, (i, bit)| acc.set_bit(i, bit))
+                .fold(&mut Res1::NONE.clone(), |acc, (i, bit)| acc.set_bit(i, bit))
                 .build();
 
             let result2 = self
@@ -891,7 +882,7 @@ pub trait Bitfield:
                 .skip(Res1::BIT_SIZE)
                 .enumerate()
                 .map(|(i, bit)| (Index::<Res2>::try_from(i).unwrap(), bit))
-                .fold(&mut Res2::new(), |acc, (i, bit)| acc.set_bit(i, bit))
+                .fold(&mut Res2::NONE.clone(), |acc, (i, bit)| acc.set_bit(i, bit))
                 .build();
 
             Ok((result1, result2))
@@ -931,7 +922,7 @@ pub trait Bitfield:
     {
         let combined = std::mem::size_of::<Self>() + std::mem::size_of::<Other>();
         if std::mem::size_of::<Res>() == combined {
-            let mut result = Res::new();
+            let mut result = Res::NONE.clone();
 
             let result_ptr = unsafe { std::mem::transmute(&mut result as *mut Res) };
             let self_ptr = self as *const Self;
@@ -981,8 +972,8 @@ pub trait Bitfield:
     {
         let combined = std::mem::size_of::<Res1>() + std::mem::size_of::<Res2>();
         if std::mem::size_of::<Self>() == combined {
-            let mut result1 = Res1::new();
-            let mut result2 = Res2::new();
+            let mut result1 = Res1::NONE.clone();
+            let mut result2 = Res2::NONE.clone();
 
             let result1_ptr = &mut result1 as *mut Res1;
             let self_ptr = unsafe { std::mem::transmute(self as *const Self) };

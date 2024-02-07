@@ -24,6 +24,11 @@ const BITS: usize = 8;
 pub struct Bitfield8(pub(crate) Inner);
 
 impl Bitfield8 {
+    #[inline(always)]
+    pub const fn new(n: Inner) -> Self {
+        Self(n)
+    }
+
     /// Returns the inner representation of `Bitfield8`.
     ///
     /// # Examples
@@ -429,7 +434,7 @@ mod tests {
 
     #[test]
     fn construction() -> TestResult {
-        let bitfield = Tested::new()
+        let bitfield = Tested::NONE.clone()
             .set_bit(0.try_into()?, true)
             .check_bit(1.try_into()?)
             .uncheck_bit(0.try_into()?)

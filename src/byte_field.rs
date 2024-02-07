@@ -22,6 +22,11 @@ pub struct ByteField<const N: usize>(pub(crate) Inner<N>);
 
 impl<const N: usize> ByteField<N> {
     #[inline(always)]
+    pub const fn new(arr: Inner<N>) -> Self {
+        Self(arr)
+    }
+
+    #[inline(always)]
     pub fn into_inner(&self) -> Inner<N> {
         self.0
     }
@@ -512,7 +517,7 @@ mod tests {
 
     #[test]
     fn construction() -> TestResult {
-        let bitfield = Tested1::new()
+        let bitfield = Tested1::NONE.clone()
             .set_bit(0.try_into()?, true)
             .check_bit(1.try_into()?)
             .uncheck_bit(0.try_into()?)

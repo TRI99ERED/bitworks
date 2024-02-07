@@ -63,6 +63,7 @@ use crate::{bitfield::Bitfield, index::Index};
 ///     assert_eq!(iter.collect::<Bitfield8>(), Bitfield8::from(0b00101010));
 /// }
 /// ```
+#[deprecated]
 pub trait FlagsEnum: Sized + Clone + TryFrom<Index<Self::Bitfield>>
 where
     Self::Bitfield: Bitfield,
