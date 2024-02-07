@@ -243,8 +243,7 @@ mod test_input_bitflags {
     // Generate implementation of FromIterator for Bitflags
     impl FromIterator<E> for TestInputBitflags {
         fn from_iter<T: IntoIterator<Item = E>>(iter: T) -> Self {
-            iter.into_iter()
-                .fold(Self::none(), |acc, v| acc | v)
+            iter.into_iter().fold(Self::none(), |acc, v| acc | v)
         }
     }
 }

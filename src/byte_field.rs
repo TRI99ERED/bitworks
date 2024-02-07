@@ -3,7 +3,8 @@
 use crate::{
     bit_ref::{BitMut, BitRef},
     bitfield::Simple,
-    prelude::{Bitfield, FlagsEnum, Index}, private::Sealed,
+    prelude::{Bitfield, FlagsEnum, Index},
+    private::Sealed,
 };
 use std::{
     collections::BTreeSet,
@@ -53,7 +54,7 @@ impl<const N: usize> ByteField<N> {
     }
 }
 
-impl<const N: usize> Sealed for ByteField<N> {} 
+impl<const N: usize> Sealed for ByteField<N> {}
 
 impl<const N: usize> Bitfield for ByteField<N> {
     const BIT_SIZE: usize = N * 8;

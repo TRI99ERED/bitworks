@@ -30,5 +30,5 @@ pub mod prelude {
 }
 
 mod private {
-    pub(crate) trait Sealed {}
+    pub trait Sealed {}
 }

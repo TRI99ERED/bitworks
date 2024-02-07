@@ -1,7 +1,11 @@
 //! Module containing [`Bitfield32`].
 
 use crate::{
-    bit_ref::{BitMut, BitRef}, bitfield::{Bitfield, Simple}, error::{ConvError, ConvTarget}, prelude::{Bitfield128, Bitfield16, Bitfield64, Bitfield8, ByteField, FlagsEnum, Index}, private::Sealed
+    bit_ref::{BitMut, BitRef},
+    bitfield::{Bitfield, Simple},
+    error::{ConvError, ConvTarget},
+    prelude::{Bitfield128, Bitfield16, Bitfield64, Bitfield8, ByteField, FlagsEnum, Index},
+    private::Sealed,
 };
 use std::{
     collections::BTreeSet,
@@ -81,7 +85,6 @@ impl Bitfield for Bitfield32 {
 }
 
 unsafe impl Simple for Bitfield32 {}
-
 
 impl From<Inner> for Bitfield32 {
     #[inline(always)]
@@ -438,7 +441,8 @@ mod tests {
 
     #[test]
     fn construction() -> TestResult {
-        let bitfield = Tested::NONE.clone()
+        let bitfield = Tested::NONE
+            .clone()
             .set_bit(0.try_into()?, true)
             .check_bit(1.try_into()?)
             .uncheck_bit(0.try_into()?)
@@ -860,14 +864,21 @@ mod tests {
 
     #[test]
     fn combine() -> TestResult {
-        let bitfield1 = Bitfield32::NONE.clone().set_bit(1.try_into()?, true).build();
-        let bitfield2 = Bitfield32::NONE.clone().set_bit(1.try_into()?, true).build();
+        let bitfield1 = Bitfield32::NONE
+            .clone()
+            .set_bit(1.try_into()?, true)
+            .build();
+        let bitfield2 = Bitfield32::NONE
+            .clone()
+            .set_bit(1.try_into()?, true)
+            .build();
 
         let bitfield3: Bitfield64 = bitfield1.combine(bitfield2)?;
 
         assert_eq!(
             bitfield3,
-            Bitfield64::NONE.clone()
+            Bitfield64::NONE
+                .clone()
                 .set_bit(1.try_into()?, true)
                 .set_bit((32 + 1).try_into()?, true)
                 .build()
@@ -877,7 +888,8 @@ mod tests {
 
     #[test]
     fn split() -> TestResult {
-        let bitfield1 = Bitfield64::NONE.clone()
+        let bitfield1 = Bitfield64::NONE
+            .clone()
             .set_bit(1.try_into()?, true)
             .set_bit((32 + 1).try_into()?, true)
             .build();
@@ -885,25 +897,38 @@ mod tests {
 
         assert_eq!(
             bitfield2,
-            Bitfield32::NONE.clone().set_bit(1.try_into()?, true).build()
+            Bitfield32::NONE
+                .clone()
+                .set_bit(1.try_into()?, true)
+                .build()
         );
         assert_eq!(
             bitfield3,
-            Bitfield32::NONE.clone().set_bit(1.try_into()?, true).build()
+            Bitfield32::NONE
+                .clone()
+                .set_bit(1.try_into()?, true)
+                .build()
         );
         Ok(())
     }
 
     #[test]
     fn fast_combine() -> TestResult {
-        let bitfield1 = Bitfield32::NONE.clone().set_bit(1.try_into()?, true).build();
-        let bitfield2 = Bitfield32::NONE.clone().set_bit(1.try_into()?, true).build();
+        let bitfield1 = Bitfield32::NONE
+            .clone()
+            .set_bit(1.try_into()?, true)
+            .build();
+        let bitfield2 = Bitfield32::NONE
+            .clone()
+            .set_bit(1.try_into()?, true)
+            .build();
 
         let bitfield3: Bitfield64 = bitfield1.fast_combine(bitfield2)?;
 
         assert_eq!(
             bitfield3,
-            Bitfield64::NONE.clone()
+            Bitfield64::NONE
+                .clone()
                 .set_bit(1.try_into()?, true)
                 .set_bit((32 + 1).try_into()?, true)
                 .build()
@@ -913,7 +938,8 @@ mod tests {
 
     #[test]
     fn fast_split() -> TestResult {
-        let bitfield1 = Bitfield64::NONE.clone()
+        let bitfield1 = Bitfield64::NONE
+            .clone()
             .set_bit(1.try_into()?, true)
             .set_bit((32 + 1).try_into()?, true)
             .build();
@@ -921,11 +947,17 @@ mod tests {
 
         assert_eq!(
             bitfield2,
-            Bitfield32::NONE.clone().set_bit(1.try_into()?, true).build()
+            Bitfield32::NONE
+                .clone()
+                .set_bit(1.try_into()?, true)
+                .build()
         );
         assert_eq!(
             bitfield3,
-            Bitfield32::NONE.clone().set_bit(1.try_into()?, true).build()
+            Bitfield32::NONE
+                .clone()
+                .set_bit(1.try_into()?, true)
+                .build()
         );
         Ok(())
     }

@@ -4,7 +4,8 @@ use crate::{
     bit_ref::{BitMut, BitRef},
     error::{ConvError, ConvResult, ConvTarget},
     flags_enum::FlagsEnum,
-    index::Index, private::Sealed,
+    index::Index,
+    private::Sealed,
 };
 use std::{
     collections::BTreeSet,
@@ -872,7 +873,9 @@ pub trait Bitfield:
                 .take(Res1::BIT_SIZE)
                 .enumerate()
                 .map(|(i, bit)| (Index::<Res1>::try_from(i).unwrap(), bit))
-                .fold(&mut Res1::NONE.clone(), |acc, (i, bit)| acc.set_bit(i, *bit))
+                .fold(&mut Res1::NONE.clone(), |acc, (i, bit)| {
+                    acc.set_bit(i, *bit)
+                })
                 .build();
 
             let result2 = self
@@ -880,7 +883,9 @@ pub trait Bitfield:
                 .skip(Res1::BIT_SIZE)
                 .enumerate()
                 .map(|(i, bit)| (Index::<Res2>::try_from(i).unwrap(), bit))
-                .fold(&mut Res2::NONE.clone(), |acc, (i, bit)| acc.set_bit(i, *bit))
+                .fold(&mut Res2::NONE.clone(), |acc, (i, bit)| {
+                    acc.set_bit(i, *bit)
+                })
                 .build();
 
             Ok((result1, result2))

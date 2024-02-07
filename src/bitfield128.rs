@@ -1,7 +1,10 @@
 //! Module containing [`Bitfield128`].
 
 use crate::{
-    bit_ref::{BitMut, BitRef}, bitfield::{Bitfield, Simple}, prelude::{Bitfield16, Bitfield32, Bitfield64, Bitfield8, ByteField, FlagsEnum, Index}, private::Sealed
+    bit_ref::{BitMut, BitRef},
+    bitfield::{Bitfield, Simple},
+    prelude::{Bitfield16, Bitfield32, Bitfield64, Bitfield8, ByteField, FlagsEnum, Index},
+    private::Sealed,
 };
 use std::{
     collections::BTreeSet,
@@ -81,7 +84,6 @@ impl Bitfield for Bitfield128 {
 }
 
 unsafe impl Simple for Bitfield128 {}
-
 
 impl From<Inner> for Bitfield128 {
     #[inline(always)]
@@ -430,7 +432,8 @@ mod tests {
 
     #[test]
     fn construction() -> TestResult {
-        let bitfield = Tested::NONE.clone()
+        let bitfield = Tested::NONE
+            .clone()
             .set_bit(0.try_into()?, true)
             .check_bit(1.try_into()?)
             .uncheck_bit(0.try_into()?)
