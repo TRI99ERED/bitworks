@@ -40,9 +40,8 @@ where
 /// This trait is not meant to be implmented on enums, as beyond some extremely rare cases,
 /// they won't produce a valid bitfield.
 ///
-/// It's recommended to implement this trait one-field structs, where that sole field
-/// is representing the bitfield, as that would allow you to implements
-/// both [`LeftAligned`] marker on it safely.
+/// It's recommended to prefer implementing this trait for one-field structs, where that sole field is
+/// representing the bitfield, as that would allow you to implement [`LeftAligned`] marker on it safely.
 pub trait Bitfield: Sized + Clone + PartialEq + Eq {
     /// Number of bits (`size` in bits) of the `Bitfield`.
     ///
