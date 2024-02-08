@@ -30,5 +30,6 @@ pub mod prelude {
 }
 
 mod private {
+    #[deprecated]
     pub trait Sealed {}
 }

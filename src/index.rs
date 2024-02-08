@@ -25,7 +25,7 @@ where
 
     /// Maximum value for `Index`.<br/>
     /// Shortcut from having to use `Index::<T>::try_from(T::BITS - 1).unwrap()`
-    pub const MAX: Self = Self(T::BIT_SIZE - 1, PhantomData);
+    pub const MAX: Self = Self(crate::bitfield::bit_len::<T>() - 1, PhantomData);
 
     /// Returns value of `Index` as [`usize`].
     ///
@@ -39,7 +39,7 @@ where
     /// }
     /// ```
     #[inline(always)]
-    pub fn into_inner(&self) -> usize {
+    pub const fn into_inner(&self) -> usize {
         self.0
     }
 
@@ -65,7 +65,7 @@ where
     pub fn checked_add(&self, other: Self) -> Option<Self> {
         self.0
             .checked_add(other.0)
-            .filter(|&i| i < T::BIT_SIZE)
+            .filter(|&i| i < crate::bitfield::bit_len::<T>())
             .map(|i| Self(i, PhantomData))
     }
 
@@ -142,11 +142,11 @@ where
 
     /// Saturating conversion between `BifieldIndex`es.
     #[inline(always)]
-    pub fn to_other<U>(self) -> Index<U>
+    pub const fn to_other<U>(self) -> Index<U>
     where
         U: Bitfield,
     {
-        if U::BIT_SIZE >= T::BIT_SIZE {
+        if crate::bitfield::bit_len::<U>() >= crate::bitfield::bit_len::<T>() {
             Index::<U>(self.0, PhantomData)
         } else {
             Index::<U>::MAX
@@ -162,13 +162,13 @@ where
     where
         U: Bitfield,
     {
-        if U::BIT_SIZE >= T::BIT_SIZE {
+        if crate::bitfield::bit_len::<U>() >= crate::bitfield::bit_len::<T>() {
             Ok(Index::<U>(self.0, PhantomData))
         } else {
             Index::<U>::try_from(self.0).map_err(|_| {
                 ConvError::new(
-                    ConvTarget::Index(U::BIT_SIZE),
-                    ConvTarget::Index(T::BIT_SIZE),
+                    ConvTarget::Index(crate::bitfield::bit_len::<U>()),
+                    ConvTarget::Index(crate::bitfield::bit_len::<T>()),
                 )
             })
         }
@@ -176,13 +176,13 @@ where
 
     // Range unsafe sum of `self` and `other`.
     #[inline(always)]
-    pub(crate) fn __add(&self, other: Self) -> Self {
+    pub(crate) const fn __add(&self, other: Self) -> Self {
         Self(self.0 + other.0, PhantomData)
     }
 
     // Range unsafe difference of `self` and `other`.
     #[inline(always)]
-    pub(crate) fn __sub(&self, other: Self) -> Self {
+    pub(crate) const fn __sub(&self, other: Self) -> Self {
         Self(self.0 - other.0, PhantomData)
     }
 }
@@ -195,12 +195,12 @@ where
 
     #[inline(always)]
     fn try_from(value: usize) -> Result<Self, Self::Error> {
-        if value < T::BIT_SIZE {
+        if value < crate::bitfield::bit_len::<T>() {
             Ok(Self(value, PhantomData))
         } else {
             Err(ConvError::new(
                 ConvTarget::Raw(value),
-                ConvTarget::Index(T::BIT_SIZE),
+                ConvTarget::Index(crate::bitfield::bit_len::<T>()),
             ))
         }
     }
@@ -265,7 +265,12 @@ where
     T: Bitfield,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Index<Bitfield{}>({})", T::BIT_SIZE, self.0)
+        write!(
+            f,
+            "Index<Bitfield{}>({})",
+            crate::bitfield::bit_len::<T>(),
+            self.0
+        )
     }
 }
 

@@ -1,15 +1,13 @@
 //! Module containing [`Bitfield128`].
 
 use crate::{
-    bit_ref::{BitMut, BitRef},
-    bitfield::{Bitfield, Simple},
+    bitfield::{Bitfield, LeftAligned},
     prelude::{Bitfield16, Bitfield32, Bitfield64, Bitfield8, ByteField, Index},
-    private::Sealed,
 };
 // use crate::prelude::FlagsEnum;
 use std::{
     // collections::BTreeSet,
-    fmt::{Binary, Display, LowerHex, Octal, UpperHex},
+    fmt::{Binary, Debug, Display, LowerHex, Octal, UpperHex},
     ops::{
         BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Not, Shl, ShlAssign, Shr,
         ShrAssign,
@@ -21,8 +19,9 @@ type BIndex = Index<Bitfield128>;
 const BITS: usize = 128;
 
 /// [`Bitfield`] of size 128.
-#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Default, Hash)]
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Default, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[repr(transparent)]
 pub struct Bitfield128(pub(crate) Inner);
 
 impl Bitfield128 {
@@ -48,43 +47,17 @@ impl Bitfield128 {
     /// # }
     /// ```
     #[inline(always)]
-    pub fn into_inner(&self) -> Inner {
+    pub const fn into_inner(&self) -> Inner {
         self.0
     }
 }
 
-impl Sealed for Bitfield128 {}
-
-impl Bitfield for Bitfield128 {
-    const BIT_SIZE: usize = BITS;
-    const ONE: Self = Self(1);
-    const NONE: Self = Self(Inner::MIN);
-    const ALL: Self = Self(Inner::MAX);
-
-    #[inline(always)]
-    fn count_ones(&self) -> usize {
-        self.0.count_ones() as usize
-    }
-
-    #[inline(always)]
-    fn count_zeros(&self) -> usize {
-        self.0.count_zeros() as usize
-    }
-
-    #[inline(always)]
-    fn bit_ref(&self, index: BIndex) -> BitRef<'_, Self> {
-        let mask = Self::from(BIndex::MIN) << index;
-        BitRef((*self & mask) != Self::NONE, index, self)
-    }
-
-    #[inline(always)]
-    fn bit_mut(&mut self, index: BIndex) -> BitMut<'_, Self> {
-        let mask = Self::from(BIndex::MIN) << index;
-        BitMut((*self & mask) != Self::NONE, index, self)
-    }
+unsafe impl LeftAligned for Bitfield128 {
+    const _BYTE_SIZE: usize = 16;
+    const _ONE: Self = Self(1);
+    const _NONE: Self = Self(Inner::MIN);
+    const _ALL: Self = Self(Inner::MAX);
 }
-
-unsafe impl Simple for Bitfield128 {}
 
 impl From<Inner> for Bitfield128 {
     #[inline(always)]
@@ -364,11 +337,12 @@ impl BitXorAssign<BIndex> for Bitfield128 {
 
 impl FromIterator<bool> for Bitfield128 {
     fn from_iter<T: IntoIterator<Item = bool>>(iter: T) -> Self {
-        let mut bitfield: Self = Self::from(0);
-        for (i, bit) in iter.into_iter().take(BITS).enumerate() {
-            bitfield.0 |= (if bit { 1 } else { 0 }) << (i as Inner);
-        }
-        bitfield
+        iter.into_iter()
+            .take(BITS)
+            .enumerate()
+            .filter_map(|(i, bit)| if bit { Some(i) } else { None })
+            .filter_map(|i| BIndex::try_from(i).ok())
+            .fold(Self::NONE, |acc, i| acc | Self(1) << i)
     }
 }
 
@@ -391,6 +365,12 @@ impl FromIterator<bool> for Bitfield128 {
 //         bitfield
 //     }
 // }
+
+impl Debug for Bitfield128 {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Bitfield128({:#0130b})", self.0)
+    }
+}
 
 impl Display for Bitfield128 {
     #[inline(always)]
@@ -426,6 +406,8 @@ impl LowerHex for Bitfield128 {
 #[cfg(test)]
 mod tests {
     use std::error::Error;
+
+    use crate::prelude::Bitfield;
 
     use super::*;
     type Tested = Bitfield128;

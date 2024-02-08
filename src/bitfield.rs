@@ -5,32 +5,49 @@ use crate::{
     error::{ConvError, ConvResult, ConvTarget},
     // flags_enum::FlagsEnum,
     index::Index,
-    private::Sealed,
-};
-use std::{
-    // collections::BTreeSet,
-    ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Not, Shl, Shr},
 };
 
-/// Trait defining common bitfield logic.
-pub trait Bitfield:
-    Sized
-    + Sealed
-    + Clone
-    + PartialEq
-    + Eq
-    + Not<Output = Self>
-    + BitAnd<Output = Self>
-    + BitAndAssign
-    + BitOr<Output = Self>
-    + BitOrAssign
-    + BitXor<Output = Self>
-    + BitXorAssign
-    + Shl<Index<Self>, Output = Self>
-    + Shr<Index<Self>, Output = Self>
-    + From<Index<Self>>
+pub const fn bit_len<T>() -> usize
+where
+    T: Bitfield,
 {
+    T::BYTE_SIZE * 8
+}
+
+pub(crate) const fn byte_index<T>(index: Index<T>) -> usize
+where
+    T: Bitfield,
+{
+    index.into_inner() / 8
+}
+
+pub(crate) const fn bit_index<T>(index: Index<T>) -> usize
+where
+    T: Bitfield,
+{
+    index.into_inner() % 8
+}
+
+pub(crate) const fn bitmask<T>(index: Index<T>) -> u8
+where
+    T: Bitfield,
+{
+    1 << bit_index(index)
+}
+
+/// Trait defining common bitfield logic.
+///
+/// This trait is not meant to be implmented on enums, as beyond some extremely rare cases,
+/// they won't produce a valid bitfield.
+///
+/// It's recommended to implement this trait one-field structs, where that sole field
+/// is representing the bitfield, as that would allow you to implements
+/// both [`LeftAligned`] marker on it safely.
+pub trait Bitfield: Sized + Clone + PartialEq + Eq {
     /// Number of bits (`size` in bits) of the `Bitfield`.
+    ///
+    /// If implementor contsina addidtional data, it's bits
+    /// should `NOT` be included when defining this constant
     ///
     /// # Examples
     /// ```rust
@@ -39,13 +56,13 @@ pub trait Bitfield:
     /// # fn main() -> Result<(), Box<dyn Error>> {
     /// use simple_bitfield::prelude::{Bitfield, Bitfield8};
     ///
-    /// let size_in_bits = Bitfield8::BIT_SIZE;
+    /// let size_in_bits = Bitfield8::BYTE_SIZE;
     ///
-    /// assert_eq!(size_in_bits, 8);
+    /// assert_eq!(size_in_bits, 1);
     /// #   Ok(())
     /// # }
     /// ```
-    const BIT_SIZE: usize;
+    const BYTE_SIZE: usize;
 
     /// Value of the `Bitfield` with the least significant bit set.
     ///
@@ -144,10 +161,7 @@ pub trait Bitfield:
     /// #   Ok(())
     /// # }
     /// ```
-    #[inline(always)]
-    fn from_index(index: &Index<Self>) -> Self {
-        Self::ONE << *index
-    }
+    fn from_index(index: &Index<Self>) -> Self;
 
     // /// Constructs `Bitfield` from `T`, where `T` implements [`FlagsEnum`].
     // ///
@@ -235,7 +249,7 @@ pub trait Bitfield:
     where
         Res: Bitfield,
     {
-        if Self::BIT_SIZE <= Res::BIT_SIZE {
+        if Self::BYTE_SIZE <= Res::BYTE_SIZE {
             let result = self
                 .bits_ref()
                 .enumerate()
@@ -246,8 +260,8 @@ pub trait Bitfield:
             Ok(result)
         } else {
             Err(ConvError::new(
-                ConvTarget::Field(Self::BIT_SIZE),
-                ConvTarget::Field(Res::BIT_SIZE),
+                ConvTarget::Field(bit_len::<Self>()),
+                ConvTarget::Field(bit_len::<Res>()),
             ))
         }
     }
@@ -265,30 +279,32 @@ pub trait Bitfield:
     /// use simple_bitfield::prelude::{Bitfield, Bitfield8, Bitfield16};
     ///
     /// let bitfield8 = Bitfield8::from(0b00000001);
-    /// let bitfield16: Bitfield16 = bitfield8.fast_expand()?;
+    /// let bitfield16: Bitfield16 = bitfield8.expand_optimized()?;
     ///
     /// assert_eq!(bitfield16.into_inner(), 0b0000000000000001);
     /// #   Ok(())
     /// # }
     /// ```
-    fn fast_expand<Res>(self) -> ConvResult<Res>
+    fn expand_optimized<Res>(self) -> ConvResult<Res>
     where
-        Self: Simple,
-        Res: Bitfield + Simple,
+        Self: LeftAligned,
+        Res: Bitfield + LeftAligned,
     {
-        if std::mem::size_of::<Self>() <= std::mem::size_of::<Res>() {
+        if Self::BYTE_SIZE <= Res::BYTE_SIZE {
             let mut result = Res::NONE.clone();
 
-            let result_ptr = unsafe { std::mem::transmute(&mut result as *mut Res) };
-            let self_ptr = &self as *const Self;
             unsafe {
-                std::ptr::copy_nonoverlapping(self_ptr, result_ptr, 1);
+                std::ptr::copy_nonoverlapping(
+                    &self as *const _ as *const u8,
+                    &mut result as *mut _ as *mut u8,
+                    Self::BYTE_SIZE,
+                );
             }
             Ok(result)
         } else {
             Err(ConvError::new(
-                ConvTarget::Field(Self::BIT_SIZE),
-                ConvTarget::Field(Res::BIT_SIZE),
+                ConvTarget::Field(bit_len::<Self>()),
+                ConvTarget::Field(bit_len::<Res>()),
             ))
         }
     }
@@ -316,7 +332,7 @@ pub trait Bitfield:
         I: IntoIterator<Item = &'a bool>,
     {
         iter.into_iter()
-            .take(Self::BIT_SIZE)
+            .take(bit_len::<Self>())
             .enumerate()
             .map(|(i, &b)| (Index::<Self>::try_from(i).unwrap(), b))
             .fold(&mut Self::NONE.clone(), |acc, (i, b)| acc.set_bit(i, b))
@@ -478,7 +494,7 @@ pub trait Bitfield:
     /// ```
     #[inline(always)]
     fn count_ones(&self) -> usize {
-        (0..Self::BIT_SIZE).fold(0, |acc, i| {
+        (0..bit_len::<Self>()).fold(0, |acc, i| {
             acc + if *self.bit_ref(i.try_into().unwrap()) {
                 1
             } else {
@@ -504,7 +520,7 @@ pub trait Bitfield:
     /// ```
     #[inline(always)]
     fn count_zeros(&self) -> usize {
-        (0..Self::BIT_SIZE).fold(0, |acc, i| {
+        (0..bit_len::<Self>()).fold(0, |acc, i| {
             acc + (if *self.bit_ref(i.try_into().unwrap()) {
                 0
             } else {
@@ -536,15 +552,7 @@ pub trait Bitfield:
     /// #   Ok(())
     /// # }
     /// ```
-    #[inline(always)]
-    fn set_bit(&mut self, index: Index<Self>, value: bool) -> &mut Self {
-        if value {
-            *self |= Self::from(Index::<Self>::MIN) << index;
-        } else {
-            *self &= !(Self::from(Index::<Self>::MIN) << index);
-        }
-        self
-    }
+    fn set_bit(&mut self, index: Index<Self>, value: bool) -> &mut Self;
 
     /// Sets bit at [`index`][Index] to 1. Returns copy of the resulting `Bitfield`.
     ///
@@ -567,11 +575,7 @@ pub trait Bitfield:
     /// #   Ok(())
     /// # }
     /// ```
-    #[inline(always)]
-    fn check_bit(&mut self, index: Index<Self>) -> &mut Self {
-        *self |= Self::from(Index::<Self>::MIN) << index;
-        self
-    }
+    fn check_bit(&mut self, index: Index<Self>) -> &mut Self;
 
     /// Sets bit at [`index`][Index] to 0. Returns copy of the resulting `Bitfield`.
     ///
@@ -594,11 +598,7 @@ pub trait Bitfield:
     /// #   Ok(())
     /// # }
     /// ```
-    #[inline(always)]
-    fn uncheck_bit(&mut self, index: Index<Self>) -> &mut Self {
-        *self &= !(Self::from(Index::<Self>::MIN) << index);
-        self
-    }
+    fn uncheck_bit(&mut self, index: Index<Self>) -> &mut Self;
 
     /// Returns a copy of a bit at [`index`][Index].
     ///
@@ -616,14 +616,7 @@ pub trait Bitfield:
     /// #   Ok(())
     /// # }
     /// ```
-    #[inline(always)]
-    fn bit(self, index: Index<Self>) -> bool
-    where
-        Self: Copy,
-    {
-        let mask = Self::from(Index::<Self>::MIN) << index;
-        (self & mask) != Self::NONE
-    }
+    fn bit(self, index: Index<Self>) -> bool;
 
     /// Returns a [`BitRef`] holding an immutable reference to the bit at [`index`][Index].
     ///
@@ -684,10 +677,7 @@ pub trait Bitfield:
     /// #   Ok(())
     /// # }
     /// ```
-    #[inline(always)]
-    fn complement(self) -> Self {
-        !self
-    }
+    fn complement(self) -> Self;
 
     /// Returns Set union (`self ∪ other`) of two `Bitfield`s.<br/>
     /// Alias for [`|`] operator
@@ -707,10 +697,7 @@ pub trait Bitfield:
     /// #   Ok(())
     /// # }
     /// ```
-    #[inline(always)]
-    fn union(self, other: Self) -> Self {
-        self | other
-    }
+    fn union(self, other: Self) -> Self;
 
     /// Returns Set intersection (`self ∩ other`) of two `Bitfield`s.<br/>
     /// Alias for [`&`] operator
@@ -730,10 +717,7 @@ pub trait Bitfield:
     /// #   Ok(())
     /// # }
     /// ```
-    #[inline(always)]
-    fn intersection(self, other: Self) -> Self {
-        self & other
-    }
+    fn intersection(self, other: Self) -> Self;
 
     /// Returns Set difference (`self \ other`) of two `Bitfield`s.
     ///
@@ -754,7 +738,7 @@ pub trait Bitfield:
     /// ```
     #[inline(always)]
     fn difference(self, other: Self) -> Self {
-        self & !other
+        self.intersection(other.complement())
     }
 
     /// Returns Set symmetric difference (`self Δ other`) of two `Bitfield`s.<br/>
@@ -775,19 +759,16 @@ pub trait Bitfield:
     /// #   Ok(())
     /// # }
     /// ```
-    #[inline(always)]
-    fn sym_difference(self, other: Self) -> Self {
-        self ^ other
-    }
+    fn sym_difference(self, other: Self) -> Self;
 
     #[inline(always)]
     fn super_set(self, other: Self) -> bool {
-        self & other.clone() == other
+        self.intersection(other.clone()) == other
     }
 
     #[inline(always)]
     fn intersects(self, other: Self) -> bool {
-        self & other != Self::NONE
+        self.intersection(other) != Self::NONE
     }
 
     /// Combines two `Bitfield`s to create a bigger one.<br/>
@@ -816,8 +797,8 @@ pub trait Bitfield:
         Other: Bitfield,
         Res: Bitfield,
     {
-        let combined = Self::BIT_SIZE + Other::BIT_SIZE;
-        if Res::BIT_SIZE == combined {
+        let combined = Self::BYTE_SIZE + Other::BYTE_SIZE;
+        if Res::BYTE_SIZE == combined {
             let mut result = self
                 .bits_ref()
                 .enumerate()
@@ -828,14 +809,14 @@ pub trait Bitfield:
             let result = other
                 .bits_ref()
                 .enumerate()
-                .map(|(i, bit)| (Index::<Res>::try_from(i + Self::BIT_SIZE).unwrap(), bit))
+                .map(|(i, bit)| (Index::<Res>::try_from(i + bit_len::<Self>()).unwrap(), bit))
                 .fold(&mut result, |acc, (i, bit)| acc.set_bit(i, *bit))
                 .build();
             Ok(result)
         } else {
             Err(ConvError::new(
-                ConvTarget::Field(combined),
-                ConvTarget::Field(Res::BIT_SIZE),
+                ConvTarget::Field(combined * 8),
+                ConvTarget::Field(bit_len::<Res>()),
             ))
         }
     }
@@ -866,11 +847,11 @@ pub trait Bitfield:
         Res1: Bitfield,
         Res2: Bitfield,
     {
-        let combined = Res1::BIT_SIZE + Res2::BIT_SIZE;
-        if Self::BIT_SIZE == combined {
+        let combined = Res1::BYTE_SIZE + Res2::BYTE_SIZE;
+        if Self::BYTE_SIZE == combined {
             let result1 = self
                 .bits_ref()
-                .take(Res1::BIT_SIZE)
+                .take(bit_len::<Res1>())
                 .enumerate()
                 .map(|(i, bit)| (Index::<Res1>::try_from(i).unwrap(), bit))
                 .fold(&mut Res1::NONE.clone(), |acc, (i, bit)| {
@@ -880,7 +861,7 @@ pub trait Bitfield:
 
             let result2 = self
                 .bits_ref()
-                .skip(Res1::BIT_SIZE)
+                .skip(bit_len::<Res1>())
                 .enumerate()
                 .map(|(i, bit)| (Index::<Res2>::try_from(i).unwrap(), bit))
                 .fold(&mut Res2::NONE.clone(), |acc, (i, bit)| {
@@ -891,8 +872,8 @@ pub trait Bitfield:
             Ok((result1, result2))
         } else {
             Err(ConvError::new(
-                ConvTarget::Field(Self::BIT_SIZE),
-                ConvTarget::Field(combined),
+                ConvTarget::Field(bit_len::<Self>()),
+                ConvTarget::Field(combined * 8),
             ))
         }
     }
@@ -911,38 +892,41 @@ pub trait Bitfield:
     ///
     /// let bitfield8_1 = Bitfield8::from(0b00000001);
     /// let bitfield8_2 = Bitfield8::from(0b00000011);
-    /// let bitfield16: Bitfield16 = bitfield8_1.fast_combine(bitfield8_2)?;
+    /// let bitfield16: Bitfield16 = bitfield8_1.combine_optimized(bitfield8_2)?;
     ///
     /// assert_eq!(bitfield16.into_inner(), 0b0000001100000001);
     /// #   Ok(())
     /// # }
     /// ```
-    fn fast_combine<Other, Res>(self, other: Other) -> ConvResult<Res>
+    fn combine_optimized<Other, Res>(self, other: Other) -> ConvResult<Res>
     where
-        Self: Simple,
-        Other: Bitfield + Simple,
-        Res: Bitfield + Simple,
+        Self: LeftAligned,
+        Other: Bitfield + LeftAligned,
+        Res: Bitfield + LeftAligned,
     {
-        let combined = std::mem::size_of::<Self>() + std::mem::size_of::<Other>();
-        if std::mem::size_of::<Res>() == combined {
+        let combined = Self::BYTE_SIZE + Other::BYTE_SIZE;
+
+        if Res::BYTE_SIZE == combined {
             let mut result = Res::NONE.clone();
 
-            let result_ptr = unsafe { std::mem::transmute(&mut result as *mut Res) };
-            let self_ptr = &self as *const Self;
             unsafe {
-                std::ptr::copy_nonoverlapping(self_ptr, result_ptr, 1);
-            }
+                std::ptr::copy_nonoverlapping(
+                    &self as *const _ as *const u8,
+                    &mut result as *mut _ as *mut u8,
+                    Self::BYTE_SIZE,
+                );
 
-            let result_ptr = unsafe { std::mem::transmute(result_ptr.add(1)) };
-            let other_ptr = &other as *const Other;
-            unsafe {
-                std::ptr::copy_nonoverlapping(other_ptr, result_ptr, 1);
+                std::ptr::copy_nonoverlapping(
+                    &other as *const _ as *const u8,
+                    (&mut result as *mut _ as *mut u8).add(Self::BYTE_SIZE),
+                    Other::BYTE_SIZE,
+                );
             }
             Ok(result)
         } else {
             Err(ConvError::new(
-                ConvTarget::Field(combined),
-                ConvTarget::Field(Res::BIT_SIZE),
+                ConvTarget::Field(combined * 8),
+                ConvTarget::Field(bit_len::<Res>()),
             ))
         }
     }
@@ -960,40 +944,43 @@ pub trait Bitfield:
     /// use simple_bitfield::prelude::{Bitfield, Bitfield8, Bitfield16};
     ///
     /// let bitfield16 = Bitfield16::from(0b0000001100000001);
-    /// let (bitfield8_1, bitfield8_2): (Bitfield8, Bitfield8) = bitfield16.fast_split()?;
+    /// let (bitfield8_1, bitfield8_2): (Bitfield8, Bitfield8) = bitfield16.split_optimized()?;
     ///
     /// assert_eq!(bitfield8_1.into_inner(), 0b00000001);
     /// assert_eq!(bitfield8_2.into_inner(), 0b00000011);
     /// #   Ok(())
     /// # }
     /// ```
-    fn fast_split<Res1, Res2>(self) -> ConvResult<(Res1, Res2)>
+    fn split_optimized<Res1, Res2>(self) -> ConvResult<(Res1, Res2)>
     where
-        Self: Simple,
-        Res1: Bitfield + Simple,
-        Res2: Bitfield + Simple,
+        Self: LeftAligned,
+        Res1: Bitfield + LeftAligned,
+        Res2: Bitfield + LeftAligned,
     {
-        let combined = std::mem::size_of::<Res1>() + std::mem::size_of::<Res2>();
-        if std::mem::size_of::<Self>() == combined {
+        let combined = Res1::BYTE_SIZE + Res2::BYTE_SIZE;
+
+        if Self::BYTE_SIZE == combined {
             let mut result1 = Res1::NONE.clone();
             let mut result2 = Res2::NONE.clone();
 
-            let result1_ptr = &mut result1 as *mut Res1;
-            let self_ptr = unsafe { std::mem::transmute(&self as *const Self) };
             unsafe {
-                std::ptr::copy_nonoverlapping(self_ptr, result1_ptr, 1);
-            }
+                std::ptr::copy_nonoverlapping(
+                    &self as *const _ as *const u8,
+                    &mut result1 as *mut _ as *mut u8,
+                    Res1::BYTE_SIZE,
+                );
 
-            let result2_ptr = &mut result2 as *mut Res2;
-            let self_ptr = unsafe { std::mem::transmute(self_ptr.add(1)) };
-            unsafe {
-                std::ptr::copy_nonoverlapping(self_ptr, result2_ptr, 1);
+                std::ptr::copy_nonoverlapping(
+                    (&self as *const _ as *const u8).add(Res1::BYTE_SIZE),
+                    &mut result2 as *mut _ as *mut u8,
+                    Res2::BYTE_SIZE,
+                );
             }
             Ok((result1, result2))
         } else {
             Err(ConvError::new(
-                ConvTarget::Field(Self::BIT_SIZE),
-                ConvTarget::Field(combined),
+                ConvTarget::Field(bit_len::<Self>()),
+                ConvTarget::Field(combined * 8),
             ))
         }
     }
@@ -1027,7 +1014,7 @@ pub trait Bitfield:
     where
         Self: Copy,
     {
-        (0..Self::BIT_SIZE)
+        (0..bit_len::<Self>())
             .map(|i| Index::<Self>::try_from(i).unwrap())
             .map(move |i| self.bit(i))
     }
@@ -1059,7 +1046,7 @@ pub trait Bitfield:
     /// ```
     #[inline(always)]
     fn bits_ref(&self) -> impl Iterator<Item = BitRef<'_, Self>> {
-        (0..Self::BIT_SIZE)
+        (0..bit_len::<Self>())
             .map(|i| Index::<Self>::try_from(i).unwrap())
             .map(|i| self.bit_ref(i))
     }
@@ -1088,7 +1075,7 @@ pub trait Bitfield:
     #[inline(always)]
     fn bits_mut(&mut self) -> impl Iterator<Item = BitMut<'_, Self>> {
         let p = self as *mut Self;
-        (0..Self::BIT_SIZE)
+        (0..bit_len::<Self>())
             .map(|i| Index::<Self>::try_from(i).unwrap())
             .map(move |i| unsafe { p.as_mut().unwrap().bit_mut(i) })
     }
@@ -1278,21 +1265,47 @@ pub trait Bitfield:
     // }
 }
 
-/// Marker trait for simple [`Bitfield`]s.
+/// Left-aligned [`Bitfield`].
 ///
 /// Implementors of this trait get access to these methods defined on `Bitfield`:
-/// * [`Bitfield::fast_expand()`]
-/// * [`Bitfield::fast_combine()`]
-/// * [`Bitfield::fast_split()`]
+/// * [`Bitfield::expand_optimized()`]
+/// * [`Bitfield::combine_optimized()`]
+/// * [`Bitfield::split_optimized()`]
 ///
-/// All the methods above have corresponding versions without `fast_` prefix, which contains no `unsafe` code
+/// All the methods above have corresponding versions without `_optimized` suffix, which contains no `unsafe` code
 /// and aren't restricted to only `Simple` types.
 ///
-/// Note: It is impossible to implement this trait outside the simple_bitfield crate.
-/// 
 /// # Safety
-/// If you implement this trait, you are responsible for making sure, that memory representation of the implementor
-/// only contains the bitfield itself and no additional data (e.g. other fields in a struct).
+/// If you implement this trait, you are responsible for making sure, that part in memory of the implementor,
+/// which contains the inner representation of the bitfield, is aligned on the left.
+/// Alignment here is not the same as Rust struct alignment, so I'll provide an example here
+/// of what structs are valid and invalid for implementing this trait:
+///
+/// ### ✅ LeftAligned Bitfield structs:
+/// ```
+/// struct A(u8); // u8 here represents the bitfield.
+///
+/// struct B { bitfield: u8 }
+///
+/// #[repr(C)]
+/// struct C(u8, String); // only u8 here represents the bitfield.
+///
+/// #[repr(C)]
+/// struct D { bitfield: u8, metadata: String }
+/// ```
+///
+/// ### ❌ *NOT* LeftAligned Bitfield structs:
+/// ```
+/// struct E(u8, String); // exact ordreing is not guaranteed
+///
+/// struct F { bitfield: u8, metadata: String } // exact ordreing is not guaranteed
+///
+/// #[repr(C)] // ordering is guaranteed, but order is incorrect
+/// struct G(String, u8); // only u8 here represents the Bitfield.
+///
+/// #[repr(C)] // ordering is guaranteed, but order is incorrect
+/// struct H { metadata: String, bitfield: u8 }
+/// ```
 ///
 /// In general, any `one-field tuple struct`s or `one-field C-like struct`s are good implementors of this trait,
 /// but only if the data in that field has consistent memory layout:<br/>
@@ -1302,4 +1315,267 @@ pub trait Bitfield:
 ///
 /// If you're unsure about what this means, use built-in `Bitfield`s (they all implement `Simple`)
 /// or do not implement this trait for your custom `Bitfield` (the trade-off should be minimal).
+pub unsafe trait LeftAligned: Bitfield {
+    const _BYTE_SIZE: usize;
+    const _ONE: Self;
+    const _ALL: Self;
+    const _NONE: Self;
+
+    fn shift_left(mut self, amount: Index<Self>) -> Self {
+        let byte_shift = byte_index(amount);
+        let bit_shift = bit_index(amount);
+
+        let ptr = &mut self as *mut _ as *mut u8;
+
+        if byte_shift > 0 {
+            unsafe {
+                std::ptr::copy(ptr.add(byte_shift), ptr, Self::BYTE_SIZE - byte_shift);
+                std::ptr::write_bytes(ptr.add(Self::BYTE_SIZE - byte_shift), 0, byte_shift);
+            }
+        }
+
+        if bit_shift > 0 {
+            let bytes: &mut [u8] = unsafe { std::slice::from_raw_parts_mut(ptr, Self::BYTE_SIZE) };
+            let mut carry = 0;
+            for byte in bytes.iter_mut().rev() {
+                let shifted = *byte << bit_shift | carry;
+                carry = *byte >> (8 - bit_shift);
+                *byte = shifted;
+            }
+        }
+        self
+    }
+
+    fn shift_right(mut self, amount: Index<Self>) -> Self {
+        let byte_shift = byte_index(amount);
+        let bit_shift = bit_index(amount);
+
+        let ptr = &mut self as *mut _ as *mut u8;
+
+        if byte_shift > 0 {
+            unsafe {
+                std::ptr::copy(ptr, ptr.add(byte_shift), Self::BYTE_SIZE - byte_shift);
+                std::ptr::write_bytes(ptr, 0, byte_shift);
+            }
+        }
+
+        if bit_shift > 0 {
+            let bytes: &mut [u8] = unsafe { std::slice::from_raw_parts_mut(ptr, Self::BYTE_SIZE) };
+            let mut carry = 0;
+            for byte in bytes.iter_mut() {
+                let shifted = *byte >> bit_shift | carry;
+                carry = *byte << (8 - bit_shift);
+                *byte = shifted;
+            }
+        }
+        self
+    }
+}
+
+/// Marker trait for simple [`Bitfield`]s.
+///
+/// Implementors of this trait must also implement [`LeftAligned`] and get blanket implementation of
+/// `Bitfield`.
+///
+/// # Safety
+/// If you implement this trait, you are responsible for making sure, that part in memory of the implementor,
+/// which contains the inner representation of the bitfield, is aligned on the right.
+/// Alignment here is not the same as Rust struct alignment, so I'll provide an example here
+/// of what structs are valid and invalid for implementing this trait:
+///
+/// ### ✅ RightAligned Bitfield structs:
+/// ```
+/// struct A(u8); // u8 here represents the bitfield.
+///
+/// struct B { bitfield: u8 }
+///
+/// #[repr(C)]
+/// struct C(String, u8); // only u8 here represents the bitfield.
+///
+/// #[repr(C)]
+/// struct D { metadata: String, bitfield: u8 }
+/// ```
+///
+/// ### ❌ *NOT* RightAligned Bitfield structs:
+/// ```
+/// struct E(String, u8); // exact ordreing is not guaranteed
+///
+/// struct F { metadata: String, bitfield: u8 } // exact ordreing is not guaranteed
+///
+/// #[repr(C)] // ordering is guaranteed, but order is incorrect
+/// struct G(u8, String); // only u8 here represents the Bitfield.
+///
+/// #[repr(C)] // ordering is guaranteed, but order is incorrect
+/// struct H { bitfield: u8, metadata: String }
+/// ```
+///
+/// In general, any `one-field tuple struct`s or `one-field C-like struct`s are good implementors of this trait,
+/// but only if the data in that field has consistent memory layout:<br/>
+/// E.g. any [`Sized`] owned primitive types or arrays of them, but not tuples, references, pointers etc.<br/>
+/// It is `unsafe` to implement this trait for second kind of structs and will lead to memory violations or
+/// unintended and undefined behaviour.
+///
+/// If you're unsure about what this means, use built-in `Bitfield`s (they all implement `Simple`)
+/// or do not implement this trait for your custom `Bitfield` (the trade-off should be minimal).
+#[deprecated]
+pub unsafe trait RightAligned: LeftAligned {}
+
+#[deprecated]
 pub unsafe trait Simple: Bitfield {}
+
+impl<T> Bitfield for T
+where
+    T: LeftAligned + Sized + Clone + PartialEq + Eq,
+{
+    const BYTE_SIZE: usize = Self::_BYTE_SIZE;
+
+    const ONE: Self = Self::_ONE;
+
+    const NONE: Self = Self::_NONE;
+
+    const ALL: Self = Self::_ALL;
+
+    #[inline(always)]
+    fn from_index(index: &Index<Self>) -> Self {
+        Self::NONE.clone().check_bit(*index).clone()
+    }
+
+    #[inline(always)]
+    fn count_ones(&self) -> usize {
+        let bytes: &[u8] =
+            unsafe { std::slice::from_raw_parts(self as *const _ as *const u8, Self::BYTE_SIZE) };
+
+        bytes.iter().fold(0, |acc, &byte| acc + byte.count_ones()) as usize
+    }
+
+    #[inline(always)]
+    fn count_zeros(&self) -> usize {
+        let bytes: &[u8] =
+            unsafe { std::slice::from_raw_parts(self as *const _ as *const u8, Self::BYTE_SIZE) };
+
+        bytes.iter().fold(0, |acc, &byte| acc + byte.count_zeros()) as usize
+    }
+
+    #[inline(always)]
+    fn set_bit(&mut self, index: Index<Self>, value: bool) -> &mut Self {
+        let self_ptr = self as *mut _ as *mut u8;
+        unsafe {
+            let byte = self_ptr.add(byte_index(index));
+            if value {
+                *byte |= 1 << bit_index(index);
+            } else {
+                *byte &= !(1 << bit_index(index));
+            }
+        }
+        self
+    }
+
+    #[inline(always)]
+    fn check_bit(&mut self, index: Index<Self>) -> &mut Self {
+        let self_ptr = self as *mut _ as *mut u8;
+        unsafe {
+            let byte = self_ptr.add(byte_index(index));
+            *byte |= 1 << bit_index(index);
+        }
+        self
+    }
+
+    #[inline(always)]
+    fn uncheck_bit(&mut self, index: Index<Self>) -> &mut Self {
+        let self_ptr = self as *mut _ as *mut u8;
+        unsafe {
+            let byte = self_ptr.add(byte_index(index));
+            *byte &= !(1 << bit_index(index));
+        }
+        self
+    }
+
+    #[inline(always)]
+    fn bit(self, index: Index<Self>) -> bool {
+        let self_ptr = &self as *const _ as *const u8;
+        let byte = unsafe { *self_ptr.add(byte_index(index)) };
+        byte & bitmask(index) != 0
+    }
+
+    #[inline(always)]
+    fn bit_ref(&self, index: Index<Self>) -> BitRef<'_, Self> {
+        let self_ptr = self as *const _ as *const u8;
+        let byte = unsafe { *self_ptr.add(byte_index(index)) };
+        BitRef(byte & bitmask(index) != 0, index, self)
+    }
+
+    #[inline(always)]
+    fn bit_mut(&mut self, index: Index<Self>) -> BitMut<'_, Self> {
+        let self_ptr = self as *mut _ as *const u8;
+        let byte = unsafe { *self_ptr.add(byte_index(index)) };
+        BitMut(byte & bitmask(index) != 0, index, self)
+    }
+
+    #[inline(always)]
+    fn complement(mut self) -> Self {
+        let bytes: &mut [u8] = unsafe {
+            std::slice::from_raw_parts_mut(&mut self as *mut _ as *mut u8, Self::BYTE_SIZE)
+        };
+
+        for byte in bytes.iter_mut() {
+            *byte = !*byte;
+        }
+        self
+    }
+
+    #[inline(always)]
+    fn union(mut self, other: Self) -> Self {
+        let self_bytes: &mut [u8] = unsafe {
+            std::slice::from_raw_parts_mut(&mut self as *mut _ as *mut u8, Self::BYTE_SIZE)
+        };
+        let other_bytes: &[u8] =
+            unsafe { std::slice::from_raw_parts(&other as *const _ as *const u8, Self::BYTE_SIZE) };
+
+        for i in 0..Self::BYTE_SIZE {
+            self_bytes[i] |= other_bytes[i];
+        }
+        self
+    }
+
+    #[inline(always)]
+    fn intersection(mut self, other: Self) -> Self {
+        let self_bytes: &mut [u8] = unsafe {
+            std::slice::from_raw_parts_mut(&mut self as *mut _ as *mut u8, Self::BYTE_SIZE)
+        };
+        let other_bytes: &[u8] =
+            unsafe { std::slice::from_raw_parts(&other as *const _ as *const u8, Self::BYTE_SIZE) };
+
+        for i in 0..Self::BYTE_SIZE {
+            self_bytes[i] &= other_bytes[i];
+        }
+        self
+    }
+
+    #[inline(always)]
+    fn difference(mut self, other: Self) -> Self {
+        let self_bytes: &mut [u8] = unsafe {
+            std::slice::from_raw_parts_mut(&mut self as *mut _ as *mut u8, Self::BYTE_SIZE)
+        };
+        let other_bytes: &[u8] =
+            unsafe { std::slice::from_raw_parts(&other as *const _ as *const u8, Self::BYTE_SIZE) };
+
+        for i in 0..Self::BYTE_SIZE {
+            self_bytes[i] &= !other_bytes[i];
+        }
+        self
+    }
+
+    #[inline(always)]
+    fn sym_difference(mut self, other: Self) -> Self {
+        let self_bytes: &mut [u8] = unsafe {
+            std::slice::from_raw_parts_mut(&mut self as *mut _ as *mut u8, Self::BYTE_SIZE)
+        };
+        let other_bytes: &[u8] =
+            unsafe { std::slice::from_raw_parts(&other as *const _ as *const u8, Self::BYTE_SIZE) };
+
+        for i in 0..Self::BYTE_SIZE {
+            self_bytes[i] ^= other_bytes[i];
+        }
+        self
+    }
+}

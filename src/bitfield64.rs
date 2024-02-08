@@ -1,16 +1,14 @@
 //! Module containing [`Bitfield64`].
 
 use crate::{
-    bit_ref::{BitMut, BitRef},
-    bitfield::{Bitfield, Simple},
+    bitfield::{Bitfield, LeftAligned},
     error::{ConvError, ConvTarget},
     prelude::{Bitfield128, Bitfield16, Bitfield32, Bitfield8, ByteField, Index},
-    private::Sealed,
 };
 // use crate::prelude::FlagsEnum;
 use std::{
     // collections::BTreeSet,
-    fmt::{Binary, Display, LowerHex, Octal, UpperHex},
+    fmt::{Binary, Debug, Display, LowerHex, Octal, UpperHex},
     ops::{
         BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Not, Shl, ShlAssign, Shr,
         ShrAssign,
@@ -22,8 +20,9 @@ type BIndex = Index<Bitfield64>;
 const BITS: usize = 64;
 
 /// [`Bitfield`] of size 64.
-#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Default, Hash)]
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Default, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[repr(transparent)]
 pub struct Bitfield64(pub(crate) Inner);
 
 impl Bitfield64 {
@@ -49,43 +48,17 @@ impl Bitfield64 {
     /// # }
     /// ```
     #[inline(always)]
-    pub fn into_inner(&self) -> Inner {
+    pub const fn into_inner(&self) -> Inner {
         self.0
     }
 }
 
-impl Sealed for Bitfield64 {}
-
-impl Bitfield for Bitfield64 {
-    const BIT_SIZE: usize = BITS;
-    const ONE: Self = Self(1);
-    const NONE: Self = Self(Inner::MIN);
-    const ALL: Self = Self(Inner::MAX);
-
-    #[inline(always)]
-    fn count_ones(&self) -> usize {
-        self.0.count_ones() as usize
-    }
-
-    #[inline(always)]
-    fn count_zeros(&self) -> usize {
-        self.0.count_zeros() as usize
-    }
-
-    #[inline(always)]
-    fn bit_ref(&self, index: BIndex) -> BitRef<'_, Self> {
-        let mask = Self::from(BIndex::MIN) << index;
-        BitRef((*self & mask) != Self::NONE, index, self)
-    }
-
-    #[inline(always)]
-    fn bit_mut(&mut self, index: BIndex) -> BitMut<'_, Self> {
-        let mask = Self::from(BIndex::MIN) << index;
-        BitMut((*self & mask) != Self::NONE, index, self)
-    }
+unsafe impl LeftAligned for Bitfield64 {
+    const _BYTE_SIZE: usize = 8;
+    const _ONE: Self = Self(1);
+    const _NONE: Self = Self(Inner::MIN);
+    const _ALL: Self = Self(Inner::MAX);
 }
-
-unsafe impl Simple for Bitfield64 {}
 
 impl From<Inner> for Bitfield64 {
     #[inline(always)]
@@ -369,11 +342,12 @@ impl BitXorAssign<BIndex> for Bitfield64 {
 
 impl FromIterator<bool> for Bitfield64 {
     fn from_iter<T: IntoIterator<Item = bool>>(iter: T) -> Self {
-        let mut bitfield: Self = Self::from(0);
-        for (i, bit) in iter.into_iter().take(BITS).enumerate() {
-            bitfield.0 |= (if bit { 1 } else { 0 }) << (i as Inner);
-        }
-        bitfield
+        iter.into_iter()
+            .take(BITS)
+            .enumerate()
+            .filter_map(|(i, bit)| if bit { Some(i) } else { None })
+            .filter_map(|i| BIndex::try_from(i).ok())
+            .fold(Self::NONE, |acc, i| acc | Self(1) << i)
     }
 }
 
@@ -396,6 +370,12 @@ impl FromIterator<bool> for Bitfield64 {
 //         bitfield
 //     }
 // }
+
+impl Debug for Bitfield64 {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Bitfield64({:#066b})", self.0)
+    }
+}
 
 impl Display for Bitfield64 {
     #[inline(always)]
@@ -431,6 +411,8 @@ impl LowerHex for Bitfield64 {
 #[cfg(test)]
 mod tests {
     use std::error::Error;
+
+    use crate::prelude::Bitfield;
 
     use super::*;
     type Tested = Bitfield64;
@@ -842,7 +824,7 @@ mod tests {
     #[test]
     fn fast_expand() -> TestResult {
         let bitfield1 = Bitfield64::from(0b00011011);
-        let bitfield2: Bitfield128 = bitfield1.fast_expand()?;
+        let bitfield2: Bitfield128 = bitfield1.expand_optimized()?;
 
         assert_eq!(bitfield2, Bitfield128::from(0b00011011));
 
@@ -910,7 +892,7 @@ mod tests {
             .set_bit(1.try_into()?, true)
             .build();
 
-        let bitfield3: Bitfield128 = bitfield1.fast_combine(bitfield2)?;
+        let bitfield3: Bitfield128 = bitfield1.combine_optimized(bitfield2)?;
 
         assert_eq!(
             bitfield3,
@@ -930,7 +912,7 @@ mod tests {
             .set_bit(1.try_into()?, true)
             .set_bit((64 + 1).try_into()?, true)
             .build();
-        let (bitfield2, bitfield3): (Bitfield64, Bitfield64) = bitfield1.fast_split()?;
+        let (bitfield2, bitfield3): (Bitfield64, Bitfield64) = bitfield1.split_optimized()?;
 
         assert_eq!(
             bitfield2,

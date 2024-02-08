@@ -1,15 +1,13 @@
 //! Module containing [`ByteField`].
 
 use crate::{
-    bit_ref::{BitMut, BitRef},
-    bitfield::Simple,
-    prelude::{Bitfield, Index},
-    private::Sealed,
+    bitfield::{Bitfield, LeftAligned},
+    prelude::Index,
 };
 // use crate::prelude::FlagsEnum;
 use std::{
     // collections::BTreeSet,
-    fmt::{Binary, Display, LowerHex, Octal, UpperHex},
+    fmt::{Binary, Debug, Display, LowerHex, Octal, UpperHex},
     ops::{
         BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Not, Shl, ShlAssign, Shr,
         ShrAssign,
@@ -19,22 +17,23 @@ use std::{
 type Inner<const N: usize> = [u8; N];
 type BIndex<const N: usize> = Index<ByteField<N>>;
 
-const fn byte_index(index: usize) -> usize {
-    index / 8
+const fn byte_index<const N: usize>(index: BIndex<N>) -> usize {
+    index.into_inner() / 8
 }
 
-const fn bit_index(index: usize) -> usize {
-    index % 8
+const fn bit_index<const N: usize>(index: BIndex<N>) -> usize {
+    index.into_inner() % 8
 }
 
-const fn bitmask(index: usize) -> u8 {
+const fn bitmask<const N: usize>(index: BIndex<N>) -> u8 {
     1 << bit_index(index)
 }
 
 /// [`Bitfield`] of variable `size`.
 /// `N` is size in bytes of the `ByteField`.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[repr(transparent)]
 pub struct ByteField<const N: usize>(pub(crate) Inner<N>);
 
 impl<const N: usize> ByteField<N> {
@@ -55,92 +54,12 @@ impl<const N: usize> ByteField<N> {
     }
 }
 
-impl<const N: usize> Sealed for ByteField<N> {}
-
-impl<const N: usize> Bitfield for ByteField<N> {
-    const BIT_SIZE: usize = N * 8;
-
-    const ONE: Self = Self::__one();
-
-    const NONE: Self = Self([0; N]);
-
-    const ALL: Self = Self([255; N]);
-
-    #[inline(always)]
-    fn from_index(index: &BIndex<N>) -> Self {
-        Self::from(*index)
-    }
-
-    // #[inline(always)]
-    // fn from_flag<T>(flag: &T) -> Self
-    // where
-    //     T: FlagsEnum<Bitfield = Self> + Copy,
-    //     BIndex<N>: From<T>,
-    // {
-    //     Self::from(BIndex::<N>::from(*flag))
-    // }
-
-    #[inline(always)]
-    fn count_ones(&self) -> usize {
-        self.0
-            .iter()
-            .fold(0usize, |acc, &e| acc + e.count_ones() as usize)
-    }
-
-    #[inline(always)]
-    fn count_zeros(&self) -> usize {
-        self.0
-            .iter()
-            .fold(0usize, |acc, &e| acc + e.count_zeros() as usize)
-    }
-
-    #[inline(always)]
-    fn set_bit(&mut self, Index::<Self>(index, ..): BIndex<N>, value: bool) -> &mut Self {
-        if value {
-            self.0[byte_index(index)] |= bitmask(index);
-        } else {
-            self.0[byte_index(index)] &= !(bitmask(index));
-        }
-        self
-    }
-
-    #[inline(always)]
-    fn check_bit(&mut self, Index::<Self>(index, ..): BIndex<N>) -> &mut Self {
-        self.0[byte_index(index)] |= bitmask(index);
-        self
-    }
-
-    #[inline(always)]
-    fn uncheck_bit(&mut self, Index::<Self>(index, ..): BIndex<N>) -> &mut Self {
-        self.0[byte_index(index)] &= !(bitmask(index));
-        self
-    }
-
-    #[inline(always)]
-    fn bit(self, Index::<Self>(index, ..): BIndex<N>) -> bool {
-        (self.0[byte_index(index)] & bitmask(index)) != 0
-    }
-
-    #[inline(always)]
-    fn bit_ref(&self, index: BIndex<N>) -> BitRef<'_, Self> {
-        BitRef(
-            (self.0[byte_index(index.into_inner())] & bitmask(index.into_inner())) != 0,
-            index,
-            self,
-        )
-    }
-
-    #[inline(always)]
-    fn bit_mut(&mut self, index: BIndex<N>) -> BitMut<'_, Self> {
-        BitMut(
-            (self.0[byte_index(index.into_inner())] & bitmask(index.into_inner())) != 0,
-            index,
-            self,
-        )
-    }
+unsafe impl<const N: usize> LeftAligned for ByteField<N> {
+    const _BYTE_SIZE: usize = N;
+    const _ONE: Self = Self::__one();
+    const _NONE: Self = Self([0; N]);
+    const _ALL: Self = Self([255; N]);
 }
-
-unsafe impl<const N: usize> Simple for ByteField<N> {}
 
 impl<const N: usize> From<Inner<N>> for ByteField<N> {
     #[inline(always)]
@@ -157,7 +76,7 @@ impl<const N: usize> From<ByteField<N>> for Inner<N> {
 }
 
 impl<const N: usize> From<BIndex<N>> for ByteField<N> {
-    fn from(Index::<Self>(index, ..): BIndex<N>) -> Self {
+    fn from(index: BIndex<N>) -> Self {
         let mut inner = [0; N];
         inner[byte_index(index)] = bitmask(index);
         Self(inner)
@@ -246,76 +165,162 @@ impl<const N: usize> BitXorAssign for ByteField<N> {
 impl<const N: usize> Shl<BIndex<N>> for ByteField<N> {
     type Output = Self;
 
-    fn shl(self, Index::<Self>(index, ..): BIndex<N>) -> Self::Output {
-        let mut inner = self.0;
+    fn shl(self, rhs: BIndex<N>) -> Self::Output {
+        // let mut inner = self.0;
 
-        let byte_shift = byte_index(index);
-        let bit_shift = bit_index(index);
+        // let byte_shift = byte_index(rhs);
+        // let bit_shift = bit_index(rhs);
 
-        if byte_shift > 0 {
-            unsafe {
-                std::ptr::copy(
-                    inner.as_ptr().add(byte_shift),
-                    inner.as_mut_ptr(),
-                    N - byte_shift,
-                );
-                std::ptr::write_bytes(inner.as_mut_ptr().add(N - byte_shift), 0, byte_shift);
-            }
-        }
+        // if byte_shift > 0 {
+        //     unsafe {
+        //         std::ptr::copy(
+        //             inner.as_ptr().add(byte_shift),
+        //             inner.as_mut_ptr(),
+        //             N - byte_shift,
+        //         );
+        //         std::ptr::write_bytes(inner.as_mut_ptr().add(N - byte_shift), 0, byte_shift);
+        //     }
+        // }
 
-        if bit_shift > 0 {
-            let mut carry = 0;
-            for chunk in inner.iter_mut().rev() {
-                let shifted = *chunk << bit_shift | carry;
-                carry = *chunk >> (8 - bit_shift);
-                *chunk = shifted;
-            }
-        }
-        Self(inner)
+        // if bit_shift > 0 {
+        //     let mut carry = 0;
+        //     for chunk in inner.iter_mut().rev() {
+        //         let shifted = *chunk << bit_shift | carry;
+        //         carry = *chunk >> (8 - bit_shift);
+        //         *chunk = shifted;
+        //     }
+        // }
+        // Self(inner)
+        Self::shift_left(self, rhs)
     }
 }
 
 impl<const N: usize> ShlAssign<BIndex<N>> for ByteField<N> {
     fn shl_assign(&mut self, rhs: BIndex<N>) {
-        *self = self.shl(rhs);
+        // let byte_shift = byte_index(rhs);
+        // let bit_shift = bit_index(rhs);
+
+        // if byte_shift > 0 {
+        //     unsafe {
+        //         std::ptr::copy(
+        //             self.0.as_ptr().add(byte_shift),
+        //             self.0.as_mut_ptr(),
+        //             N - byte_shift,
+        //         );
+        //         std::ptr::write_bytes(self.0.as_mut_ptr().add(N - byte_shift), 0, byte_shift);
+        //     }
+        // }
+
+        // if bit_shift > 0 {
+        //     let mut carry = 0;
+        //     for chunk in self.0.iter_mut().rev() {
+        //         let shifted = *chunk << bit_shift | carry;
+        //         carry = *chunk >> (8 - bit_shift);
+        //         *chunk = shifted;
+        //     }
+        // }
+        let byte_shift = byte_index(rhs);
+        let bit_shift = bit_index(rhs);
+
+        let ptr = self as *mut _ as *mut u8;
+
+        if byte_shift > 0 {
+            unsafe {
+                std::ptr::copy(ptr.add(byte_shift), ptr, Self::BYTE_SIZE - byte_shift);
+                std::ptr::write_bytes(ptr.add(Self::BYTE_SIZE - byte_shift), 0, byte_shift);
+            }
+        }
+
+        if bit_shift > 0 {
+            let bytes: &mut [u8] = unsafe { std::slice::from_raw_parts_mut(ptr, Self::BYTE_SIZE) };
+            let mut carry = 0;
+            for byte in bytes.iter_mut().rev() {
+                let shifted = *byte << bit_shift | carry;
+                carry = *byte >> (8 - bit_shift);
+                *byte = shifted;
+            }
+        }
     }
 }
 
 impl<const N: usize> Shr<BIndex<N>> for ByteField<N> {
     type Output = Self;
 
-    fn shr(self, Index::<Self>(index, ..): BIndex<N>) -> Self::Output {
-        let mut inner = self.0;
+    fn shr(self, rhs: BIndex<N>) -> Self::Output {
+        // let mut inner = self.0;
 
-        let byte_shift = byte_index(index);
-        let bit_shift = bit_index(index);
+        // let byte_shift = byte_index(rhs);
+        // let bit_shift = bit_index(rhs);
 
-        if byte_shift > 0 {
-            unsafe {
-                std::ptr::copy(
-                    inner.as_ptr(),
-                    inner.as_mut_ptr().add(byte_shift),
-                    N - byte_shift,
-                );
-                std::ptr::write_bytes(inner.as_mut_ptr(), 0, byte_shift);
-            }
-        }
+        // if byte_shift > 0 {
+        //     unsafe {
+        //         std::ptr::copy(
+        //             inner.as_ptr(),
+        //             inner.as_mut_ptr().add(byte_shift),
+        //             N - byte_shift,
+        //         );
+        //         std::ptr::write_bytes(inner.as_mut_ptr(), 0, byte_shift);
+        //     }
+        // }
 
-        if bit_shift > 0 {
-            let mut carry = 0;
-            for chunk in inner.iter_mut() {
-                let shifted = *chunk >> bit_shift | carry;
-                carry = *chunk << (8 - bit_shift);
-                *chunk = shifted;
-            }
-        }
-        Self(inner)
+        // if bit_shift > 0 {
+        //     let mut carry = 0;
+        //     for chunk in inner.iter_mut() {
+        //         let shifted = *chunk >> bit_shift | carry;
+        //         carry = *chunk << (8 - bit_shift);
+        //         *chunk = shifted;
+        //     }
+        // }
+        // Self(inner)
+        Self::shift_right(self, rhs)
     }
 }
 
 impl<const N: usize> ShrAssign<BIndex<N>> for ByteField<N> {
     fn shr_assign(&mut self, rhs: BIndex<N>) {
-        *self = self.shr(rhs);
+        // let byte_shift = byte_index(rhs);
+        // let bit_shift = bit_index(rhs);
+
+        // if byte_shift > 0 {
+        //     unsafe {
+        //         std::ptr::copy(
+        //             self.0.as_ptr(),
+        //             self.0.as_mut_ptr().add(byte_shift),
+        //             N - byte_shift,
+        //         );
+        //         std::ptr::write_bytes(self.0.as_mut_ptr(), 0, byte_shift);
+        //     }
+        // }
+
+        // if bit_shift > 0 {
+        //     let mut carry = 0;
+        //     for chunk in self.0.iter_mut() {
+        //         let shifted = *chunk >> bit_shift | carry;
+        //         carry = *chunk << (8 - bit_shift);
+        //         *chunk = shifted;
+        //     }
+        // }
+        let byte_shift = byte_index(rhs);
+        let bit_shift = bit_index(rhs);
+
+        let ptr = self as *mut _ as *mut u8;
+
+        if byte_shift > 0 {
+            unsafe {
+                std::ptr::copy(ptr, ptr.add(byte_shift), Self::BYTE_SIZE - byte_shift);
+                std::ptr::write_bytes(ptr, 0, byte_shift);
+            }
+        }
+
+        if bit_shift > 0 {
+            let bytes: &mut [u8] = unsafe { std::slice::from_raw_parts_mut(ptr, Self::BYTE_SIZE) };
+            let mut carry = 0;
+            for byte in bytes.iter_mut() {
+                let shifted = *byte >> bit_shift | carry;
+                carry = *byte << (8 - bit_shift);
+                *byte = shifted;
+            }
+        }
     }
 }
 
@@ -470,6 +475,20 @@ impl<const N: usize> FromIterator<bool> for ByteField<N> {
 //     }
 // }
 
+impl<const N: usize> Debug for ByteField<N> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut s =
+            self.0
+                .iter()
+                .fold("ByteField([".to_owned(), |mut acc, &chunk| {
+                    acc.push_str(&format!(" {:08b}", chunk));
+                    acc
+                });
+        s.push_str(" ])");
+        write!(f, "{s}")
+    }
+}
+
 impl<const N: usize> Display for ByteField<N> {
     #[inline(always)]
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -538,6 +557,8 @@ impl<const N: usize> LowerHex for ByteField<N> {
 mod tests {
     use std::error::Error;
 
+    use crate::prelude::Bitfield;
+
     use super::*;
     type Tested1 = ByteField<1>;
     type Tested2 = ByteField<2>;
@@ -603,14 +624,14 @@ mod tests {
         Ok(())
     }
 
-    #[test]
-    fn bit() -> TestResult {
-        let bitfield: Tested1 = [0b10101010].into();
+    // #[test]
+    // fn bit() -> TestResult {
+    //     let bitfield: Tested1 = [0b10101010].into();
 
-        assert_eq!(bitfield.bit(0.try_into()?), false);
-        assert_eq!(bitfield.bit(1.try_into()?), true);
-        Ok(())
-    }
+    //     assert_eq!(bitfield.bit(0.try_into()?), false);
+    //     assert_eq!(bitfield.bit(1.try_into()?), true);
+    //     Ok(())
+    // }
 
     #[test]
     fn bit_check() -> TestResult {
@@ -826,21 +847,21 @@ mod tests {
         assert_eq!(a.sym_difference(b), [0b00111100].into());
     }
 
-    #[test]
-    fn bits() {
-        let bitfield: Tested1 = [0b11110000].into();
-        let mut iter = bitfield.bits();
+    // #[test]
+    // fn bits() {
+    //     let bitfield: Tested1 = [0b11110000].into();
+    //     let mut iter = bitfield.bits();
 
-        assert_eq!(iter.next(), Some(false));
-        assert_eq!(iter.next(), Some(false));
-        assert_eq!(iter.next(), Some(false));
-        assert_eq!(iter.next(), Some(false));
-        assert_eq!(iter.next(), Some(true));
-        assert_eq!(iter.next(), Some(true));
-        assert_eq!(iter.next(), Some(true));
-        assert_eq!(iter.next(), Some(true));
-        assert_eq!(iter.next(), None);
-    }
+    //     assert_eq!(iter.next(), Some(false));
+    //     assert_eq!(iter.next(), Some(false));
+    //     assert_eq!(iter.next(), Some(false));
+    //     assert_eq!(iter.next(), Some(false));
+    //     assert_eq!(iter.next(), Some(true));
+    //     assert_eq!(iter.next(), Some(true));
+    //     assert_eq!(iter.next(), Some(true));
+    //     assert_eq!(iter.next(), Some(true));
+    //     assert_eq!(iter.next(), None);
+    // }
 
     #[test]
     fn bits_ref() {
@@ -895,8 +916,8 @@ mod tests {
     #[test]
     fn collect_from_bits() {
         let a: Tested1 = [0b11110000].into();
-        let iter = a.bits();
-        let b: Tested1 = iter.collect();
+        let iter = a.bits_ref();
+        let b: Tested1 = iter.map(|b| *b).collect();
 
         assert_eq!(b, [0b11110000].into());
 
@@ -1002,35 +1023,35 @@ mod tests {
     #[test]
     fn fast_expand() -> TestResult {
         let bitfield1 = Tested1::from([0b00011011]);
-        let bitfield2: Tested2 = bitfield1.fast_expand()?;
+        let bitfield2: Tested2 = bitfield1.expand_optimized()?;
 
         let mut arr = [0; 2];
         arr[0] = 0b00011011;
         assert_eq!(bitfield2, Tested2::from(arr));
 
         let bitfield1 = Tested1::from([0b00011011]);
-        let bitfield2: Tested4 = bitfield1.fast_expand()?;
+        let bitfield2: Tested4 = bitfield1.expand_optimized()?;
 
         let mut arr = [0; 4];
         arr[0] = 0b00011011;
         assert_eq!(bitfield2, Tested4::from(arr));
 
         let bitfield1 = Tested1::from([0b00011011]);
-        let bitfield2: Tested8 = bitfield1.fast_expand()?;
+        let bitfield2: Tested8 = bitfield1.expand_optimized()?;
 
         let mut arr = [0; 8];
         arr[0] = 0b00011011;
         assert_eq!(bitfield2, Tested8::from(arr));
 
         let bitfield1 = Tested1::from([0b00011011]);
-        let bitfield2: Tested16 = bitfield1.fast_expand()?;
+        let bitfield2: Tested16 = bitfield1.expand_optimized()?;
 
         let mut arr = [0; 16];
         arr[0] = 0b00011011;
         assert_eq!(bitfield2, Tested16::from(arr));
 
         let bitfield1 = Tested1::from([0b00011011]);
-        let bitfield2: TestedOdd = bitfield1.fast_expand()?;
+        let bitfield2: TestedOdd = bitfield1.expand_optimized()?;
 
         let mut arr = [0; 3];
         arr[0] = 0b00011011;
@@ -1081,14 +1102,14 @@ mod tests {
         let bitfield1 = Tested1::from([0b00011011]);
         let bitfield2 = Tested1::from([0b11101000]);
 
-        let bitfield3: Tested2 = bitfield1.fast_combine(bitfield2)?;
+        let bitfield3: Tested2 = bitfield1.combine_optimized(bitfield2)?;
 
         assert_eq!(bitfield3, Tested2::from([0b00011011, 0b11101000]));
 
         let bitfield1 = Tested1::from([0b00011011]);
         let bitfield2 = Tested2::from([0b11011011, 0b11101000]);
 
-        let bitfield3: TestedOdd = bitfield1.fast_combine(bitfield2)?;
+        let bitfield3: TestedOdd = bitfield1.combine_optimized(bitfield2)?;
 
         assert_eq!(
             bitfield3,
@@ -1100,13 +1121,13 @@ mod tests {
     #[test]
     fn fast_split() -> TestResult {
         let bitfield1 = Tested2::from([0b00011011, 0b11101000]);
-        let (bitfield2, bitfield3): (Tested1, Tested1) = bitfield1.fast_split()?;
+        let (bitfield2, bitfield3): (Tested1, Tested1) = bitfield1.split_optimized()?;
 
         assert_eq!(bitfield2, Tested1::from([0b00011011]));
         assert_eq!(bitfield3, Tested1::from([0b11101000]));
 
         let bitfield1 = TestedOdd::from([0b00011011, 0b11011011, 0b11101000]);
-        let (bitfield2, bitfield3): (Tested1, Tested2) = bitfield1.fast_split()?;
+        let (bitfield2, bitfield3): (Tested1, Tested2) = bitfield1.split_optimized()?;
 
         assert_eq!(bitfield2, Tested1::from([0b00011011]));
         assert_eq!(bitfield3, Tested2::from([0b11011011, 0b11101000]));
