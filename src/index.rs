@@ -1,6 +1,7 @@
 //! Module containing [`Index`].
 
 use crate::{
+    bitfield,
     error::{ConvError, ConvResult, ConvTarget},
     prelude::Bitfield,
 };
@@ -16,27 +17,92 @@ where
     T: Bitfield,
 {
     /// Value of 1 for `Index`.<br/>
-    /// Shortcut from having to use `Index::<T>::try_from(1).unwrap()`
+    /// Shortcut from having to use `Index::<T>::from_usize(1)`
     pub const ONE: Self = Self(1, PhantomData);
 
     /// Minimum value for `Index`.<br/>
-    /// Shortcut from having to use `Index::<T>::try_from(usize::MIN).unwrap()`
+    /// Shortcut from having to use `Index::<T>::from_usize(usize::MIN)`
     pub const MIN: Self = Self(0, PhantomData);
 
     /// Maximum value for `Index`.<br/>
-    /// Shortcut from having to use `Index::<T>::try_from(T::BITS - 1).unwrap()`
-    pub const MAX: Self = Self(crate::bitfield::bit_len::<T>() - 1, PhantomData);
+    /// Shortcut from having to use `Index::<T>::from_usize(T::BITS - 1)`
+    pub const MAX: Self = Self(bitfield::bit_len::<T>() - 1, PhantomData);
+
+    /// Constructs a valid `Index<T>` value from usize.
+    ///
+    /// Only use this, if you're certain, that resulting index will be valid.<br/>
+    /// Valid inputs to this function are in range `0..(T::BYTE_SIZE * 8)`.
+    /// This function exists solely to avoid situations, where you are certain of
+    /// the validity and don't want to write:<br/>
+    /// `Index::<T>::try_from_usize(value).expect("value should be in range")`
+    ///
+    /// # Panics
+    /// This function panics, if the `value` supplied is outside the range `0..(T::BYTE_SIZE * 8)`.
+    ///
+    /// # Examples
+    /// ```rust
+    /// # use std::error::Error;
+    /// #
+    /// # fn main() -> Result<(), Box<dyn Error>> {
+    /// use simple_bitfield::prelude::{Bitfield8, Index};
+    ///
+    /// let index = Index::<Bitfield8>::from_usize(7);
+    /// assert_eq!(index.into_inner(), 7);
+    /// #   Ok(())
+    /// # }
+    /// ```
+    pub const fn from_usize(value: usize) -> Self {
+        if value < bitfield::bit_len::<T>() {
+            Self(value, PhantomData)
+        } else {
+            panic!("value was out of range 0..(T::BYTE_SIZE * 8)",)
+        }
+    }
+
+    /// Tries constructing an `Index<T>` value from usize.
+    ///
+    /// Meant to be used in situations, where you're uncertain, if the `value` supplied would make
+    /// a valid `Index<T>` value.
+    ///
+    /// # Errors
+    /// This function errors, if the `value` supplied is outside the range `0..(T::BYTE_SIZE * 8)`.
+    ///
+    /// # Examples
+    /// ```rust
+    /// # use std::error::Error;
+    /// #
+    /// # fn main() -> Result<(), Box<dyn Error>> {
+    /// use simple_bitfield::prelude::{Bitfield8, Index};
+    ///
+    /// let index = Index::<Bitfield8>::try_from_usize(7)?;
+    /// assert_eq!(index.into_inner(), 7);
+    /// #   Ok(())
+    /// # }
+    /// ```
+    pub const fn try_from_usize(value: usize) -> ConvResult<Self> {
+        if value < bitfield::bit_len::<T>() {
+            Ok(Self(value, PhantomData))
+        } else {
+            Err(ConvError::new(
+                ConvTarget::Raw(value),
+                ConvTarget::Index(bitfield::bit_len::<T>()),
+            ))
+        }
+    }
 
     /// Returns value of `Index` as [`usize`].
     ///
     /// # Examples
-    /// ```
+    /// ```rust
+    /// # use std::error::Error;
+    /// #
+    /// # fn main() -> Result<(), Box<dyn Error>> {
     /// use simple_bitfield::prelude::{Bitfield8, Index};
     ///
-    /// fn example() {
-    ///     let index = Index::<Bitfield8>::MAX;
-    ///     assert_eq!(index.into_inner(), 7);
-    /// }
+    /// let index = Index::<Bitfield8>::MAX;
+    /// assert_eq!(index.into_inner(), 7);
+    /// #   Ok(())
+    /// # }
     /// ```
     #[inline(always)]
     pub const fn into_inner(&self) -> usize {
@@ -46,20 +112,23 @@ where
     /// Returns [`Some`] `Index`, that is sum of `self` and `other`, or [`None`] on overflow.
     ///
     /// # Examples
-    /// ```
+    /// ```rust
+    /// # use std::error::Error;
+    /// #
+    /// # fn main() -> Result<(), Box<dyn Error>> {
     /// use simple_bitfield::prelude::{Bitfield8, Index};
     ///
-    /// fn example() {
-    ///     let a = Index::<Bitfield8>::ONE;
-    ///     let b = Index::<Bitfield8>::ONE;
-    ///     let c = a.checked_add(b);
-    ///     assert_eq!(c.unwrap().into_inner(), 2);
+    /// let a = Index::<Bitfield8>::ONE;
+    /// let b = Index::<Bitfield8>::ONE;
+    /// let c = a.checked_add(b);
+    /// assert_eq!(c.unwrap().into_inner(), 2);
     ///
-    ///     let d = Index::<Bitfield8>::MAX;
-    ///     let e = Index::<Bitfield8>::ONE;
-    ///     let f = d.checked_add(e);
-    ///     assert_eq!(f, None);
-    /// }
+    /// let d = Index::<Bitfield8>::MAX;
+    /// let e = Index::<Bitfield8>::ONE;
+    /// let f = d.checked_add(e);
+    /// assert_eq!(f, None);
+    /// #   Ok(())
+    /// # }
     /// ```
     #[inline(always)]
     pub fn checked_add(&self, other: Self) -> Option<Self> {
@@ -72,20 +141,23 @@ where
     /// Returns [`Some`] `Index`, that is difference of `self` and `other`, or [`None`] on overflow.
     ///
     /// # Examples
-    /// ```
+    /// ```rust
+    /// # use std::error::Error;
+    /// #
+    /// # fn main() -> Result<(), Box<dyn Error>> {
     /// use simple_bitfield::prelude::{Bitfield8, Index};
     ///
-    /// fn example() {
-    ///     let a = Index::<Bitfield8>::MAX;
-    ///     let b = Index::<Bitfield8>::ONE;
-    ///     let c = a.checked_sub(b);
-    ///     assert_eq!(c.unwrap().into_inner(), 6);
+    /// let a = Index::<Bitfield8>::MAX;
+    /// let b = Index::<Bitfield8>::ONE;
+    /// let c = a.checked_sub(b);
+    /// assert_eq!(c.unwrap().into_inner(), 6);
     ///
-    ///     let d = Index::<Bitfield8>::MIN;
-    ///     let e = Index::<Bitfield8>::ONE;
-    ///     let f = d.checked_sub(e);
-    ///     assert_eq!(f, None);
-    /// }
+    /// let d = Index::<Bitfield8>::MIN;
+    /// let e = Index::<Bitfield8>::ONE;
+    /// let f = d.checked_sub(e);
+    /// assert_eq!(f, None);
+    /// #   Ok(())
+    /// # }
     /// ```
     #[inline(always)]
     pub fn checked_sub(&self, other: Self) -> Option<Self> {
@@ -96,20 +168,23 @@ where
     /// or [`Index::<T>::MAX`] on overflow.
     ///
     /// # Examples
-    /// ```
+    /// ```rust
+    /// # use std::error::Error;
+    /// #
+    /// # fn main() -> Result<(), Box<dyn Error>> {
     /// use simple_bitfield::prelude::{Bitfield8, Index};
     ///
-    /// fn example() {
-    ///     let a = Index::<Bitfield8>::ONE;
-    ///     let b = Index::<Bitfield8>::ONE;
-    ///     let c = a.saturating_add(b);
-    ///     assert_eq!(c.into_inner(), 2);
+    /// let a = Index::<Bitfield8>::ONE;
+    /// let b = Index::<Bitfield8>::ONE;
+    /// let c = a.saturating_add(b);
+    /// assert_eq!(c.into_inner(), 2);
     ///
-    ///     let d = Index::<Bitfield8>::MAX;
-    ///     let e = Index::<Bitfield8>::ONE;
-    ///     let f = d.saturating_add(e);
-    ///     assert_eq!(f.into_inner(), 7);
-    /// }
+    /// let d = Index::<Bitfield8>::MAX;
+    /// let e = Index::<Bitfield8>::ONE;
+    /// let f = d.saturating_add(e);
+    /// assert_eq!(f.into_inner(), 7);
+    /// #   Ok(())
+    /// # }
     /// ```
     #[inline(always)]
     pub fn saturating_add(&self, other: Self) -> Self {
@@ -120,20 +195,23 @@ where
     /// or [`Index::<T>::MIN`] on overflow.
     ///
     /// # Examples
-    /// ```
+    /// ```rust
+    /// # use std::error::Error;
+    /// #
+    /// # fn main() -> Result<(), Box<dyn Error>> {
     /// use simple_bitfield::prelude::{Bitfield8, Index};
     ///
-    /// fn example() {
-    ///     let a = Index::<Bitfield8>::MAX;
-    ///     let b = Index::<Bitfield8>::ONE;
-    ///     let c = a.saturating_sub(b);
-    ///     assert_eq!(c.into_inner(), 6);
+    /// let a = Index::<Bitfield8>::MAX;
+    /// let b = Index::<Bitfield8>::ONE;
+    /// let c = a.saturating_sub(b);
+    /// assert_eq!(c.into_inner(), 6);
     ///
-    ///     let d = Index::<Bitfield8>::MIN;
-    ///     let e = Index::<Bitfield8>::ONE;
-    ///     let f = d.saturating_sub(e);
-    ///     assert_eq!(f.into_inner(), 0);
-    /// }
+    /// let d = Index::<Bitfield8>::MIN;
+    /// let e = Index::<Bitfield8>::ONE;
+    /// let f = d.saturating_sub(e);
+    /// assert_eq!(f.into_inner(), 0);
+    /// #   Ok(())
+    /// # }
     /// ```
     #[inline(always)]
     pub fn saturating_sub(&self, other: Self) -> Self {
@@ -167,8 +245,8 @@ where
         } else {
             Index::<U>::try_from(self.0).map_err(|_| {
                 ConvError::new(
-                    ConvTarget::Index(crate::bitfield::bit_len::<U>()),
-                    ConvTarget::Index(crate::bitfield::bit_len::<T>()),
+                    ConvTarget::Index(bitfield::bit_len::<U>()),
+                    ConvTarget::Index(bitfield::bit_len::<T>()),
                 )
             })
         }
@@ -195,14 +273,7 @@ where
 
     #[inline(always)]
     fn try_from(value: usize) -> Result<Self, Self::Error> {
-        if value < crate::bitfield::bit_len::<T>() {
-            Ok(Self(value, PhantomData))
-        } else {
-            Err(ConvError::new(
-                ConvTarget::Raw(value),
-                ConvTarget::Index(crate::bitfield::bit_len::<T>()),
-            ))
-        }
+        Self::try_from_usize(value)
     }
 }
 

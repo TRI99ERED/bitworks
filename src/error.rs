@@ -30,7 +30,7 @@ impl Debug for ConvTarget {
         match self {
             Self::Field(size) => write!(f, "Bitfield{size}"),
             Self::Index(size) => write!(f, "Index<Bitfield{size}>"),
-            Self::Enum(size) => write!(f, "FlagsEnum<Bitfield = Bitfield{size}>"),
+            Self::Enum(size) => write!(f, "Enum({size} variants)"),
             Self::Raw(n) => write!(f, "{n}usize"),
         }
     }
@@ -41,7 +41,7 @@ impl Display for ConvTarget {
         match *self {
             Self::Field(size) => write!(f, "Bitfield (size {size})"),
             Self::Index(max) => write!(f, "Index (max = {max})"),
-            Self::Enum(size) => write!(f, "FlagsEnum (Bitfield (size {size}))"),
+            Self::Enum(size) => write!(f, "Enum ({size} variants)"),
             Self::Raw(n) => write!(f, "{n}usize"),
         }
     }
@@ -60,11 +60,11 @@ impl ConvError {
     /// //Oh no! I couldn't convert from a bitfield to my enum!
     /// let error = ConvError::new(ConvTarget::Field(8), ConvTarget::Enum(8));
     ///
-    /// assert_eq!(error.to_string(), "failed to convert from Bitfield (size 8) to FlagsEnum (Bitfield (size 8))");
+    /// assert_eq!(error.to_string(), "failed to convert from Bitfield (size 8) to Enum (8 variants)");
     /// #   Ok(())
     /// # }
     /// ```
-    pub fn new(from: ConvTarget, to: ConvTarget) -> Self {
+    pub const fn new(from: ConvTarget, to: ConvTarget) -> Self {
         Self { from, to }
     }
 }

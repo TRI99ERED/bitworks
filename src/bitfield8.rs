@@ -1,13 +1,12 @@
 //! Module containing [`Bitfield8`].
 
 use crate::{
+    bit::Bit,
     bitfield::{Bitfield, LeftAligned},
     error::{ConvError, ConvTarget},
     prelude::{Bitfield128, Bitfield16, Bitfield32, Bitfield64, ByteField, Index},
 };
-// use crate::prelude::FlagsEnum;
 use std::{
-    // collections::BTreeSet,
     fmt::{Binary, Debug, Display, LowerHex, Octal, UpperHex},
     ops::{
         BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Not, Shl, ShlAssign, Shr,
@@ -80,17 +79,6 @@ impl From<BIndex> for Bitfield8 {
         Self(1) << value
     }
 }
-
-// impl<T> From<T> for Bitfield8
-// where
-//     T: FlagsEnum<Bitfield = Self>,
-//     BIndex: From<T>,
-// {
-//     #[inline(always)]
-//     fn from(value: T) -> Self {
-//         Self(1) << BIndex::from(value)
-//     }
-// }
 
 impl From<ByteField<1>> for Bitfield8 {
     #[inline(always)]
@@ -280,108 +268,16 @@ impl BitXorAssign<BIndex> for Bitfield8 {
     }
 }
 
-// impl<T> BitAnd<T> for Bitfield8
-// where
-//     T: FlagsEnum<Bitfield = Self>,
-//     BIndex: From<T>,
-// {
-//     type Output = Self;
-
-//     #[inline(always)]
-//     fn bitand(self, rhs: T) -> Self::Output {
-//         Self(self.0 & Self::from(rhs).0)
-//     }
-// }
-
-// impl<T> BitAndAssign<T> for Bitfield8
-// where
-//     T: FlagsEnum<Bitfield = Self>,
-//     BIndex: From<T>,
-// {
-//     #[inline(always)]
-//     fn bitand_assign(&mut self, rhs: T) {
-//         self.0 &= Self::from(rhs).0;
-//     }
-// }
-
-// impl<T> BitOr<T> for Bitfield8
-// where
-//     T: FlagsEnum<Bitfield = Self>,
-//     BIndex: From<T>,
-// {
-//     type Output = Self;
-
-//     #[inline(always)]
-//     fn bitor(self, rhs: T) -> Self::Output {
-//         Self(self.0 | Self::from(rhs).0)
-//     }
-// }
-
-// impl<T> BitOrAssign<T> for Bitfield8
-// where
-//     T: FlagsEnum<Bitfield = Self>,
-//     BIndex: From<T>,
-// {
-//     #[inline(always)]
-//     fn bitor_assign(&mut self, rhs: T) {
-//         self.0 |= Self::from(rhs).0;
-//     }
-// }
-
-// impl<T> BitXor<T> for Bitfield8
-// where
-//     T: FlagsEnum<Bitfield = Self>,
-//     BIndex: From<T>,
-// {
-//     type Output = Self;
-
-//     #[inline(always)]
-//     fn bitxor(self, rhs: T) -> Self::Output {
-//         Self(self.0 ^ Self::from(rhs).0)
-//     }
-// }
-
-// impl<T> BitXorAssign<T> for Bitfield8
-// where
-//     T: FlagsEnum<Bitfield = Self>,
-//     BIndex: From<T>,
-// {
-//     #[inline(always)]
-//     fn bitxor_assign(&mut self, rhs: T) {
-//         self.0 ^= Self::from(rhs).0;
-//     }
-// }
-
-impl FromIterator<bool> for Bitfield8 {
-    fn from_iter<T: IntoIterator<Item = bool>>(iter: T) -> Self {
+impl FromIterator<Bit> for Bitfield8 {
+    fn from_iter<T: IntoIterator<Item = Bit>>(iter: T) -> Self {
         iter.into_iter()
             .take(BITS)
             .enumerate()
-            .filter_map(|(i, bit)| if bit { Some(i) } else { None })
+            .filter_map(|(i, bit)| if bool::from(bit) { Some(i) } else { None })
             .filter_map(|i| BIndex::try_from(i).ok())
             .fold(Self::NONE, |acc, i| acc | Self(1) << i)
     }
 }
-
-// impl<A> FromIterator<A> for Bitfield8
-// where
-//     A: FlagsEnum<Bitfield = Self>,
-//     BIndex: From<A>,
-// {
-//     fn from_iter<T: IntoIterator<Item = A>>(iter: T) -> Self {
-//         let mut bitfield = Self::NONE;
-//         let mut seen_indices = BTreeSet::new();
-
-//         for e in iter {
-//             let index = BIndex::from(e);
-//             if !seen_indices.contains(&index) {
-//                 seen_indices.insert(index);
-//                 bitfield |= Self(1) << index;
-//             }
-//         }
-//         bitfield
-//     }
-// }
 
 impl Debug for Bitfield8 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -423,7 +319,7 @@ impl LowerHex for Bitfield8 {
 mod tests {
     use std::error::Error;
 
-    use crate::prelude::Bitfield;
+    use crate::{bit::Bit::*, prelude::Bitfield};
 
     use super::*;
     type Tested = Bitfield8;
@@ -433,7 +329,7 @@ mod tests {
     fn construction() -> TestResult {
         let bitfield = Tested::NONE
             .clone()
-            .set_bit(0.try_into()?, true)
+            .set_bit(0.try_into()?, One)
             .check_bit(1.try_into()?)
             .uncheck_bit(0.try_into()?)
             .build();
@@ -467,7 +363,7 @@ mod tests {
     fn bit_set_to_true() -> TestResult {
         let mut bitfield: Tested = 0b10101010.into();
 
-        bitfield.set_bit(6.try_into()?, true);
+        bitfield.set_bit(6.try_into()?, One);
 
         assert_eq!(bitfield.0, 0b11101010);
         Ok(())
@@ -477,7 +373,7 @@ mod tests {
     fn bit_set_to_false() -> TestResult {
         let mut bitfield: Tested = 0b10101010.into();
 
-        bitfield.set_bit(7.try_into()?, false);
+        bitfield.set_bit(7.try_into()?, Zero);
 
         assert_eq!(bitfield.0, 0b00101010);
         Ok(())
@@ -487,8 +383,8 @@ mod tests {
     fn bit() -> TestResult {
         let bitfield: Tested = 0b10101010.into();
 
-        assert_eq!(bitfield.bit(0.try_into()?), false);
-        assert_eq!(bitfield.bit(1.try_into()?), true);
+        assert_eq!(bitfield.bit(0.try_into()?), Zero);
+        assert_eq!(bitfield.bit(1.try_into()?), One);
         Ok(())
     }
 
@@ -516,8 +412,8 @@ mod tests {
     fn bit_ref() -> TestResult {
         let bitfield: Tested = 0b10101010.into();
 
-        assert_eq!(*bitfield.bit_ref(0.try_into()?), false);
-        assert_eq!(*bitfield.bit_ref(1.try_into()?), true);
+        assert_eq!(*bitfield.bit_ref(0.try_into()?), Zero);
+        assert_eq!(*bitfield.bit_ref(1.try_into()?), One);
         Ok(())
     }
 
@@ -525,14 +421,14 @@ mod tests {
     fn bit_mut() -> TestResult {
         let mut bitfield: Tested = 0b10101010.into();
 
-        assert_eq!(*bitfield.bit_ref(0.try_into()?), false);
-        assert_eq!(*bitfield.bit_ref(1.try_into()?), true);
+        assert_eq!(*bitfield.bit_ref(0.try_into()?), Zero);
+        assert_eq!(*bitfield.bit_ref(1.try_into()?), One);
 
-        *bitfield.bit_mut(0.try_into()?) = true;
-        *bitfield.bit_mut(1.try_into()?) = false;
+        *bitfield.bit_mut(0.try_into()?) = One;
+        *bitfield.bit_mut(1.try_into()?) = Zero;
 
-        assert_eq!(*bitfield.bit_ref(0.try_into()?), true);
-        assert_eq!(*bitfield.bit_ref(1.try_into()?), false);
+        assert_eq!(*bitfield.bit_ref(0.try_into()?), One);
+        assert_eq!(*bitfield.bit_ref(1.try_into()?), Zero);
         Ok(())
     }
 
@@ -669,14 +565,14 @@ mod tests {
         let bitfield: Tested = 0b11110000.into();
         let mut iter = bitfield.bits();
 
-        assert_eq!(iter.next(), Some(false));
-        assert_eq!(iter.next(), Some(false));
-        assert_eq!(iter.next(), Some(false));
-        assert_eq!(iter.next(), Some(false));
-        assert_eq!(iter.next(), Some(true));
-        assert_eq!(iter.next(), Some(true));
-        assert_eq!(iter.next(), Some(true));
-        assert_eq!(iter.next(), Some(true));
+        assert_eq!(iter.next(), Some(Zero));
+        assert_eq!(iter.next(), Some(Zero));
+        assert_eq!(iter.next(), Some(Zero));
+        assert_eq!(iter.next(), Some(Zero));
+        assert_eq!(iter.next(), Some(One));
+        assert_eq!(iter.next(), Some(One));
+        assert_eq!(iter.next(), Some(One));
+        assert_eq!(iter.next(), Some(One));
         assert_eq!(iter.next(), None);
     }
 
@@ -685,14 +581,14 @@ mod tests {
         let bitfield: Tested = 0b11110000.into();
         let mut iter = bitfield.bits_ref();
 
-        assert_eq!(iter.next().as_deref(), Some(&false));
-        assert_eq!(iter.next().as_deref(), Some(&false));
-        assert_eq!(iter.next().as_deref(), Some(&false));
-        assert_eq!(iter.next().as_deref(), Some(&false));
-        assert_eq!(iter.next().as_deref(), Some(&true));
-        assert_eq!(iter.next().as_deref(), Some(&true));
-        assert_eq!(iter.next().as_deref(), Some(&true));
-        assert_eq!(iter.next().as_deref(), Some(&true));
+        assert_eq!(iter.next().as_deref(), Some(&Zero));
+        assert_eq!(iter.next().as_deref(), Some(&Zero));
+        assert_eq!(iter.next().as_deref(), Some(&Zero));
+        assert_eq!(iter.next().as_deref(), Some(&Zero));
+        assert_eq!(iter.next().as_deref(), Some(&One));
+        assert_eq!(iter.next().as_deref(), Some(&One));
+        assert_eq!(iter.next().as_deref(), Some(&One));
+        assert_eq!(iter.next().as_deref(), Some(&One));
         assert_eq!(iter.next(), None);
     }
 
@@ -702,14 +598,14 @@ mod tests {
 
         let mut iter = bitfield.bits_ref();
 
-        assert_eq!(iter.next().as_deref(), Some(&false));
-        assert_eq!(iter.next().as_deref(), Some(&false));
-        assert_eq!(iter.next().as_deref(), Some(&false));
-        assert_eq!(iter.next().as_deref(), Some(&false));
-        assert_eq!(iter.next().as_deref(), Some(&true));
-        assert_eq!(iter.next().as_deref(), Some(&true));
-        assert_eq!(iter.next().as_deref(), Some(&true));
-        assert_eq!(iter.next().as_deref(), Some(&true));
+        assert_eq!(iter.next().as_deref(), Some(&Zero));
+        assert_eq!(iter.next().as_deref(), Some(&Zero));
+        assert_eq!(iter.next().as_deref(), Some(&Zero));
+        assert_eq!(iter.next().as_deref(), Some(&Zero));
+        assert_eq!(iter.next().as_deref(), Some(&One));
+        assert_eq!(iter.next().as_deref(), Some(&One));
+        assert_eq!(iter.next().as_deref(), Some(&One));
+        assert_eq!(iter.next().as_deref(), Some(&One));
         assert_eq!(iter.next(), None);
         drop(iter);
 
@@ -719,14 +615,14 @@ mod tests {
 
         let mut iter = bitfield.bits_ref();
 
-        assert_eq!(iter.next().as_deref(), Some(&true));
-        assert_eq!(iter.next().as_deref(), Some(&true));
-        assert_eq!(iter.next().as_deref(), Some(&true));
-        assert_eq!(iter.next().as_deref(), Some(&true));
-        assert_eq!(iter.next().as_deref(), Some(&false));
-        assert_eq!(iter.next().as_deref(), Some(&false));
-        assert_eq!(iter.next().as_deref(), Some(&false));
-        assert_eq!(iter.next().as_deref(), Some(&false));
+        assert_eq!(iter.next().as_deref(), Some(&One));
+        assert_eq!(iter.next().as_deref(), Some(&One));
+        assert_eq!(iter.next().as_deref(), Some(&One));
+        assert_eq!(iter.next().as_deref(), Some(&One));
+        assert_eq!(iter.next().as_deref(), Some(&Zero));
+        assert_eq!(iter.next().as_deref(), Some(&Zero));
+        assert_eq!(iter.next().as_deref(), Some(&Zero));
+        assert_eq!(iter.next().as_deref(), Some(&Zero));
         assert_eq!(iter.next(), None);
     }
 
@@ -738,7 +634,7 @@ mod tests {
 
         assert_eq!(b, 0b11110000.into());
 
-        let arr = [true, false, true, false, true, false, true, false];
+        let arr = [One, Zero, One, Zero, One, Zero, One, Zero];
         let bitfield: Tested = arr
             .into_iter()
             // Need to reverse to get the same visual representation, because
@@ -779,7 +675,7 @@ mod tests {
     #[test]
     fn from_slice_bool() {
         // Same index order
-        let slice: &[bool] = &[true, false, true, false, true, false, true, false];
+        let slice: &[Bit] = &[One, Zero, One, Zero, One, Zero, One, Zero];
         let bitfield: Tested = Tested::from_bits_ref(slice);
 
         assert_eq!(bitfield, 0b01010101.into());

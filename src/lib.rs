@@ -8,15 +8,15 @@ pub mod bitfield64;
 pub mod bitfield8;
 pub mod byte_field;
 
-pub mod bit_ref;
+pub mod bit;
 pub mod error;
-// pub mod flags_enum;
 pub mod index;
 
 /// Prelude.
 pub mod prelude {
     use super::*;
 
+    pub use bit::Bit::{self, One, Zero};
     pub use bitfield::Bitfield;
     pub use bitfield128::Bitfield128;
     pub use bitfield16::Bitfield16;
@@ -25,7 +25,6 @@ pub mod prelude {
     pub use bitfield8::Bitfield8;
     pub use byte_field::ByteField;
 
-    // pub use flags_enum::FlagsEnum;
     pub use index::Index;
 }
 
