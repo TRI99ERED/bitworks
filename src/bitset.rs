@@ -185,7 +185,7 @@ where
     /// # fn main() -> Result<(), Box<dyn Error>> {
     /// use bitworks::prelude::{Bitset, Bitset8, Bitset16};
     ///
-    /// let bitset8 = Bitset8::from(0b00000001);
+    /// let bitset8 = Bitset8::new(0b00000001);
     /// let bitset16: Bitset16 = bitset8.expand()?;
     ///
     /// assert_eq!(bitset16.into_inner(), 0b0000000000000001);
@@ -225,7 +225,7 @@ where
     /// # fn main() -> Result<(), Box<dyn Error>> {
     /// use bitworks::prelude::{Bitset, Bitset8, Bitset16};
     ///
-    /// let bitset8 = Bitset8::from(0b00000001);
+    /// let bitset8 = Bitset8::new(0b00000001);
     /// let bitset16: Bitset16 = bitset8.expand_optimized()?;
     ///
     /// assert_eq!(bitset16.into_inner(), 0b0000000000000001);
@@ -296,7 +296,7 @@ where
     /// # fn main() -> Result<(), Box<dyn Error>> {
     /// use bitworks::prelude::{Bitset, Bitset8};
     ///
-    /// let bitset = Bitset8::from(0b00000111);
+    /// let bitset = Bitset8::new(0b00000111);
     ///
     /// assert_eq!(bitset.count_ones(), 3);
     /// #   Ok(())
@@ -322,7 +322,7 @@ where
     /// # fn main() -> Result<(), Box<dyn Error>> {
     /// use bitworks::prelude::{Bitset, Bitset8};
     ///
-    /// let bitset = Bitset8::from(0b00000111);
+    /// let bitset = Bitset8::new(0b00000111);
     ///
     /// assert_eq!(bitset.count_zeros(), 5);
     /// #   Ok(())
@@ -348,7 +348,7 @@ where
     /// # fn main() -> Result<(), Box<dyn Error>> {
     /// use bitworks::prelude::*;
     ///
-    /// let bitset = Bitset8::from(0b01010100)
+    /// let bitset = Bitset8::new(0b01010100)
     ///     .set_bit(1.try_into()?, One)
     ///     .set_bit(2.try_into()?, Zero)
     ///     .set_bit(3.try_into()?, One)
@@ -417,6 +417,44 @@ where
     /// # }
     /// ```
     fn uncheck_bit(&mut self, index: Index<Self>) -> &mut Self;
+
+    /// Inserts all bits of `other` to `self`. Returns a mutable reference to `self`.
+    ///
+    /// # Examples
+    /// ```rust
+    /// # use std::error::Error;
+    /// #
+    /// # fn main() -> Result<(), Box<dyn Error>> {
+    /// use bitworks::prelude::*;
+    ///
+    /// let bitset = Bitset8::new(0b01010100)
+    ///     .insert(Bitset8::new(0b10101010))
+    ///     .build();
+    ///
+    /// assert_eq!(bitset.into_inner(), 0b11111110);
+    /// #   Ok(())
+    /// # }
+    /// ```
+    fn insert(&mut self, other: Self) -> &mut Self;
+
+    /// Removes all bits of `other` from `self`. Returns a mutable reference to `self`.
+    ///
+    /// # Examples
+    /// ```rust
+    /// # use std::error::Error;
+    /// #
+    /// # fn main() -> Result<(), Box<dyn Error>> {
+    /// use bitworks::prelude::*;
+    ///
+    /// let bitset = Bitset8::new(0b11111110)
+    ///     .remove(Bitset8::new(0b01010100))
+    ///     .build();
+    ///
+    /// assert_eq!(bitset.into_inner(), 0b10101010);
+    /// #   Ok(())
+    /// # }
+    /// ```
+    fn remove(&mut self, other: Self) -> &mut Self;
 
     /// Returns a copy of a bit at [`index`][Index].
     ///
@@ -487,7 +525,7 @@ where
     /// # fn main() -> Result<(), Box<dyn Error>> {
     /// use bitworks::prelude::{Bitset, Bitset8};
     ///
-    /// let a = Bitset8::from(0b11110000);
+    /// let a = Bitset8::new(0b11110000);
     /// let b = a.complement();
     ///
     /// assert_eq!(a.into_inner(), 0b11110000);
@@ -507,8 +545,8 @@ where
     /// # fn main() -> Result<(), Box<dyn Error>> {
     /// use bitworks::prelude::{Bitset, Bitset8};
     ///
-    /// let a = Bitset8::from(0b11001100);
-    /// let b = Bitset8::from(0b11110000);
+    /// let a = Bitset8::new(0b11001100);
+    /// let b = Bitset8::new(0b11110000);
     /// let c = a.union(b);
     ///
     /// assert_eq!(c.into_inner(), 0b11111100);
@@ -527,8 +565,8 @@ where
     /// # fn main() -> Result<(), Box<dyn Error>> {
     /// use bitworks::prelude::{Bitset, Bitset8};
     ///
-    /// let a = Bitset8::from(0b11001100);
-    /// let b = Bitset8::from(0b11110000);
+    /// let a = Bitset8::new(0b11001100);
+    /// let b = Bitset8::new(0b11110000);
     /// let c = a.intersection(b);
     ///
     /// assert_eq!(c.into_inner(), 0b11000000);
@@ -546,8 +584,8 @@ where
     /// # fn main() -> Result<(), Box<dyn Error>> {
     /// use bitworks::prelude::{Bitset, Bitset8};
     ///
-    /// let a = Bitset8::from(0b11001100);
-    /// let b = Bitset8::from(0b11110000);
+    /// let a = Bitset8::new(0b11001100);
+    /// let b = Bitset8::new(0b11110000);
     /// let c = a.difference(b);
     ///
     /// assert_eq!(c.into_inner(), 0b00001100);
@@ -569,8 +607,8 @@ where
     /// # fn main() -> Result<(), Box<dyn Error>> {
     /// use bitworks::prelude::{Bitset, Bitset8};
     ///
-    /// let a = Bitset8::from(0b11001100); // implements Bitset
-    /// let b = Bitset8::from(0b11110000);
+    /// let a = Bitset8::new(0b11001100); // implements Bitset
+    /// let b = Bitset8::new(0b11110000);
     /// let c = a.sym_difference(b);
     ///
     /// assert_eq!(c.into_inner(), 0b00111100);
@@ -602,8 +640,8 @@ where
     /// # fn main() -> Result<(), Box<dyn Error>> {
     /// use bitworks::prelude::{Bitset, Bitset8, Bitset16};
     ///
-    /// let bitset8_1 = Bitset8::from(0b00000001);
-    /// let bitset8_2 = Bitset8::from(0b00000011);
+    /// let bitset8_1 = Bitset8::new(0b00000001);
+    /// let bitset8_2 = Bitset8::new(0b00000011);
     /// let bitset16: Bitset16 = bitset8_1.combine(bitset8_2)?;
     ///
     /// assert_eq!(bitset16.into_inner(), 0b0000001100000001);
@@ -708,8 +746,8 @@ where
     /// # fn main() -> Result<(), Box<dyn Error>> {
     /// use bitworks::prelude::{Bitset, Bitset8, Bitset16};
     ///
-    /// let bitset8_1 = Bitset8::from(0b00000001);
-    /// let bitset8_2 = Bitset8::from(0b00000011);
+    /// let bitset8_1 = Bitset8::new(0b00000001);
+    /// let bitset8_2 = Bitset8::new(0b00000011);
     /// let bitset16: Bitset16 = bitset8_1.combine_optimized(bitset8_2)?;
     ///
     /// assert_eq!(bitset16.into_inner(), 0b0000001100000001);
@@ -812,7 +850,7 @@ where
     /// # fn main() -> Result<(), Box<dyn Error>> {
     /// use bitworks::prelude::*;
     ///
-    /// let bitset = Bitset8::from(0b01010100);
+    /// let bitset = Bitset8::new(0b01010100);
     /// let mut iter = bitset.bits();
     ///
     /// assert_eq!(iter.next(), Some(Zero)); // 0
@@ -847,7 +885,7 @@ where
     /// # fn main() -> Result<(), Box<dyn Error>> {
     /// use bitworks::prelude::*;
     ///
-    /// let bitset = Bitset8::from(0b01010100);
+    /// let bitset = Bitset8::new(0b01010100);
     /// let mut iter = bitset.bits_ref();
     ///
     /// assert_eq!(iter.next().as_deref(), Some(&Zero)); // 0
@@ -879,7 +917,7 @@ where
     /// # fn main() -> Result<(), Box<dyn Error>> {
     /// use bitworks::prelude::{Bitset, Bitset8};
     ///
-    /// let mut bitset = Bitset8::from(0b01010100);
+    /// let mut bitset = Bitset8::new(0b01010100);
     /// let mut iter = bitset.bits_mut();
     ///
     /// for mut bit in iter {
@@ -907,7 +945,7 @@ where
     /// # fn main() -> Result<(), Box<dyn Error>> {
     /// use bitworks::prelude::{Bitset, Bitset8};
     ///
-    /// let bitset = Bitset8::from(0b01010100);
+    /// let bitset = Bitset8::new(0b01010100);
     /// let mut iter = bitset.ones();
     ///
     /// assert_eq!(iter.next(), Some(2.try_into()?));
@@ -937,7 +975,7 @@ where
     /// # fn main() -> Result<(), Box<dyn Error>> {
     /// use bitworks::prelude::{Bitset, Bitset8};
     ///
-    /// let bitset = Bitset8::from(0b01010100);
+    /// let bitset = Bitset8::new(0b01010100);
     /// let mut iter = bitset.zeros();
     ///
     /// assert_eq!(iter.next(), Some(0.try_into()?));
@@ -1130,6 +1168,34 @@ where
         unsafe {
             let byte = self_ptr.add(byte_index(index));
             *byte &= !(1 << bit_index(index));
+        }
+        self
+    }
+
+    #[inline(always)]
+    fn insert(&mut self, other: Self) -> &mut Self {
+        let self_bytes: &mut [u8] = unsafe {
+            std::slice::from_raw_parts_mut(self as *mut _ as *mut u8, Self::BYTE_SIZE)
+        };
+        let other_bytes: &[u8] =
+            unsafe { std::slice::from_raw_parts(&other as *const _ as *const u8, Self::BYTE_SIZE) };
+
+        for i in 0..Self::BYTE_SIZE {
+            self_bytes[i] |= other_bytes[i];
+        }
+        self
+    }
+
+    #[inline(always)]
+    fn remove(&mut self, other: Self) -> &mut Self {
+        let self_bytes: &mut [u8] = unsafe {
+            std::slice::from_raw_parts_mut(self as *mut _ as *mut u8, Self::BYTE_SIZE)
+        };
+        let other_bytes: &[u8] =
+            unsafe { std::slice::from_raw_parts(&other as *const _ as *const u8, Self::BYTE_SIZE) };
+
+        for i in 0..Self::BYTE_SIZE {
+            self_bytes[i] &= !other_bytes[i];
         }
         self
     }
