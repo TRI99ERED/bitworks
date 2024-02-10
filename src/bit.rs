@@ -1,6 +1,6 @@
 //! Module containing [`Bit`] enum as well as [`BitRef`] and [`BitMut`] smart pointers.
 
-use crate::{bitfield::Bitfield, prelude::Index};
+use crate::{bitset::Bitset, prelude::Index};
 use std::{
     fmt::{Debug, Display},
     ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Deref, DerefMut, Not},
@@ -120,13 +120,13 @@ impl Display for Bit {
     }
 }
 
-/// Smart pointer granting immutable access to a bit in [`Bitfield`].
+/// Smart pointer granting immutable access to a bit in [`Bitset`].
 #[derive(PartialEq, Eq)]
-pub struct BitRef<'a, T: Bitfield + 'a>(pub(crate) Bit, pub(crate) Index<T>, pub(crate) &'a T);
+pub struct BitRef<'a, T: Bitset + 'a>(pub(crate) Bit, pub(crate) Index<T>, pub(crate) &'a T);
 
 impl<'a, T: 'a> BitRef<'a, T>
 where
-    T: Bitfield,
+    T: Bitset,
     Self: 'a,
 {
     /// Constructs a new value of `BitRef`
@@ -142,7 +142,7 @@ where
 
 impl<'a, T: 'a> Deref for BitRef<'a, T>
 where
-    T: Bitfield,
+    T: Bitset,
     Self: 'a,
 {
     type Target = Bit;
@@ -154,7 +154,7 @@ where
 
 impl<'a, T: 'a> AsRef<Bit> for BitRef<'a, T>
 where
-    T: Bitfield,
+    T: Bitset,
     Self: 'a,
 {
     fn as_ref(&self) -> &Bit {
@@ -164,7 +164,7 @@ where
 
 impl<'a, T: 'a> Clone for BitRef<'a, T>
 where
-    T: Bitfield,
+    T: Bitset,
     Self: 'a,
 {
     fn clone(&self) -> Self {
@@ -172,24 +172,21 @@ where
     }
 }
 
-impl<'a, T: 'a> Copy for BitRef<'a, T> where T: Bitfield {}
+impl<'a, T: 'a> Copy for BitRef<'a, T> where T: Bitset {}
 
 impl<'a, T: 'a> Debug for BitRef<'a, T>
 where
-    T: Bitfield,
+    T: Bitset,
     Self: 'a,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_tuple("BitRef")
-            .field(&self.0)
-            .field(&self.1)
-            .finish()
+        f.debug_tuple("BitRef").field(&self.0).field(&self.1).finish()
     }
 }
 
 impl<'a, T: 'a> Display for BitRef<'a, T>
 where
-    T: Bitfield,
+    T: Bitset,
     Self: 'a,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -204,13 +201,13 @@ where
     }
 }
 
-/// Smart pointer granting mutable access to a bit in [`Bitfield`].
+/// Smart pointer granting mutable access to a bit in [`Bitset`].
 #[derive(PartialEq, Eq)]
-pub struct BitMut<'a, T: Bitfield + 'a>(pub(crate) Bit, pub(crate) Index<T>, pub(crate) &'a mut T);
+pub struct BitMut<'a, T: Bitset + 'a>(pub(crate) Bit, pub(crate) Index<T>, pub(crate) &'a mut T);
 
 impl<'a, T: 'a> BitMut<'a, T>
 where
-    T: Bitfield,
+    T: Bitset,
     Self: 'a,
 {
     /// Constructs a new value of `BitMut`
@@ -226,7 +223,7 @@ where
 
 impl<'a, T: 'a> Drop for BitMut<'a, T>
 where
-    T: Bitfield,
+    T: Bitset,
     Self: 'a,
 {
     fn drop(&mut self) {
@@ -236,7 +233,7 @@ where
 
 impl<'a, T: 'a> Deref for BitMut<'a, T>
 where
-    T: Bitfield,
+    T: Bitset,
     Self: 'a,
 {
     type Target = Bit;
@@ -248,7 +245,7 @@ where
 
 impl<'a, T: 'a> DerefMut for BitMut<'a, T>
 where
-    T: Bitfield,
+    T: Bitset,
     Self: 'a,
 {
     fn deref_mut(&mut self) -> &mut Self::Target {
@@ -258,7 +255,7 @@ where
 
 impl<'a, T: 'a> AsRef<Bit> for BitMut<'a, T>
 where
-    T: Bitfield,
+    T: Bitset,
     Self: 'a,
 {
     fn as_ref(&self) -> &Bit {
@@ -268,7 +265,7 @@ where
 
 impl<'a, T: 'a> AsMut<Bit> for BitMut<'a, T>
 where
-    T: Bitfield,
+    T: Bitset,
     Self: 'a,
 {
     fn as_mut(&mut self) -> &mut Bit {
@@ -278,20 +275,17 @@ where
 
 impl<'a, T: 'a> Debug for BitMut<'a, T>
 where
-    T: Bitfield,
+    T: Bitset,
     Self: 'a,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_tuple("BitMut")
-            .field(&self.0)
-            .field(&self.1)
-            .finish()
+        f.debug_tuple("BitMut").field(&self.0).field(&self.1).finish()
     }
 }
 
 impl<'a, T: 'a> Display for BitMut<'a, T>
 where
-    T: Bitfield,
+    T: Bitset,
     Self: 'a,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {

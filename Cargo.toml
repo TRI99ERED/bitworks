@@ -3,10 +3,10 @@ name = "bitworks"
 version = "0.0.1"
 edition = "2021"
 license = "MIT OR Apache-2.0"
-description = "Crate meant to provide easy to use bitfields, with some out of the box useful functionality."
+description = "Crate meant to provide easy to use bitsets with emphasis on safety."
 repository = "https://github.com/TRI99ERED/bitworks"
 readme = "README.md"
-keywords = ["bitfield", "bitwise", "data-structure"]
+keywords = ["bitfield", "bitwise", "data-structure", "bitset"]
 categories = ["data-structures"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html

@@ -1,20 +1,20 @@
 //! Module containing [`Index`].
 
 use crate::{
-    bitfield,
+    bitset,
     error::{ConvError, ConvResult, ConvTarget},
-    prelude::Bitfield,
+    prelude::Bitset,
 };
 use std::{cmp::Ordering, fmt::Debug, hash::Hash, marker::PhantomData};
 
-/// Struct meant to safely index the `T`, where `T` implements [`Bitfield`].
+/// Struct meant to safely index the `T`, where `T` implements [`Bitset`].
 #[derive(Default)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct Index<T: Bitfield>(pub(crate) usize, pub(crate) PhantomData<T>);
+pub struct Index<T: Bitset>(pub(crate) usize, pub(crate) PhantomData<T>);
 
 impl<T> Index<T>
 where
-    T: Bitfield,
+    T: Bitset,
 {
     /// Value of 1 for `Index`.<br/>
     /// Shortcut from having to use `Index::<T>::from_usize(1)`
@@ -26,7 +26,7 @@ where
 
     /// Maximum value for `Index`.<br/>
     /// Shortcut from having to use `Index::<T>::from_usize(T::BITS - 1)`
-    pub const MAX: Self = Self(bitfield::bit_len::<T>() - 1, PhantomData);
+    pub const MAX: Self = Self(bitset::bit_len::<T>() - 1, PhantomData);
 
     /// Constructs a valid `Index<T>` value from usize.
     ///
@@ -44,15 +44,15 @@ where
     /// # use std::error::Error;
     /// #
     /// # fn main() -> Result<(), Box<dyn Error>> {
-    /// use simple_bitfield::prelude::{Bitfield8, Index};
+    /// use bitworks::prelude::{Bitset8, Index};
     ///
-    /// let index = Index::<Bitfield8>::from_usize(7);
+    /// let index = Index::<Bitset8>::from_usize(7);
     /// assert_eq!(index.into_inner(), 7);
     /// #   Ok(())
     /// # }
     /// ```
     pub const fn from_usize(value: usize) -> Self {
-        if value < bitfield::bit_len::<T>() {
+        if value < bitset::bit_len::<T>() {
             Self(value, PhantomData)
         } else {
             panic!("value was out of range 0..(T::BYTE_SIZE * 8)",)
@@ -72,20 +72,20 @@ where
     /// # use std::error::Error;
     /// #
     /// # fn main() -> Result<(), Box<dyn Error>> {
-    /// use simple_bitfield::prelude::{Bitfield8, Index};
+    /// use bitworks::prelude::{Bitset8, Index};
     ///
-    /// let index = Index::<Bitfield8>::try_from_usize(7)?;
+    /// let index = Index::<Bitset8>::try_from_usize(7)?;
     /// assert_eq!(index.into_inner(), 7);
     /// #   Ok(())
     /// # }
     /// ```
     pub const fn try_from_usize(value: usize) -> ConvResult<Self> {
-        if value < bitfield::bit_len::<T>() {
+        if value < bitset::bit_len::<T>() {
             Ok(Self(value, PhantomData))
         } else {
             Err(ConvError::new(
                 ConvTarget::Raw(value),
-                ConvTarget::Index(bitfield::bit_len::<T>()),
+                ConvTarget::Index(bitset::bit_len::<T>()),
             ))
         }
     }
@@ -97,9 +97,9 @@ where
     /// # use std::error::Error;
     /// #
     /// # fn main() -> Result<(), Box<dyn Error>> {
-    /// use simple_bitfield::prelude::{Bitfield8, Index};
+    /// use bitworks::prelude::{Bitset8, Index};
     ///
-    /// let index = Index::<Bitfield8>::MAX;
+    /// let index = Index::<Bitset8>::MAX;
     /// assert_eq!(index.into_inner(), 7);
     /// #   Ok(())
     /// # }
@@ -116,15 +116,15 @@ where
     /// # use std::error::Error;
     /// #
     /// # fn main() -> Result<(), Box<dyn Error>> {
-    /// use simple_bitfield::prelude::{Bitfield8, Index};
+    /// use bitworks::prelude::{Bitset8, Index};
     ///
-    /// let a = Index::<Bitfield8>::ONE;
-    /// let b = Index::<Bitfield8>::ONE;
+    /// let a = Index::<Bitset8>::ONE;
+    /// let b = Index::<Bitset8>::ONE;
     /// let c = a.checked_add(b);
     /// assert_eq!(c.unwrap().into_inner(), 2);
     ///
-    /// let d = Index::<Bitfield8>::MAX;
-    /// let e = Index::<Bitfield8>::ONE;
+    /// let d = Index::<Bitset8>::MAX;
+    /// let e = Index::<Bitset8>::ONE;
     /// let f = d.checked_add(e);
     /// assert_eq!(f, None);
     /// #   Ok(())
@@ -134,7 +134,7 @@ where
     pub fn checked_add(&self, other: Self) -> Option<Self> {
         self.0
             .checked_add(other.0)
-            .filter(|&i| i < crate::bitfield::bit_len::<T>())
+            .filter(|&i| i < crate::bitset::bit_len::<T>())
             .map(|i| Self(i, PhantomData))
     }
 
@@ -145,15 +145,15 @@ where
     /// # use std::error::Error;
     /// #
     /// # fn main() -> Result<(), Box<dyn Error>> {
-    /// use simple_bitfield::prelude::{Bitfield8, Index};
+    /// use bitworks::prelude::{Bitset8, Index};
     ///
-    /// let a = Index::<Bitfield8>::MAX;
-    /// let b = Index::<Bitfield8>::ONE;
+    /// let a = Index::<Bitset8>::MAX;
+    /// let b = Index::<Bitset8>::ONE;
     /// let c = a.checked_sub(b);
     /// assert_eq!(c.unwrap().into_inner(), 6);
     ///
-    /// let d = Index::<Bitfield8>::MIN;
-    /// let e = Index::<Bitfield8>::ONE;
+    /// let d = Index::<Bitset8>::MIN;
+    /// let e = Index::<Bitset8>::ONE;
     /// let f = d.checked_sub(e);
     /// assert_eq!(f, None);
     /// #   Ok(())
@@ -172,15 +172,15 @@ where
     /// # use std::error::Error;
     /// #
     /// # fn main() -> Result<(), Box<dyn Error>> {
-    /// use simple_bitfield::prelude::{Bitfield8, Index};
+    /// use bitworks::prelude::{Bitset8, Index};
     ///
-    /// let a = Index::<Bitfield8>::ONE;
-    /// let b = Index::<Bitfield8>::ONE;
+    /// let a = Index::<Bitset8>::ONE;
+    /// let b = Index::<Bitset8>::ONE;
     /// let c = a.saturating_add(b);
     /// assert_eq!(c.into_inner(), 2);
     ///
-    /// let d = Index::<Bitfield8>::MAX;
-    /// let e = Index::<Bitfield8>::ONE;
+    /// let d = Index::<Bitset8>::MAX;
+    /// let e = Index::<Bitset8>::ONE;
     /// let f = d.saturating_add(e);
     /// assert_eq!(f.into_inner(), 7);
     /// #   Ok(())
@@ -199,15 +199,15 @@ where
     /// # use std::error::Error;
     /// #
     /// # fn main() -> Result<(), Box<dyn Error>> {
-    /// use simple_bitfield::prelude::{Bitfield8, Index};
+    /// use bitworks::prelude::{Bitset8, Index};
     ///
-    /// let a = Index::<Bitfield8>::MAX;
-    /// let b = Index::<Bitfield8>::ONE;
+    /// let a = Index::<Bitset8>::MAX;
+    /// let b = Index::<Bitset8>::ONE;
     /// let c = a.saturating_sub(b);
     /// assert_eq!(c.into_inner(), 6);
     ///
-    /// let d = Index::<Bitfield8>::MIN;
-    /// let e = Index::<Bitfield8>::ONE;
+    /// let d = Index::<Bitset8>::MIN;
+    /// let e = Index::<Bitset8>::ONE;
     /// let f = d.saturating_sub(e);
     /// assert_eq!(f.into_inner(), 0);
     /// #   Ok(())
@@ -218,35 +218,35 @@ where
         self.checked_sub(other).unwrap_or(Self::MIN)
     }
 
-    /// Saturating conversion between `BifieldIndex`es.
+    /// Saturating conversion between `BisetIndex`es.
     #[inline(always)]
     pub const fn to_other<U>(self) -> Index<U>
     where
-        U: Bitfield,
+        U: Bitset,
     {
-        if crate::bitfield::bit_len::<U>() >= crate::bitfield::bit_len::<T>() {
+        if crate::bitset::bit_len::<U>() >= crate::bitset::bit_len::<T>() {
             Index::<U>(self.0, PhantomData)
         } else {
             Index::<U>::MAX
         }
     }
 
-    /// Attempted conversion between `BifieldIndex`es.
+    /// Attempted conversion between `BisetIndex`es.
     ///
     /// # Errors
     /// `U::BIT_SIZE` is smaller, than `T::BIT_SIZE`.
     #[inline(always)]
     pub fn try_to_other<U>(self) -> ConvResult<Index<U>>
     where
-        U: Bitfield,
+        U: Bitset,
     {
-        if crate::bitfield::bit_len::<U>() >= crate::bitfield::bit_len::<T>() {
+        if crate::bitset::bit_len::<U>() >= crate::bitset::bit_len::<T>() {
             Ok(Index::<U>(self.0, PhantomData))
         } else {
             Index::<U>::try_from(self.0).map_err(|_| {
                 ConvError::new(
-                    ConvTarget::Index(bitfield::bit_len::<U>()),
-                    ConvTarget::Index(bitfield::bit_len::<T>()),
+                    ConvTarget::Index(bitset::bit_len::<U>()),
+                    ConvTarget::Index(bitset::bit_len::<T>()),
                 )
             })
         }
@@ -267,7 +267,7 @@ where
 
 impl<T> TryFrom<usize> for Index<T>
 where
-    T: Bitfield,
+    T: Bitset,
 {
     type Error = ConvError;
 
@@ -279,7 +279,7 @@ where
 
 impl<T> From<Index<T>> for usize
 where
-    T: Bitfield,
+    T: Bitset,
 {
     #[inline(always)]
     fn from(value: Index<T>) -> Self {
@@ -289,18 +289,18 @@ where
 
 impl<T> Clone for Index<T>
 where
-    T: Bitfield,
+    T: Bitset,
 {
     fn clone(&self) -> Self {
         *self
     }
 }
 
-impl<T> Copy for Index<T> where T: Bitfield {}
+impl<T> Copy for Index<T> where T: Bitset {}
 
 impl<T> PartialOrd for Index<T>
 where
-    T: Bitfield,
+    T: Bitset,
 {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
@@ -309,7 +309,7 @@ where
 
 impl<T> Ord for Index<T>
 where
-    T: Bitfield,
+    T: Bitset,
 {
     fn cmp(&self, other: &Self) -> Ordering {
         match self.0.cmp(&other.0) {
@@ -322,24 +322,24 @@ where
 
 impl<T> PartialEq for Index<T>
 where
-    T: Bitfield,
+    T: Bitset,
 {
     fn eq(&self, other: &Self) -> bool {
         self.0 == other.0 && self.1 == other.1
     }
 }
 
-impl<T> Eq for Index<T> where T: Bitfield {}
+impl<T> Eq for Index<T> where T: Bitset {}
 
 impl<T> Debug for Index<T>
 where
-    T: Bitfield,
+    T: Bitset,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "Index<Bitfield{}>({})",
-            crate::bitfield::bit_len::<T>(),
+            "Index<Bitset{}>({})",
+            crate::bitset::bit_len::<T>(),
             self.0
         )
     }
@@ -347,7 +347,7 @@ where
 
 impl<T> Hash for Index<T>
 where
-    T: Bitfield,
+    T: Bitset,
 {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.0.hash(state);

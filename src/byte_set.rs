@@ -1,8 +1,8 @@
-//! Module containing [`ByteField`].
+//! Module containing [`Byteset`].
 
 use crate::{
     bit::Bit,
-    bitfield::{Bitfield, LeftAligned},
+    bitset::{Bitset, LeftAligned},
     prelude::Index,
 };
 use std::{
@@ -14,7 +14,7 @@ use std::{
 };
 
 type Inner<const N: usize> = [u8; N];
-type BIndex<const N: usize> = Index<ByteField<N>>;
+type BIndex<const N: usize> = Index<Byteset<N>>;
 
 const fn byte_index<const N: usize>(index: BIndex<N>) -> usize {
     index.into_inner() / 8
@@ -28,14 +28,14 @@ const fn bitmask<const N: usize>(index: BIndex<N>) -> u8 {
     1 << bit_index(index)
 }
 
-/// [`Bitfield`] of variable `size`.
-/// `N` is size in bytes of the `ByteField`.
+/// [`Bitset`] of variable `size`.
+/// `N` is size in bytes of the `Byteset`.
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[repr(transparent)]
-pub struct ByteField<const N: usize>(pub(crate) Inner<N>);
+pub struct Byteset<const N: usize>(pub(crate) Inner<N>);
 
-impl<const N: usize> ByteField<N> {
+impl<const N: usize> Byteset<N> {
     #[inline(always)]
     pub fn into_inner(&self) -> Inner<N> {
         self.0
@@ -48,7 +48,7 @@ impl<const N: usize> ByteField<N> {
     }
 }
 
-unsafe impl<const N: usize> LeftAligned for ByteField<N> {
+unsafe impl<const N: usize> LeftAligned for Byteset<N> {
     type _Repr = Inner<N>;
     const _BYTE_SIZE: usize = N;
     const _ONE: Self = Self::__one();
@@ -61,21 +61,21 @@ unsafe impl<const N: usize> LeftAligned for ByteField<N> {
     }
 }
 
-impl<const N: usize> From<Inner<N>> for ByteField<N> {
+impl<const N: usize> From<Inner<N>> for Byteset<N> {
     #[inline(always)]
     fn from(value: Inner<N>) -> Self {
         Self(value)
     }
 }
 
-impl<const N: usize> From<ByteField<N>> for Inner<N> {
+impl<const N: usize> From<Byteset<N>> for Inner<N> {
     #[inline(always)]
-    fn from(value: ByteField<N>) -> Self {
+    fn from(value: Byteset<N>) -> Self {
         value.0
     }
 }
 
-impl<const N: usize> From<BIndex<N>> for ByteField<N> {
+impl<const N: usize> From<BIndex<N>> for Byteset<N> {
     fn from(index: BIndex<N>) -> Self {
         let mut inner = [0; N];
         inner[byte_index(index)] = bitmask(index);
@@ -83,7 +83,7 @@ impl<const N: usize> From<BIndex<N>> for ByteField<N> {
     }
 }
 
-impl<const N: usize> Not for ByteField<N> {
+impl<const N: usize> Not for Byteset<N> {
     type Output = Self;
 
     fn not(mut self) -> Self::Output {
@@ -94,7 +94,7 @@ impl<const N: usize> Not for ByteField<N> {
     }
 }
 
-impl<const N: usize> BitAnd for ByteField<N> {
+impl<const N: usize> BitAnd for Byteset<N> {
     type Output = Self;
 
     fn bitand(mut self, rhs: Self) -> Self::Output {
@@ -105,7 +105,7 @@ impl<const N: usize> BitAnd for ByteField<N> {
     }
 }
 
-impl<const N: usize> BitAndAssign for ByteField<N> {
+impl<const N: usize> BitAndAssign for Byteset<N> {
     fn bitand_assign(&mut self, rhs: Self) {
         for (i, chunk) in self.0.iter_mut().enumerate() {
             *chunk &= rhs.0[i];
@@ -113,7 +113,7 @@ impl<const N: usize> BitAndAssign for ByteField<N> {
     }
 }
 
-impl<const N: usize> BitOr for ByteField<N> {
+impl<const N: usize> BitOr for Byteset<N> {
     type Output = Self;
 
     fn bitor(mut self, rhs: Self) -> Self::Output {
@@ -124,7 +124,7 @@ impl<const N: usize> BitOr for ByteField<N> {
     }
 }
 
-impl<const N: usize> BitOrAssign for ByteField<N> {
+impl<const N: usize> BitOrAssign for Byteset<N> {
     fn bitor_assign(&mut self, rhs: Self) {
         for (i, chunk) in self.0.iter_mut().enumerate() {
             *chunk |= rhs.0[i];
@@ -132,7 +132,7 @@ impl<const N: usize> BitOrAssign for ByteField<N> {
     }
 }
 
-impl<const N: usize> BitXor for ByteField<N> {
+impl<const N: usize> BitXor for Byteset<N> {
     type Output = Self;
 
     fn bitxor(mut self, rhs: Self) -> Self::Output {
@@ -143,7 +143,7 @@ impl<const N: usize> BitXor for ByteField<N> {
     }
 }
 
-impl<const N: usize> BitXorAssign for ByteField<N> {
+impl<const N: usize> BitXorAssign for Byteset<N> {
     fn bitxor_assign(&mut self, rhs: Self) {
         for (i, chunk) in self.0.iter_mut().enumerate() {
             *chunk ^= rhs.0[i];
@@ -151,7 +151,7 @@ impl<const N: usize> BitXorAssign for ByteField<N> {
     }
 }
 
-impl<const N: usize> Shl<BIndex<N>> for ByteField<N> {
+impl<const N: usize> Shl<BIndex<N>> for Byteset<N> {
     type Output = Self;
 
     fn shl(self, rhs: BIndex<N>) -> Self::Output {
@@ -159,7 +159,7 @@ impl<const N: usize> Shl<BIndex<N>> for ByteField<N> {
     }
 }
 
-impl<const N: usize> ShlAssign<BIndex<N>> for ByteField<N> {
+impl<const N: usize> ShlAssign<BIndex<N>> for Byteset<N> {
     fn shl_assign(&mut self, rhs: BIndex<N>) {
         let byte_shift = byte_index(rhs);
         let bit_shift = bit_index(rhs);
@@ -185,7 +185,7 @@ impl<const N: usize> ShlAssign<BIndex<N>> for ByteField<N> {
     }
 }
 
-impl<const N: usize> Shr<BIndex<N>> for ByteField<N> {
+impl<const N: usize> Shr<BIndex<N>> for Byteset<N> {
     type Output = Self;
 
     fn shr(self, rhs: BIndex<N>) -> Self::Output {
@@ -193,7 +193,7 @@ impl<const N: usize> Shr<BIndex<N>> for ByteField<N> {
     }
 }
 
-impl<const N: usize> ShrAssign<BIndex<N>> for ByteField<N> {
+impl<const N: usize> ShrAssign<BIndex<N>> for Byteset<N> {
     fn shr_assign(&mut self, rhs: BIndex<N>) {
         let byte_shift = byte_index(rhs);
         let bit_shift = bit_index(rhs);
@@ -219,7 +219,7 @@ impl<const N: usize> ShrAssign<BIndex<N>> for ByteField<N> {
     }
 }
 
-impl<const N: usize> BitAnd<BIndex<N>> for ByteField<N> {
+impl<const N: usize> BitAnd<BIndex<N>> for Byteset<N> {
     type Output = Self;
 
     #[inline(always)]
@@ -228,14 +228,14 @@ impl<const N: usize> BitAnd<BIndex<N>> for ByteField<N> {
     }
 }
 
-impl<const N: usize> BitAndAssign<BIndex<N>> for ByteField<N> {
+impl<const N: usize> BitAndAssign<BIndex<N>> for Byteset<N> {
     #[inline(always)]
     fn bitand_assign(&mut self, rhs: BIndex<N>) {
         *self &= Self::from(rhs);
     }
 }
 
-impl<const N: usize> BitOr<BIndex<N>> for ByteField<N> {
+impl<const N: usize> BitOr<BIndex<N>> for Byteset<N> {
     type Output = Self;
 
     #[inline(always)]
@@ -244,14 +244,14 @@ impl<const N: usize> BitOr<BIndex<N>> for ByteField<N> {
     }
 }
 
-impl<const N: usize> BitOrAssign<BIndex<N>> for ByteField<N> {
+impl<const N: usize> BitOrAssign<BIndex<N>> for Byteset<N> {
     #[inline(always)]
     fn bitor_assign(&mut self, rhs: BIndex<N>) {
         *self |= Self::from(rhs);
     }
 }
 
-impl<const N: usize> BitXor<BIndex<N>> for ByteField<N> {
+impl<const N: usize> BitXor<BIndex<N>> for Byteset<N> {
     type Output = Self;
 
     #[inline(always)]
@@ -260,14 +260,14 @@ impl<const N: usize> BitXor<BIndex<N>> for ByteField<N> {
     }
 }
 
-impl<const N: usize> BitXorAssign<BIndex<N>> for ByteField<N> {
+impl<const N: usize> BitXorAssign<BIndex<N>> for Byteset<N> {
     #[inline(always)]
     fn bitxor_assign(&mut self, rhs: BIndex<N>) {
         *self ^= Self::from(rhs);
     }
 }
 
-impl<const N: usize> FromIterator<Bit> for ByteField<N> {
+impl<const N: usize> FromIterator<Bit> for Byteset<N> {
     fn from_iter<T: IntoIterator<Item = Bit>>(iter: T) -> Self {
         iter.into_iter()
             .take(N * 8)
@@ -278,12 +278,12 @@ impl<const N: usize> FromIterator<Bit> for ByteField<N> {
     }
 }
 
-impl<const N: usize> Debug for ByteField<N> {
+impl<const N: usize> Debug for Byteset<N> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut s = self
             .0
             .iter()
-            .fold("ByteField([".to_owned(), |mut acc, &chunk| {
+            .fold("Byteset([".to_owned(), |mut acc, &chunk| {
                 acc.push_str(&format!(" {:08b}", chunk));
                 acc
             });
@@ -292,7 +292,7 @@ impl<const N: usize> Debug for ByteField<N> {
     }
 }
 
-impl<const N: usize> Display for ByteField<N> {
+impl<const N: usize> Display for Byteset<N> {
     #[inline(always)]
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut s = self
@@ -316,7 +316,7 @@ impl<const N: usize> Display for ByteField<N> {
     }
 }
 
-impl<const N: usize> Binary for ByteField<N> {
+impl<const N: usize> Binary for Byteset<N> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let s = self.0.iter().fold("".to_owned(), |mut acc, &chunk| {
             acc.push_str(&format!("{:08b}", chunk));
@@ -326,7 +326,7 @@ impl<const N: usize> Binary for ByteField<N> {
     }
 }
 
-impl<const N: usize> Octal for ByteField<N> {
+impl<const N: usize> Octal for Byteset<N> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let s = self.0.iter().fold("".to_owned(), |mut acc, &chunk| {
             acc.push_str(&format!("{:03o}", chunk));
@@ -336,7 +336,7 @@ impl<const N: usize> Octal for ByteField<N> {
     }
 }
 
-impl<const N: usize> UpperHex for ByteField<N> {
+impl<const N: usize> UpperHex for Byteset<N> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let s = self.0.iter().fold("".to_owned(), |mut acc, &chunk| {
             acc.push_str(&format!("{:02X}", chunk));
@@ -346,7 +346,7 @@ impl<const N: usize> UpperHex for ByteField<N> {
     }
 }
 
-impl<const N: usize> LowerHex for ByteField<N> {
+impl<const N: usize> LowerHex for Byteset<N> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let s = self.0.iter().fold("".to_owned(), |mut acc, &chunk| {
             acc.push_str(&format!("{:02x}", chunk));
@@ -360,205 +360,205 @@ impl<const N: usize> LowerHex for ByteField<N> {
 mod tests {
     use std::error::Error;
 
-    use crate::{bit::Bit::*, prelude::Bitfield};
+    use crate::{bit::Bit::*, prelude::Bitset};
 
     use super::*;
-    type Tested1 = ByteField<1>;
-    type Tested2 = ByteField<2>;
-    type Tested4 = ByteField<4>;
-    type Tested8 = ByteField<8>;
-    type Tested16 = ByteField<16>;
+    type Tested1 = Byteset<1>;
+    type Tested2 = Byteset<2>;
+    type Tested4 = Byteset<4>;
+    type Tested8 = Byteset<8>;
+    type Tested16 = Byteset<16>;
 
-    type TestedOdd = ByteField<3>;
+    type TestedOdd = Byteset<3>;
 
     type TestResult = Result<(), Box<dyn Error>>;
 
     #[test]
     fn construction() -> TestResult {
-        let bitfield = Tested1::NONE
+        let bitset = Tested1::NONE
             .clone()
             .set_bit(0.try_into()?, One)
             .check_bit(1.try_into()?)
             .uncheck_bit(0.try_into()?)
             .build();
 
-        assert_eq!(bitfield, [0b00000010].into());
+        assert_eq!(bitset, [0b00000010].into());
         Ok(())
     }
 
     #[test]
     fn conversion_from_arr() {
-        let bitfield: Tested1 = [0b10101010].into();
+        let bitset: Tested1 = [0b10101010].into();
 
-        assert_eq!(bitfield.0, [0b10101010]);
+        assert_eq!(bitset.0, [0b10101010]);
     }
 
     #[test]
     fn conversion_from_index() {
-        let bitfield = Tested1::from(Index::<Tested1>::MIN);
+        let bitset = Tested1::from(Index::<Tested1>::MIN);
 
-        assert_eq!(bitfield.0, [1]);
+        assert_eq!(bitset.0, [1]);
     }
 
     #[test]
     fn into_inner() {
-        let bitfield: Tested1 = [0b10101010].into();
+        let bitset: Tested1 = [0b10101010].into();
 
-        assert_eq!(bitfield.0, bitfield.into_inner());
+        assert_eq!(bitset.0, bitset.into_inner());
     }
 
     #[test]
     fn bit_set_to_true() -> TestResult {
-        let mut bitfield: Tested1 = [0b10101010].into();
+        let mut bitset: Tested1 = [0b10101010].into();
 
-        bitfield.set_bit(6.try_into()?, One);
+        bitset.set_bit(6.try_into()?, One);
 
-        assert_eq!(bitfield.0, [0b11101010]);
+        assert_eq!(bitset.0, [0b11101010]);
         Ok(())
     }
 
     #[test]
     fn bit_set_to_false() -> TestResult {
-        let mut bitfield: Tested1 = [0b10101010].into();
+        let mut bitset: Tested1 = [0b10101010].into();
 
-        bitfield.set_bit(7.try_into()?, Zero);
+        bitset.set_bit(7.try_into()?, Zero);
 
-        assert_eq!(bitfield.0, [0b00101010]);
+        assert_eq!(bitset.0, [0b00101010]);
         Ok(())
     }
 
     // #[test]
     // fn bit() -> TestResult {
-    //     let bitfield: Tested1 = [0b10101010].into();
+    //     let bitset: Tested1 = [0b10101010].into();
 
-    //     assert_eq!(bitfield.bit(0.try_into()?), Zero);
-    //     assert_eq!(bitfield.bit(1.try_into()?), One);
+    //     assert_eq!(bitset.bit(0.try_into()?), Zero);
+    //     assert_eq!(bitset.bit(1.try_into()?), One);
     //     Ok(())
     // }
 
     #[test]
     fn bit_check() -> TestResult {
-        let mut bitfield: Tested1 = [0b10101010].into();
+        let mut bitset: Tested1 = [0b10101010].into();
 
-        bitfield.check_bit(6.try_into()?);
+        bitset.check_bit(6.try_into()?);
 
-        assert_eq!(bitfield.0, [0b11101010]);
+        assert_eq!(bitset.0, [0b11101010]);
         Ok(())
     }
 
     #[test]
     fn bit_uncheck() -> TestResult {
-        let mut bitfield: Tested1 = [0b10101010].into();
+        let mut bitset: Tested1 = [0b10101010].into();
 
-        bitfield.uncheck_bit(7.try_into()?);
+        bitset.uncheck_bit(7.try_into()?);
 
-        assert_eq!(bitfield.0, [0b00101010]);
+        assert_eq!(bitset.0, [0b00101010]);
         Ok(())
     }
 
     #[test]
     fn bit_ref() -> TestResult {
-        let bitfield: Tested1 = [0b10101010].into();
+        let bitset: Tested1 = [0b10101010].into();
 
-        assert_eq!(*bitfield.bit_ref(0.try_into()?), Zero);
-        assert_eq!(*bitfield.bit_ref(1.try_into()?), One);
+        assert_eq!(*bitset.bit_ref(0.try_into()?), Zero);
+        assert_eq!(*bitset.bit_ref(1.try_into()?), One);
         Ok(())
     }
 
     #[test]
     fn bit_mut() -> TestResult {
-        let mut bitfield: Tested1 = [0b10101010].into();
+        let mut bitset: Tested1 = [0b10101010].into();
 
-        assert_eq!(*bitfield.bit_ref(0.try_into()?), Zero);
-        assert_eq!(*bitfield.bit_ref(1.try_into()?), One);
+        assert_eq!(*bitset.bit_ref(0.try_into()?), Zero);
+        assert_eq!(*bitset.bit_ref(1.try_into()?), One);
 
-        *bitfield.bit_mut(0.try_into()?) = One;
-        *bitfield.bit_mut(1.try_into()?) = Zero;
+        *bitset.bit_mut(0.try_into()?) = One;
+        *bitset.bit_mut(1.try_into()?) = Zero;
 
-        assert_eq!(*bitfield.bit_ref(0.try_into()?), One);
-        assert_eq!(*bitfield.bit_ref(1.try_into()?), Zero);
+        assert_eq!(*bitset.bit_ref(0.try_into()?), One);
+        assert_eq!(*bitset.bit_ref(1.try_into()?), Zero);
         Ok(())
     }
 
     #[test]
     fn count_ones() {
-        let bitfield: Tested1 = [0b11100000].into();
+        let bitset: Tested1 = [0b11100000].into();
 
-        assert_eq!(bitfield.count_ones(), 3);
+        assert_eq!(bitset.count_ones(), 3);
     }
 
     #[test]
     fn count_zeros() {
-        let bitfield: Tested1 = [0b11100000].into();
+        let bitset: Tested1 = [0b11100000].into();
 
-        assert_eq!(bitfield.count_zeros(), 5);
+        assert_eq!(bitset.count_zeros(), 5);
     }
 
     #[test]
     fn shl() -> TestResult {
         // 1 bit shift, easy case
-        let bitfield: Tested1 = [0b00000001].into();
+        let bitset: Tested1 = [0b00000001].into();
 
-        assert_eq!(bitfield << 1.try_into()?, [0b00000010].into());
+        assert_eq!(bitset << 1.try_into()?, [0b00000010].into());
 
-        let mut bitfield: Tested1 = [0b00000001].into();
-        bitfield <<= 1.try_into()?;
+        let mut bitset: Tested1 = [0b00000001].into();
+        bitset <<= 1.try_into()?;
 
-        assert_eq!(bitfield, [0b00000010].into());
+        assert_eq!(bitset, [0b00000010].into());
 
         // 7 bit shift, crossing the boundary case
-        let bitfield: Tested2 = [0b00011011, 0b11101000].into();
+        let bitset: Tested2 = [0b00011011, 0b11101000].into();
 
-        assert_eq!(bitfield << 7.try_into()?, [0b11110100, 0b00000000].into());
+        assert_eq!(bitset << 7.try_into()?, [0b11110100, 0b00000000].into());
 
-        let mut bitfield: Tested2 = [0b00011011, 0b11101000].into();
-        bitfield <<= 7.try_into()?;
+        let mut bitset: Tested2 = [0b00011011, 0b11101000].into();
+        bitset <<= 7.try_into()?;
 
-        assert_eq!(bitfield, [0b11110100, 0b00000000].into());
+        assert_eq!(bitset, [0b11110100, 0b00000000].into());
 
         // 9 bit shift, bigger, than chunk length
-        let bitfield: Tested2 = [0b00011011, 0b11101000].into();
+        let bitset: Tested2 = [0b00011011, 0b11101000].into();
 
-        assert_eq!(bitfield << 9.try_into()?, [0b11010000, 0b00000000].into());
+        assert_eq!(bitset << 9.try_into()?, [0b11010000, 0b00000000].into());
 
-        let mut bitfield: Tested2 = [0b00011011, 0b11101000].into();
-        bitfield <<= 9.try_into()?;
+        let mut bitset: Tested2 = [0b00011011, 0b11101000].into();
+        bitset <<= 9.try_into()?;
 
-        assert_eq!(bitfield, [0b11010000, 0b00000000].into());
+        assert_eq!(bitset, [0b11010000, 0b00000000].into());
         Ok(())
     }
 
     #[test]
     fn shr() -> TestResult {
         // 1 bit shift, easy case
-        let bitfield: Tested1 = [0b00000010].into();
+        let bitset: Tested1 = [0b00000010].into();
 
-        assert_eq!(bitfield >> 1.try_into()?, [0b00000001].into());
+        assert_eq!(bitset >> 1.try_into()?, [0b00000001].into());
 
-        let mut bitfield: Tested1 = [0b00000010].into();
-        bitfield >>= 1.try_into()?;
+        let mut bitset: Tested1 = [0b00000010].into();
+        bitset >>= 1.try_into()?;
 
-        assert_eq!(bitfield, [0b00000001].into());
+        assert_eq!(bitset, [0b00000001].into());
 
         // 7 bit shift, crossing the boundary case
-        let bitfield: Tested2 = [0b11110100, 0b00000000].into();
+        let bitset: Tested2 = [0b11110100, 0b00000000].into();
 
-        assert_eq!(bitfield >> 7.try_into()?, [0b00000001, 0b11101000].into());
+        assert_eq!(bitset >> 7.try_into()?, [0b00000001, 0b11101000].into());
 
-        let mut bitfield: Tested2 = [0b11110100, 0b00000000].into();
-        bitfield >>= 7.try_into()?;
+        let mut bitset: Tested2 = [0b11110100, 0b00000000].into();
+        bitset >>= 7.try_into()?;
 
-        assert_eq!(bitfield, [0b00000001, 0b11101000].into());
+        assert_eq!(bitset, [0b00000001, 0b11101000].into());
 
         // 9 bit shift, bigger, than chunk length
-        let bitfield: Tested2 = [0b11010000, 0b00000000].into();
+        let bitset: Tested2 = [0b11010000, 0b00000000].into();
 
-        assert_eq!(bitfield >> 9.try_into()?, [0b00000000, 0b01101000].into());
+        assert_eq!(bitset >> 9.try_into()?, [0b00000000, 0b01101000].into());
 
-        let mut bitfield: Tested2 = [0b11010000, 0b00000000].into();
-        bitfield >>= 9.try_into()?;
+        let mut bitset: Tested2 = [0b11010000, 0b00000000].into();
+        bitset >>= 9.try_into()?;
 
-        assert_eq!(bitfield, [0b00000000, 0b01101000].into());
+        assert_eq!(bitset, [0b00000000, 0b01101000].into());
         Ok(())
     }
 
@@ -652,8 +652,8 @@ mod tests {
 
     #[test]
     fn bits_ref() {
-        let bitfield: Tested1 = [0b11110000].into();
-        let mut iter = bitfield.bits_ref();
+        let bitset: Tested1 = [0b11110000].into();
+        let mut iter = bitset.bits_ref();
 
         assert_eq!(iter.next().as_deref(), Some(&Zero));
         assert_eq!(iter.next().as_deref(), Some(&Zero));
@@ -668,9 +668,9 @@ mod tests {
 
     #[test]
     fn bits_mut() {
-        let mut bitfield: Tested1 = [0b11110000].into();
+        let mut bitset: Tested1 = [0b11110000].into();
 
-        let mut iter = bitfield.bits_ref();
+        let mut iter = bitset.bits_ref();
 
         assert_eq!(iter.next().as_deref(), Some(&Zero));
         assert_eq!(iter.next().as_deref(), Some(&Zero));
@@ -683,11 +683,11 @@ mod tests {
         assert_eq!(iter.next(), None);
         drop(iter);
 
-        for mut bit in bitfield.bits_mut() {
+        for mut bit in bitset.bits_mut() {
             *bit = !*bit;
         }
 
-        let mut iter = bitfield.bits_ref();
+        let mut iter = bitset.bits_ref();
 
         assert_eq!(iter.next().as_deref(), Some(&One));
         assert_eq!(iter.next().as_deref(), Some(&One));
@@ -709,7 +709,7 @@ mod tests {
         assert_eq!(b, [0b11110000].into());
 
         let arr = [One, Zero, One, Zero, One, Zero, One, Zero];
-        let bitfield: Tested1 = arr
+        let bitset: Tested1 = arr
             .into_iter()
             // Need to reverse to get the same visual representation, because
             // array's .into_iter() makes iterator from left to right,
@@ -717,13 +717,13 @@ mod tests {
             .rev()
             .collect();
 
-        assert_eq!(bitfield, [0b10101010].into());
+        assert_eq!(bitset, [0b10101010].into());
     }
 
     #[test]
     fn ones() -> TestResult {
-        let bitfield: Tested1 = [0b11110000].into();
-        let mut iter = bitfield.ones();
+        let bitset: Tested1 = [0b11110000].into();
+        let mut iter = bitset.ones();
 
         assert_eq!(iter.next(), Some(4.try_into()?));
         assert_eq!(iter.next(), Some(5.try_into()?));
@@ -735,8 +735,8 @@ mod tests {
 
     #[test]
     fn zeros() -> TestResult {
-        let bitfield: Tested1 = [0b11110000].into();
-        let mut iter = bitfield.zeros();
+        let bitset: Tested1 = [0b11110000].into();
+        let mut iter = bitset.zeros();
 
         assert_eq!(iter.next(), Some(0.try_into()?));
         assert_eq!(iter.next(), Some(1.try_into()?));
@@ -750,9 +750,9 @@ mod tests {
     fn from_slice_bool() {
         // Same index order
         let slice: &[Bit] = &[One, Zero, One, Zero, One, Zero, One, Zero];
-        let bitfield: Tested1 = Tested1::from_bits_ref(slice);
+        let bitset: Tested1 = Tested1::from_bits_col(slice);
 
-        assert_eq!(bitfield, [0b01010101].into());
+        assert_eq!(bitset, [0b01010101].into());
     }
 
     #[test]
@@ -769,100 +769,100 @@ mod tests {
 
     #[test]
     fn expand() -> TestResult {
-        let bitfield1 = Tested1::from([0b00011011]);
-        let bitfield2: Tested2 = bitfield1.expand()?;
+        let bitset1 = Tested1::from([0b00011011]);
+        let bitset2: Tested2 = bitset1.expand()?;
 
         let mut arr = [0; 2];
         arr[0] = 0b00011011;
-        assert_eq!(bitfield2, Tested2::from(arr));
+        assert_eq!(bitset2, Tested2::from(arr));
 
-        let bitfield1 = Tested1::from([0b00011011]);
-        let bitfield2: Tested4 = bitfield1.expand()?;
+        let bitset1 = Tested1::from([0b00011011]);
+        let bitset2: Tested4 = bitset1.expand()?;
 
         let mut arr = [0; 4];
         arr[0] = 0b00011011;
-        assert_eq!(bitfield2, Tested4::from(arr));
+        assert_eq!(bitset2, Tested4::from(arr));
 
-        let bitfield1 = Tested1::from([0b00011011]);
-        let bitfield2: Tested8 = bitfield1.expand()?;
+        let bitset1 = Tested1::from([0b00011011]);
+        let bitset2: Tested8 = bitset1.expand()?;
 
         let mut arr = [0; 8];
         arr[0] = 0b00011011;
-        assert_eq!(bitfield2, Tested8::from(arr));
+        assert_eq!(bitset2, Tested8::from(arr));
 
-        let bitfield1 = Tested1::from([0b00011011]);
-        let bitfield2: Tested16 = bitfield1.expand()?;
+        let bitset1 = Tested1::from([0b00011011]);
+        let bitset2: Tested16 = bitset1.expand()?;
 
         let mut arr = [0; 16];
         arr[0] = 0b00011011;
-        assert_eq!(bitfield2, Tested16::from(arr));
+        assert_eq!(bitset2, Tested16::from(arr));
 
-        let bitfield1 = Tested1::from([0b00011011]);
-        let bitfield2: TestedOdd = bitfield1.expand()?;
+        let bitset1 = Tested1::from([0b00011011]);
+        let bitset2: TestedOdd = bitset1.expand()?;
 
         let mut arr = [0; 3];
         arr[0] = 0b00011011;
-        assert_eq!(bitfield2, TestedOdd::from(arr));
+        assert_eq!(bitset2, TestedOdd::from(arr));
 
         Ok(())
     }
 
     #[test]
     fn fast_expand() -> TestResult {
-        let bitfield1 = Tested1::from([0b00011011]);
-        let bitfield2: Tested2 = bitfield1.expand_optimized()?;
+        let bitset1 = Tested1::from([0b00011011]);
+        let bitset2: Tested2 = bitset1.expand_optimized()?;
 
         let mut arr = [0; 2];
         arr[0] = 0b00011011;
-        assert_eq!(bitfield2, Tested2::from(arr));
+        assert_eq!(bitset2, Tested2::from(arr));
 
-        let bitfield1 = Tested1::from([0b00011011]);
-        let bitfield2: Tested4 = bitfield1.expand_optimized()?;
+        let bitset1 = Tested1::from([0b00011011]);
+        let bitset2: Tested4 = bitset1.expand_optimized()?;
 
         let mut arr = [0; 4];
         arr[0] = 0b00011011;
-        assert_eq!(bitfield2, Tested4::from(arr));
+        assert_eq!(bitset2, Tested4::from(arr));
 
-        let bitfield1 = Tested1::from([0b00011011]);
-        let bitfield2: Tested8 = bitfield1.expand_optimized()?;
+        let bitset1 = Tested1::from([0b00011011]);
+        let bitset2: Tested8 = bitset1.expand_optimized()?;
 
         let mut arr = [0; 8];
         arr[0] = 0b00011011;
-        assert_eq!(bitfield2, Tested8::from(arr));
+        assert_eq!(bitset2, Tested8::from(arr));
 
-        let bitfield1 = Tested1::from([0b00011011]);
-        let bitfield2: Tested16 = bitfield1.expand_optimized()?;
+        let bitset1 = Tested1::from([0b00011011]);
+        let bitset2: Tested16 = bitset1.expand_optimized()?;
 
         let mut arr = [0; 16];
         arr[0] = 0b00011011;
-        assert_eq!(bitfield2, Tested16::from(arr));
+        assert_eq!(bitset2, Tested16::from(arr));
 
-        let bitfield1 = Tested1::from([0b00011011]);
-        let bitfield2: TestedOdd = bitfield1.expand_optimized()?;
+        let bitset1 = Tested1::from([0b00011011]);
+        let bitset2: TestedOdd = bitset1.expand_optimized()?;
 
         let mut arr = [0; 3];
         arr[0] = 0b00011011;
-        assert_eq!(bitfield2, TestedOdd::from(arr));
+        assert_eq!(bitset2, TestedOdd::from(arr));
 
         Ok(())
     }
 
     #[test]
     fn combine() -> TestResult {
-        let bitfield1 = Tested1::from([0b00011011]);
-        let bitfield2 = Tested1::from([0b11101000]);
+        let bitset1 = Tested1::from([0b00011011]);
+        let bitset2 = Tested1::from([0b11101000]);
 
-        let bitfield3: Tested2 = bitfield1.combine(bitfield2)?;
+        let bitset3: Tested2 = bitset1.combine(bitset2)?;
 
-        assert_eq!(bitfield3, Tested2::from([0b00011011, 0b11101000]));
+        assert_eq!(bitset3, Tested2::from([0b00011011, 0b11101000]));
 
-        let bitfield1 = Tested1::from([0b00011011]);
-        let bitfield2 = Tested2::from([0b11011011, 0b11101000]);
+        let bitset1 = Tested1::from([0b00011011]);
+        let bitset2 = Tested2::from([0b11011011, 0b11101000]);
 
-        let bitfield3: TestedOdd = bitfield1.combine(bitfield2)?;
+        let bitset3: TestedOdd = bitset1.combine(bitset2)?;
 
         assert_eq!(
-            bitfield3,
+            bitset3,
             TestedOdd::from([0b00011011, 0b11011011, 0b11101000])
         );
         Ok(())
@@ -870,36 +870,36 @@ mod tests {
 
     #[test]
     fn split() -> TestResult {
-        let bitfield1 = Tested2::from([0b00011011, 0b11101000]);
-        let (bitfield2, bitfield3): (Tested1, Tested1) = bitfield1.split()?;
+        let bitset1 = Tested2::from([0b00011011, 0b11101000]);
+        let (bitset2, bitset3): (Tested1, Tested1) = bitset1.split()?;
 
-        assert_eq!(bitfield2, Tested1::from([0b00011011]));
-        assert_eq!(bitfield3, Tested1::from([0b11101000]));
+        assert_eq!(bitset2, Tested1::from([0b00011011]));
+        assert_eq!(bitset3, Tested1::from([0b11101000]));
 
-        let bitfield1 = TestedOdd::from([0b00011011, 0b11011011, 0b11101000]);
-        let (bitfield2, bitfield3): (Tested1, Tested2) = bitfield1.split()?;
+        let bitset1 = TestedOdd::from([0b00011011, 0b11011011, 0b11101000]);
+        let (bitset2, bitset3): (Tested1, Tested2) = bitset1.split()?;
 
-        assert_eq!(bitfield2, Tested1::from([0b00011011]));
-        assert_eq!(bitfield3, Tested2::from([0b11011011, 0b11101000]));
+        assert_eq!(bitset2, Tested1::from([0b00011011]));
+        assert_eq!(bitset3, Tested2::from([0b11011011, 0b11101000]));
         Ok(())
     }
 
     #[test]
     fn fast_combine() -> TestResult {
-        let bitfield1 = Tested1::from([0b00011011]);
-        let bitfield2 = Tested1::from([0b11101000]);
+        let bitset1 = Tested1::from([0b00011011]);
+        let bitset2 = Tested1::from([0b11101000]);
 
-        let bitfield3: Tested2 = bitfield1.combine_optimized(bitfield2)?;
+        let bitset3: Tested2 = bitset1.combine_optimized(bitset2)?;
 
-        assert_eq!(bitfield3, Tested2::from([0b00011011, 0b11101000]));
+        assert_eq!(bitset3, Tested2::from([0b00011011, 0b11101000]));
 
-        let bitfield1 = Tested1::from([0b00011011]);
-        let bitfield2 = Tested2::from([0b11011011, 0b11101000]);
+        let bitset1 = Tested1::from([0b00011011]);
+        let bitset2 = Tested2::from([0b11011011, 0b11101000]);
 
-        let bitfield3: TestedOdd = bitfield1.combine_optimized(bitfield2)?;
+        let bitset3: TestedOdd = bitset1.combine_optimized(bitset2)?;
 
         assert_eq!(
-            bitfield3,
+            bitset3,
             TestedOdd::from([0b00011011, 0b11011011, 0b11101000])
         );
         Ok(())
@@ -907,43 +907,43 @@ mod tests {
 
     #[test]
     fn fast_split() -> TestResult {
-        let bitfield1 = Tested2::from([0b00011011, 0b11101000]);
-        let (bitfield2, bitfield3): (Tested1, Tested1) = bitfield1.split_optimized()?;
+        let bitset1 = Tested2::from([0b00011011, 0b11101000]);
+        let (bitset2, bitset3): (Tested1, Tested1) = bitset1.split_optimized()?;
 
-        assert_eq!(bitfield2, Tested1::from([0b00011011]));
-        assert_eq!(bitfield3, Tested1::from([0b11101000]));
+        assert_eq!(bitset2, Tested1::from([0b00011011]));
+        assert_eq!(bitset3, Tested1::from([0b11101000]));
 
-        let bitfield1 = TestedOdd::from([0b00011011, 0b11011011, 0b11101000]);
-        let (bitfield2, bitfield3): (Tested1, Tested2) = bitfield1.split_optimized()?;
+        let bitset1 = TestedOdd::from([0b00011011, 0b11011011, 0b11101000]);
+        let (bitset2, bitset3): (Tested1, Tested2) = bitset1.split_optimized()?;
 
-        assert_eq!(bitfield2, Tested1::from([0b00011011]));
-        assert_eq!(bitfield3, Tested2::from([0b11011011, 0b11101000]));
+        assert_eq!(bitset2, Tested1::from([0b00011011]));
+        assert_eq!(bitset3, Tested2::from([0b11011011, 0b11101000]));
         Ok(())
     }
 
     #[test]
     fn display() {
-        let bytefield = ByteField::<1>::from([170; 1]);
-        println!("{bytefield}");
+        let byteset = Byteset::<1>::from([170; 1]);
+        println!("{byteset}");
 
-        println!("Binary representation: {:#0b}", bytefield);
-        println!("Octal representation: {:#0o}", bytefield);
-        println!("LowerHex representation: {:#0x}", bytefield);
-        println!("UpperHex representation: {:#0X}", bytefield);
+        println!("Binary representation: {:#0b}", byteset);
+        println!("Octal representation: {:#0o}", byteset);
+        println!("LowerHex representation: {:#0x}", byteset);
+        println!("UpperHex representation: {:#0X}", byteset);
 
-        let bytefield = ByteField::<2>::from([170; 2]);
-        println!("{bytefield}");
-        let bytefield = ByteField::<3>::from([170; 3]);
-        println!("{bytefield}");
-        let bytefield = ByteField::<4>::from([170; 4]);
-        println!("{bytefield}");
-        let bytefield = ByteField::<5>::from([170; 5]);
-        println!("{bytefield}");
-        let bytefield = ByteField::<6>::from([170; 6]);
-        println!("{bytefield}");
-        let bytefield = ByteField::<7>::from([170; 7]);
-        println!("{bytefield}");
-        let bytefield = ByteField::<8>::from([170; 8]);
-        println!("{bytefield}");
+        let byteset = Byteset::<2>::from([170; 2]);
+        println!("{byteset}");
+        let byteset = Byteset::<3>::from([170; 3]);
+        println!("{byteset}");
+        let byteset = Byteset::<4>::from([170; 4]);
+        println!("{byteset}");
+        let byteset = Byteset::<5>::from([170; 5]);
+        println!("{byteset}");
+        let byteset = Byteset::<6>::from([170; 6]);
+        println!("{byteset}");
+        let byteset = Byteset::<7>::from([170; 7]);
+        println!("{byteset}");
+        let byteset = Byteset::<8>::from([170; 8]);
+        println!("{byteset}");
     }
 }

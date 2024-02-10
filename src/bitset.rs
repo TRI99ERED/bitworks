@@ -1,4 +1,4 @@
-//! Module containing [`Bitfield`].
+//! Module containing [`Bitset`].
 
 use crate::{
     bit::{Bit, BitMut, BitRef},
@@ -8,48 +8,48 @@ use crate::{
 
 pub(crate) const fn bit_len<T>() -> usize
 where
-    T: Bitfield,
+    T: Bitset,
 {
     T::BYTE_SIZE * 8
 }
 
 pub(crate) const fn byte_index<T>(index: Index<T>) -> usize
 where
-    T: Bitfield,
+    T: Bitset,
 {
     index.into_inner() / 8
 }
 
 pub(crate) const fn bit_index<T>(index: Index<T>) -> usize
 where
-    T: Bitfield,
+    T: Bitset,
 {
     index.into_inner() % 8
 }
 
 pub(crate) const fn bitmask<T>(index: Index<T>) -> u8
 where
-    T: Bitfield,
+    T: Bitset,
 {
     1 << bit_index(index)
 }
 
-/// Trait defining common bitfield logic.
+/// Trait defining common bitset logic.
 ///
 /// This trait is not meant to be implmented on enums, as beyond some extremely rare cases,
-/// they won't produce a valid bitfield.
+/// they won't produce a valid bitset.
 ///
-/// It's recommended to prefer implementing this trait for one-field structs, where that sole field is
-/// representing the bitfield, as that would allow you to implement [`LeftAligned`] marker on it safely.
+/// It's recommended to prefer implementing this trait for one-set structs, where that sole set is
+/// representing the bitset, as that would allow you to implement [`LeftAligned`] marker on it safely.
 /// If you want to get the benefits of `LeftAligned` on any struct, make it a wrapper around
-/// one of the `LeftAligned` types and use it's methods. All built-in `Bitfield` types are `LeftAligned`.
-pub trait Bitfield: Sized + Clone + PartialEq + Eq
+/// one of the `LeftAligned` types and use it's methods. All built-in `Bitset` types are `LeftAligned`.
+pub trait Bitset: Sized + Clone + PartialEq + Eq
 where
     Self::Repr: Sized + Clone + PartialEq + Eq,
 {
     type Repr;
 
-    /// Number of bytes (`size` in bytes) of the `Bitfield`.
+    /// Number of bytes (`size` in bytes) of the `Bitset`.
     ///
     /// If the implementor contains additional data, its bytes
     /// should *NOT* be included when initializing this constant.
@@ -61,9 +61,9 @@ where
     /// # use std::error::Error;
     /// #
     /// # fn main() -> Result<(), Box<dyn Error>> {
-    /// use simple_bitfield::prelude::{Bitfield, Bitfield8};
+    /// use bitworks::prelude::{Bitset, Bitset8};
     ///
-    /// let size_in_bytes = Bitfield8::BYTE_SIZE;
+    /// let size_in_bytes = Bitset8::BYTE_SIZE;
     ///
     /// assert_eq!(size_in_bytes, 1);
     /// #   Ok(())
@@ -71,52 +71,52 @@ where
     /// ```
     const BYTE_SIZE: usize;
 
-    /// Value of the `Bitfield` with the least significant bit set.
+    /// Value of the `Bitset` with the least significant bit set.
     ///
     /// # Examples
     /// ```rust
     /// # use std::error::Error;
     /// #
     /// # fn main() -> Result<(), Box<dyn Error>> {
-    /// use simple_bitfield::prelude::{Bitfield, Bitfield8};
+    /// use bitworks::prelude::{Bitset, Bitset8};
     ///
-    /// let bitfield = Bitfield8::ONE;
+    /// let bitset = Bitset8::ONE;
     ///
-    /// assert_eq!(bitfield.into_inner(), 0b00000001);
+    /// assert_eq!(bitset.into_inner(), 0b00000001);
     /// #   Ok(())
     /// # }
     /// ```
     const ONE: Self;
 
-    /// Value of the `Bitfield` with every bit not set.
+    /// Value of the `Bitset` with every bit not set.
     ///
     /// # Examples
     /// ```rust
     /// # use std::error::Error;
     /// #
     /// # fn main() -> Result<(), Box<dyn Error>> {
-    /// use simple_bitfield::prelude::{Bitfield, Bitfield8};
+    /// use bitworks::prelude::{Bitset, Bitset8};
     ///
-    /// let bitfield = Bitfield8::NONE;
+    /// let bitset = Bitset8::NONE;
     ///
-    /// assert_eq!(bitfield.into_inner(), 0b00000000);
+    /// assert_eq!(bitset.into_inner(), 0b00000000);
     /// #   Ok(())
     /// # }
     /// ```
     const NONE: Self;
 
-    /// Value of the `Bitfield` with every bit set.
+    /// Value of the `Bitset` with every bit set.
     ///
     /// # Examples
     /// ```rust
     /// # use std::error::Error;
     /// #
     /// # fn main() -> Result<(), Box<dyn Error>> {
-    /// use simple_bitfield::prelude::{Bitfield, Bitfield8};
+    /// use bitworks::prelude::{Bitset, Bitset8};
     ///
-    /// let bitfield = Bitfield8::ALL;
+    /// let bitset = Bitset8::ALL;
     ///
-    /// assert_eq!(bitfield.into_inner(), 0b11111111);
+    /// assert_eq!(bitset.into_inner(), 0b11111111);
     /// #   Ok(())
     /// # }
     /// ```
@@ -124,7 +124,7 @@ where
 
     fn new(value: Self::Repr) -> Self;
 
-    /// Build `Bitfield` from a mutable reference.<br/>
+    /// Build `Bitset` from a mutable reference.<br/>
     /// Useful for chaining bit modifications.
     ///
     /// # Examples
@@ -132,15 +132,15 @@ where
     /// # use std::error::Error;
     /// #
     /// # fn main() -> Result<(), Box<dyn Error>> {
-    /// use simple_bitfield::prelude::*;
+    /// use bitworks::prelude::*;
     ///
-    /// let bitfield = Bitfield8::NONE
+    /// let bitset = Bitset8::NONE
     ///     .set_bit(0.try_into()?, One)
     ///     .check_bit(6.try_into()?)
     ///     .uncheck_bit(0.try_into()?)
     ///     .build();
     ///
-    /// assert_eq!(bitfield.into_inner(), 0b01000000);
+    /// assert_eq!(bitset.into_inner(), 0b01000000);
     /// #   Ok(())
     /// # }
     /// ```
@@ -149,31 +149,31 @@ where
         self.clone()
     }
 
-    /// Constructs `Bitfield` from [`Index`].
+    /// Constructs `Bitset` from [`Index`].
     ///
     /// # Examples
     /// ```rust
     /// # use std::error::Error;
     /// #
     /// # fn main() -> Result<(), Box<dyn Error>> {
-    /// use simple_bitfield::prelude::{Bitfield, Bitfield8, Index};
+    /// use bitworks::prelude::{Bitset, Bitset8, Index};
     ///
     /// let index = 0.try_into()?;
-    /// let bitfield = Bitfield8::from_index(&index);
+    /// let bitset = Bitset8::from_index(&index);
     ///
-    /// assert_eq!(bitfield.into_inner(), 0b00000001);
+    /// assert_eq!(bitset.into_inner(), 0b00000001);
     ///
     /// let index = 3.try_into()?;
-    /// let bitfield = Bitfield8::from_index(&index);
+    /// let bitset = Bitset8::from_index(&index);
     ///
-    /// assert_eq!(bitfield.into_inner(), 0b00001000);
+    /// assert_eq!(bitset.into_inner(), 0b00001000);
     /// #   Ok(())
     /// # }
     /// ```
     fn from_index(index: &Index<Self>) -> Self;
 
-    /// Expands `Bitfield` to a bigger one.<br/>
-    /// If available, you should prefer using [`Bitfield::expand_optimized`].
+    /// Expands `Bitset` to a bigger one.<br/>
+    /// If available, you should prefer using [`Bitset::expand_optimized`].
     ///
     /// # Errors
     /// Size of `Res` is smaller, than size of `Self`.
@@ -183,18 +183,18 @@ where
     /// # use std::error::Error;
     /// #
     /// # fn main() -> Result<(), Box<dyn Error>> {
-    /// use simple_bitfield::prelude::{Bitfield, Bitfield8, Bitfield16};
+    /// use bitworks::prelude::{Bitset, Bitset8, Bitset16};
     ///
-    /// let bitfield8 = Bitfield8::from(0b00000001);
-    /// let bitfield16: Bitfield16 = bitfield8.expand()?;
+    /// let bitset8 = Bitset8::from(0b00000001);
+    /// let bitset16: Bitset16 = bitset8.expand()?;
     ///
-    /// assert_eq!(bitfield16.into_inner(), 0b0000000000000001);
+    /// assert_eq!(bitset16.into_inner(), 0b0000000000000001);
     /// #   Ok(())
     /// # }
     /// ```
     fn expand<Res>(self) -> ConvResult<Res>
     where
-        Res: Bitfield,
+        Res: Bitset,
     {
         if Self::BYTE_SIZE <= Res::BYTE_SIZE {
             let result = self
@@ -207,13 +207,13 @@ where
             Ok(result)
         } else {
             Err(ConvError::new(
-                ConvTarget::Field(bit_len::<Self>()),
-                ConvTarget::Field(bit_len::<Res>()),
+                ConvTarget::Set(bit_len::<Self>()),
+                ConvTarget::Set(bit_len::<Res>()),
             ))
         }
     }
 
-    /// Expands `Bitfield` to a bigger one. Uses `unsafe` optimizations.
+    /// Expands `Bitset` to a bigger one. Uses `unsafe` optimizations.
     ///
     /// # Errors
     /// Size of `Res` is smaller, than size of `Self`.
@@ -223,19 +223,19 @@ where
     /// # use std::error::Error;
     /// #
     /// # fn main() -> Result<(), Box<dyn Error>> {
-    /// use simple_bitfield::prelude::{Bitfield, Bitfield8, Bitfield16};
+    /// use bitworks::prelude::{Bitset, Bitset8, Bitset16};
     ///
-    /// let bitfield8 = Bitfield8::from(0b00000001);
-    /// let bitfield16: Bitfield16 = bitfield8.expand_optimized()?;
+    /// let bitset8 = Bitset8::from(0b00000001);
+    /// let bitset16: Bitset16 = bitset8.expand_optimized()?;
     ///
-    /// assert_eq!(bitfield16.into_inner(), 0b0000000000000001);
+    /// assert_eq!(bitset16.into_inner(), 0b0000000000000001);
     /// #   Ok(())
     /// # }
     /// ```
     fn expand_optimized<Res>(self) -> ConvResult<Res>
     where
         Self: LeftAligned,
-        Res: Bitfield + LeftAligned,
+        Res: Bitset + LeftAligned,
     {
         if Self::BYTE_SIZE <= Res::BYTE_SIZE {
             let mut result = Res::NONE.clone();
@@ -250,13 +250,13 @@ where
             Ok(result)
         } else {
             Err(ConvError::new(
-                ConvTarget::Field(bit_len::<Self>()),
-                ConvTarget::Field(bit_len::<Res>()),
+                ConvTarget::Set(bit_len::<Self>()),
+                ConvTarget::Set(bit_len::<Res>()),
             ))
         }
     }
 
-    /// Builds `Bitfield` from [`slice`] over [`bool`]ean values.<br/>
+    /// Builds `Bitset` from collection of [`Bit`] values.<br/>
     /// Maintains the same index order: leftmost `slice` item becomes the least significant bit.
     ///
     /// # Examples
@@ -264,24 +264,25 @@ where
     /// # use std::error::Error;
     /// #
     /// # fn main() -> Result<(), Box<dyn Error>> {
-    /// use simple_bitfield::prelude::*;
+    /// use bitworks::prelude::*;
     ///
     /// // Same index order
     /// let slice: &[Bit] = &[One, Zero, One, Zero, One, Zero, One, Zero];
-    /// let bitfield = Bitfield8::from_bits_ref(slice);
+    /// let bitset = Bitset8::from_bits_col(slice);
     ///
-    /// assert_eq!(bitfield.into_inner(), 0b01010101);
+    /// assert_eq!(bitset.into_inner(), 0b01010101);
     /// #   Ok(())
     /// # }
     /// ```
-    fn from_bits_ref<'a, I>(iter: I) -> Self
+    fn from_bits_col<'a, I>(iter: I) -> Self
     where
+        Self: 'a,
         I: IntoIterator<Item = &'a Bit>,
     {
         iter.into_iter()
             .take(bit_len::<Self>())
             .enumerate()
-            .map(|(i, &b)| (Index::<Self>::try_from(i).unwrap(), b))
+            .map(|(i, b)| (Index::<Self>::try_from(i).unwrap(), *b))
             .fold(&mut Self::NONE.clone(), |acc, (i, b)| acc.set_bit(i, b))
             .build()
     }
@@ -293,11 +294,11 @@ where
     /// # use std::error::Error;
     /// #
     /// # fn main() -> Result<(), Box<dyn Error>> {
-    /// use simple_bitfield::prelude::{Bitfield, Bitfield8};
+    /// use bitworks::prelude::{Bitset, Bitset8};
     ///
-    /// let bitfield = Bitfield8::from(0b00000111);
+    /// let bitset = Bitset8::from(0b00000111);
     ///
-    /// assert_eq!(bitfield.count_ones(), 3);
+    /// assert_eq!(bitset.count_ones(), 3);
     /// #   Ok(())
     /// # }
     /// ```
@@ -319,11 +320,11 @@ where
     /// # use std::error::Error;
     /// #
     /// # fn main() -> Result<(), Box<dyn Error>> {
-    /// use simple_bitfield::prelude::{Bitfield, Bitfield8};
+    /// use bitworks::prelude::{Bitset, Bitset8};
     ///
-    /// let bitfield = Bitfield8::from(0b00000111);
+    /// let bitset = Bitset8::from(0b00000111);
     ///
-    /// assert_eq!(bitfield.count_zeros(), 5);
+    /// assert_eq!(bitset.count_zeros(), 5);
     /// #   Ok(())
     /// # }
     /// ```
@@ -338,16 +339,16 @@ where
         })
     }
 
-    /// Sets bit at [`index`][Index] to value. Returns a mutable reference to the `Bitfield`.
+    /// Sets bit at [`index`][Index] to value. Returns a mutable reference to the `Bitset`.
     ///
     /// # Examples
     /// ```rust
     /// # use std::error::Error;
     /// #
     /// # fn main() -> Result<(), Box<dyn Error>> {
-    /// use simple_bitfield::prelude::*;
+    /// use bitworks::prelude::*;
     ///
-    /// let bitfield = Bitfield8::from(0b01010100)
+    /// let bitset = Bitset8::from(0b01010100)
     ///     .set_bit(1.try_into()?, One)
     ///     .set_bit(2.try_into()?, Zero)
     ///     .set_bit(3.try_into()?, One)
@@ -357,7 +358,7 @@ where
     ///     .set_bit(7.try_into()?, One)
     ///     .build();
     ///
-    /// assert_eq!(bitfield.into_inner(), 0b10101010);
+    /// assert_eq!(bitset.into_inner(), 0b10101010);
     /// #   Ok(())
     /// # }
     /// ```
@@ -371,16 +372,16 @@ where
         self
     }
 
-    /// Sets bit at [`index`][Index] to 1. Returns a mutable reference to the `Bitfield`.
+    /// Sets bit at [`index`][Index] to 1. Returns a mutable reference to the `Bitset`.
     ///
     /// # Examples
     /// ```rust
     /// # use std::error::Error;
     /// #
     /// # fn main() -> Result<(), Box<dyn Error>> {
-    /// use simple_bitfield::prelude::{Bitfield, Bitfield8};
+    /// use bitworks::prelude::{Bitset, Bitset8};
     ///
-    /// let bitfield = Bitfield8::NONE
+    /// let bitset = Bitset8::NONE
     ///     .clone()
     ///     .check_bit(1.try_into()?)
     ///     .check_bit(3.try_into()?)
@@ -388,22 +389,22 @@ where
     ///     .check_bit(7.try_into()?)
     ///     .build();
     ///
-    /// assert_eq!(bitfield.into_inner(), 0b10101010);
+    /// assert_eq!(bitset.into_inner(), 0b10101010);
     /// #   Ok(())
     /// # }
     /// ```
     fn check_bit(&mut self, index: Index<Self>) -> &mut Self;
 
-    /// Sets bit at [`index`][Index] to 0. Returns a mutable reference to the `Bitfield`.
+    /// Sets bit at [`index`][Index] to 0. Returns a mutable reference to the `Bitset`.
     ///
     /// # Examples
     /// ```rust
     /// # use std::error::Error;
     /// #
     /// # fn main() -> Result<(), Box<dyn Error>> {
-    /// use simple_bitfield::prelude::{Bitfield, Bitfield8};
+    /// use bitworks::prelude::{Bitset, Bitset8};
     ///
-    /// let bitfield = Bitfield8::ALL
+    /// let bitset = Bitset8::ALL
     ///     .clone()
     ///     .uncheck_bit(0.try_into()?)
     ///     .uncheck_bit(2.try_into()?)
@@ -411,7 +412,7 @@ where
     ///     .uncheck_bit(6.try_into()?)
     ///     .build();
     ///
-    /// assert_eq!(bitfield.into_inner(), 0b10101010);
+    /// assert_eq!(bitset.into_inner(), 0b10101010);
     /// #   Ok(())
     /// # }
     /// ```
@@ -424,12 +425,12 @@ where
     /// # use std::error::Error;
     /// #
     /// # fn main() -> Result<(), Box<dyn Error>> {
-    /// use simple_bitfield::prelude::*;
+    /// use bitworks::prelude::*;
     ///
-    /// let bitfield = Bitfield8::NONE.set_bit(1.try_into()?, One).build();
+    /// let bitset = Bitset8::NONE.set_bit(1.try_into()?, One).build();
     ///
-    /// assert_eq!(bitfield.bit(0.try_into()?), Zero);
-    /// assert_eq!(bitfield.bit(1.try_into()?), One);
+    /// assert_eq!(bitset.bit(0.try_into()?), Zero);
+    /// assert_eq!(bitset.bit(1.try_into()?), One);
     /// #   Ok(())
     /// # }
     /// ```
@@ -442,12 +443,12 @@ where
     /// # use std::error::Error;
     /// #
     /// # fn main() -> Result<(), Box<dyn Error>> {
-    /// use simple_bitfield::prelude::*;
+    /// use bitworks::prelude::*;
     ///
-    /// let bitfield = Bitfield8::NONE.set_bit(1.try_into()?, One).build();
+    /// let bitset = Bitset8::NONE.set_bit(1.try_into()?, One).build();
     ///
-    /// assert_eq!(*bitfield.bit_ref(0.try_into()?), Zero);
-    /// assert_eq!(*bitfield.bit_ref(1.try_into()?), One);
+    /// assert_eq!(*bitset.bit_ref(0.try_into()?), Zero);
+    /// assert_eq!(*bitset.bit_ref(1.try_into()?), One);
     /// #   Ok(())
     /// # }
     /// ```
@@ -460,23 +461,23 @@ where
     /// # use std::error::Error;
     /// #
     /// # fn main() -> Result<(), Box<dyn Error>> {
-    /// use simple_bitfield::prelude::*;
+    /// use bitworks::prelude::*;
     ///
-    /// let mut bitfield = Bitfield8::NONE;
+    /// let mut bitset = Bitset8::NONE;
     ///
-    /// assert_eq!(bitfield.bit(0.try_into()?), Zero);
-    /// assert_eq!(bitfield.bit(1.try_into()?), Zero);
+    /// assert_eq!(bitset.bit(0.try_into()?), Zero);
+    /// assert_eq!(bitset.bit(1.try_into()?), Zero);
     ///
-    /// *bitfield.bit_mut(0.try_into()?) = One;
+    /// *bitset.bit_mut(0.try_into()?) = One;
     ///
-    /// assert_eq!(bitfield.bit(0.try_into()?), One);
-    /// assert_eq!(bitfield.bit(1.try_into()?), Zero);
+    /// assert_eq!(bitset.bit(0.try_into()?), One);
+    /// assert_eq!(bitset.bit(1.try_into()?), Zero);
     /// #   Ok(())
     /// # }
     /// ```
     fn bit_mut(&mut self, index: Index<Self>) -> BitMut<'_, Self>;
 
-    /// Returns Set complement (`self′`) of `Bitfield`.<br/>
+    /// Returns Set complement (`self′`) of `Bitset`.<br/>
     /// Alias for [`!`] operator
     ///
     /// # Examples
@@ -484,9 +485,9 @@ where
     /// # use std::error::Error;
     /// #
     /// # fn main() -> Result<(), Box<dyn Error>> {
-    /// use simple_bitfield::prelude::{Bitfield, Bitfield8};
+    /// use bitworks::prelude::{Bitset, Bitset8};
     ///
-    /// let a = Bitfield8::from(0b11110000);
+    /// let a = Bitset8::from(0b11110000);
     /// let b = a.complement();
     ///
     /// assert_eq!(a.into_inner(), 0b11110000);
@@ -496,7 +497,7 @@ where
     /// ```
     fn complement(self) -> Self;
 
-    /// Returns Set union (`self ∪ other`) of two `Bitfield`s.<br/>
+    /// Returns Set union (`self ∪ other`) of two `Bitset`s.<br/>
     /// Alias for [`|`] operator
     ///
     /// # Examples
@@ -504,10 +505,10 @@ where
     /// # use std::error::Error;
     /// #
     /// # fn main() -> Result<(), Box<dyn Error>> {
-    /// use simple_bitfield::prelude::{Bitfield, Bitfield8};
+    /// use bitworks::prelude::{Bitset, Bitset8};
     ///
-    /// let a = Bitfield8::from(0b11001100);
-    /// let b = Bitfield8::from(0b11110000);
+    /// let a = Bitset8::from(0b11001100);
+    /// let b = Bitset8::from(0b11110000);
     /// let c = a.union(b);
     ///
     /// assert_eq!(c.into_inner(), 0b11111100);
@@ -516,7 +517,7 @@ where
     /// ```
     fn union(self, other: Self) -> Self;
 
-    /// Returns Set intersection (`self ∩ other`) of two `Bitfield`s.<br/>
+    /// Returns Set intersection (`self ∩ other`) of two `Bitset`s.<br/>
     /// Alias for [`&`] operator
     ///
     /// # Examples
@@ -524,10 +525,10 @@ where
     /// # use std::error::Error;
     /// #
     /// # fn main() -> Result<(), Box<dyn Error>> {
-    /// use simple_bitfield::prelude::{Bitfield, Bitfield8};
+    /// use bitworks::prelude::{Bitset, Bitset8};
     ///
-    /// let a = Bitfield8::from(0b11001100);
-    /// let b = Bitfield8::from(0b11110000);
+    /// let a = Bitset8::from(0b11001100);
+    /// let b = Bitset8::from(0b11110000);
     /// let c = a.intersection(b);
     ///
     /// assert_eq!(c.into_inner(), 0b11000000);
@@ -536,17 +537,17 @@ where
     /// ```
     fn intersection(self, other: Self) -> Self;
 
-    /// Returns Set difference (`self \ other`) of two `Bitfield`s.
+    /// Returns Set difference (`self \ other`) of two `Bitset`s.
     ///
     /// # Examples
     /// ```rust
     /// # use std::error::Error;
     /// #
     /// # fn main() -> Result<(), Box<dyn Error>> {
-    /// use simple_bitfield::prelude::{Bitfield, Bitfield8};
+    /// use bitworks::prelude::{Bitset, Bitset8};
     ///
-    /// let a = Bitfield8::from(0b11001100);
-    /// let b = Bitfield8::from(0b11110000);
+    /// let a = Bitset8::from(0b11001100);
+    /// let b = Bitset8::from(0b11110000);
     /// let c = a.difference(b);
     ///
     /// assert_eq!(c.into_inner(), 0b00001100);
@@ -558,7 +559,7 @@ where
         self.intersection(other.complement())
     }
 
-    /// Returns Set symmetric difference (`self Δ other`) of two `Bitfield`s.<br/>
+    /// Returns Set symmetric difference (`self Δ other`) of two `Bitset`s.<br/>
     /// Alias for [`^`] operator
     ///
     /// # Examples
@@ -566,10 +567,10 @@ where
     /// # use std::error::Error;
     /// #
     /// # fn main() -> Result<(), Box<dyn Error>> {
-    /// use simple_bitfield::prelude::{Bitfield, Bitfield8};
+    /// use bitworks::prelude::{Bitset, Bitset8};
     ///
-    /// let a = Bitfield8::from(0b11001100); // implements Bitfield
-    /// let b = Bitfield8::from(0b11110000);
+    /// let a = Bitset8::from(0b11001100); // implements Bitset
+    /// let b = Bitset8::from(0b11110000);
     /// let c = a.sym_difference(b);
     ///
     /// assert_eq!(c.into_inner(), 0b00111100);
@@ -588,8 +589,8 @@ where
         self.intersection(other) != Self::NONE
     }
 
-    /// Combines two `Bitfield`s to create a bigger one.<br/>
-    /// If available, you should prefer using [`Bitfield::combine_optimized`].
+    /// Combines two `Bitset`s to create a bigger one.<br/>
+    /// If available, you should prefer using [`Bitset::combine_optimized`].
     ///
     /// # Errors
     /// Size of `Res` is smaller, than the sum of size of `Self` and size of `Other`.
@@ -599,20 +600,20 @@ where
     /// # use std::error::Error;
     /// #
     /// # fn main() -> Result<(), Box<dyn Error>> {
-    /// use simple_bitfield::prelude::{Bitfield, Bitfield8, Bitfield16};
+    /// use bitworks::prelude::{Bitset, Bitset8, Bitset16};
     ///
-    /// let bitfield8_1 = Bitfield8::from(0b00000001);
-    /// let bitfield8_2 = Bitfield8::from(0b00000011);
-    /// let bitfield16: Bitfield16 = bitfield8_1.combine(bitfield8_2)?;
+    /// let bitset8_1 = Bitset8::from(0b00000001);
+    /// let bitset8_2 = Bitset8::from(0b00000011);
+    /// let bitset16: Bitset16 = bitset8_1.combine(bitset8_2)?;
     ///
-    /// assert_eq!(bitfield16.into_inner(), 0b0000001100000001);
+    /// assert_eq!(bitset16.into_inner(), 0b0000001100000001);
     /// #   Ok(())
     /// # }
     /// ```
     fn combine<Other, Res>(self, other: Other) -> ConvResult<Res>
     where
-        Other: Bitfield,
-        Res: Bitfield,
+        Other: Bitset,
+        Res: Bitset,
     {
         let combined = Self::BYTE_SIZE + Other::BYTE_SIZE;
         if Res::BYTE_SIZE == combined {
@@ -632,14 +633,14 @@ where
             Ok(result)
         } else {
             Err(ConvError::new(
-                ConvTarget::Field(combined * 8),
-                ConvTarget::Field(bit_len::<Res>()),
+                ConvTarget::Set(combined * 8),
+                ConvTarget::Set(bit_len::<Res>()),
             ))
         }
     }
 
-    /// Splits `Bitfield` into two smaller ones.<br/>
-    /// If available, you should prefer using [`Bitfield::split_optimized`].
+    /// Splits `Bitset` into two smaller ones.<br/>
+    /// If available, you should prefer using [`Bitset::split_optimized`].
     ///
     /// # Errors
     /// Size of `Self` is smaller, than the sum of size of `Res1` and size of `Res2`.
@@ -649,20 +650,20 @@ where
     /// # use std::error::Error;
     /// #
     /// # fn main() -> Result<(), Box<dyn Error>> {
-    /// use simple_bitfield::prelude::{Bitfield, Bitfield8, Bitfield16};
+    /// use bitworks::prelude::{Bitset, Bitset8, Bitset16};
     ///
-    /// let bitfield16 = Bitfield16::from(0b0000001100000001);
-    /// let (bitfield8_1, bitfield8_2): (Bitfield8, Bitfield8) = bitfield16.split()?;
+    /// let bitset16 = Bitset16::from(0b0000001100000001);
+    /// let (bitset8_1, bitset8_2): (Bitset8, Bitset8) = bitset16.split()?;
     ///
-    /// assert_eq!(bitfield8_1.into_inner(), 0b00000001);
-    /// assert_eq!(bitfield8_2.into_inner(), 0b00000011);
+    /// assert_eq!(bitset8_1.into_inner(), 0b00000001);
+    /// assert_eq!(bitset8_2.into_inner(), 0b00000011);
     /// #   Ok(())
     /// # }
     /// ```
     fn split<Res1, Res2>(self) -> ConvResult<(Res1, Res2)>
     where
-        Res1: Bitfield,
-        Res2: Bitfield,
+        Res1: Bitset,
+        Res2: Bitset,
     {
         let combined = Res1::BYTE_SIZE + Res2::BYTE_SIZE;
         if Self::BYTE_SIZE == combined {
@@ -689,13 +690,13 @@ where
             Ok((result1, result2))
         } else {
             Err(ConvError::new(
-                ConvTarget::Field(bit_len::<Self>()),
-                ConvTarget::Field(combined * 8),
+                ConvTarget::Set(bit_len::<Self>()),
+                ConvTarget::Set(combined * 8),
             ))
         }
     }
 
-    /// Combines two `Bitfield`s to create a bigger one. Uses `unsafe` optimizations.
+    /// Combines two `Bitset`s to create a bigger one. Uses `unsafe` optimizations.
     ///
     /// # Errors
     /// Size of `Res` is smaller, than the sum of size of `Self` and size of `Other`.
@@ -705,21 +706,21 @@ where
     /// # use std::error::Error;
     /// #
     /// # fn main() -> Result<(), Box<dyn Error>> {
-    /// use simple_bitfield::prelude::{Bitfield, Bitfield8, Bitfield16};
+    /// use bitworks::prelude::{Bitset, Bitset8, Bitset16};
     ///
-    /// let bitfield8_1 = Bitfield8::from(0b00000001);
-    /// let bitfield8_2 = Bitfield8::from(0b00000011);
-    /// let bitfield16: Bitfield16 = bitfield8_1.combine_optimized(bitfield8_2)?;
+    /// let bitset8_1 = Bitset8::from(0b00000001);
+    /// let bitset8_2 = Bitset8::from(0b00000011);
+    /// let bitset16: Bitset16 = bitset8_1.combine_optimized(bitset8_2)?;
     ///
-    /// assert_eq!(bitfield16.into_inner(), 0b0000001100000001);
+    /// assert_eq!(bitset16.into_inner(), 0b0000001100000001);
     /// #   Ok(())
     /// # }
     /// ```
     fn combine_optimized<Other, Res>(self, other: Other) -> ConvResult<Res>
     where
         Self: LeftAligned,
-        Other: Bitfield + LeftAligned,
-        Res: Bitfield + LeftAligned,
+        Other: Bitset + LeftAligned,
+        Res: Bitset + LeftAligned,
     {
         let combined = Self::BYTE_SIZE + Other::BYTE_SIZE;
 
@@ -742,13 +743,13 @@ where
             Ok(result)
         } else {
             Err(ConvError::new(
-                ConvTarget::Field(combined * 8),
-                ConvTarget::Field(bit_len::<Res>()),
+                ConvTarget::Set(combined * 8),
+                ConvTarget::Set(bit_len::<Res>()),
             ))
         }
     }
 
-    /// Splits `Bitfield` into two smaller ones. Uses `unsafe` optimizations.
+    /// Splits `Bitset` into two smaller ones. Uses `unsafe` optimizations.
     ///
     /// # Errors
     /// Size of `Self` is smaller, than the sum of size of `Res1` and size of `Res2`.
@@ -758,21 +759,21 @@ where
     /// # use std::error::Error;
     /// #
     /// # fn main() -> Result<(), Box<dyn Error>> {
-    /// use simple_bitfield::prelude::{Bitfield, Bitfield8, Bitfield16};
+    /// use bitworks::prelude::{Bitset, Bitset8, Bitset16};
     ///
-    /// let bitfield16 = Bitfield16::from(0b0000001100000001);
-    /// let (bitfield8_1, bitfield8_2): (Bitfield8, Bitfield8) = bitfield16.split_optimized()?;
+    /// let bitset16 = Bitset16::from(0b0000001100000001);
+    /// let (bitset8_1, bitset8_2): (Bitset8, Bitset8) = bitset16.split_optimized()?;
     ///
-    /// assert_eq!(bitfield8_1.into_inner(), 0b00000001);
-    /// assert_eq!(bitfield8_2.into_inner(), 0b00000011);
+    /// assert_eq!(bitset8_1.into_inner(), 0b00000001);
+    /// assert_eq!(bitset8_2.into_inner(), 0b00000011);
     /// #   Ok(())
     /// # }
     /// ```
     fn split_optimized<Res1, Res2>(self) -> ConvResult<(Res1, Res2)>
     where
         Self: LeftAligned,
-        Res1: Bitfield + LeftAligned,
-        Res2: Bitfield + LeftAligned,
+        Res1: Bitset + LeftAligned,
+        Res2: Bitset + LeftAligned,
     {
         let combined = Res1::BYTE_SIZE + Res2::BYTE_SIZE;
 
@@ -796,23 +797,23 @@ where
             Ok((result1, result2))
         } else {
             Err(ConvError::new(
-                ConvTarget::Field(bit_len::<Self>()),
-                ConvTarget::Field(combined * 8),
+                ConvTarget::Set(bit_len::<Self>()),
+                ConvTarget::Set(combined * 8),
             ))
         }
     }
 
-    /// Returns iterator over bits of the `Bitfield` in [`bool`]ean representation.
+    /// Returns iterator over bits of the `Bitset` in [`Bit`] representation.
     ///
     /// # Examples
     /// ```rust
     /// # use std::error::Error;
     /// #
     /// # fn main() -> Result<(), Box<dyn Error>> {
-    /// use simple_bitfield::prelude::*;
+    /// use bitworks::prelude::*;
     ///
-    /// let bitfield = Bitfield8::from(0b01010100);
-    /// let mut iter = bitfield.bits();
+    /// let bitset = Bitset8::from(0b01010100);
+    /// let mut iter = bitset.bits();
     ///
     /// assert_eq!(iter.next(), Some(Zero)); // 0
     /// assert_eq!(iter.next(), Some(Zero)); // 0
@@ -837,17 +838,17 @@ where
     }
 
     /// Returns iterator over [`BitRef`] holding immutable references
-    /// to bits of the bitfield in [`bool`]ean representation.
+    /// to bits of the bitset.
     ///
     /// # Examples
     /// ```rust
     /// # use std::error::Error;
     /// #
     /// # fn main() -> Result<(), Box<dyn Error>> {
-    /// use simple_bitfield::prelude::*;
+    /// use bitworks::prelude::*;
     ///
-    /// let bitfield = Bitfield8::from(0b01010100);
-    /// let mut iter = bitfield.bits_ref();
+    /// let bitset = Bitset8::from(0b01010100);
+    /// let mut iter = bitset.bits_ref();
     ///
     /// assert_eq!(iter.next().as_deref(), Some(&Zero)); // 0
     /// assert_eq!(iter.next().as_deref(), Some(&Zero)); // 0
@@ -869,23 +870,23 @@ where
     }
 
     /// Returns iterator over [`BitMut`] holding mutable references
-    /// to bits of the bitfield in [`bool`]ean representation.
+    /// to bits of the bitset.
     ///
     /// # Examples
     /// ```rust
     /// # use std::error::Error;
     /// #
     /// # fn main() -> Result<(), Box<dyn Error>> {
-    /// use simple_bitfield::prelude::{Bitfield, Bitfield8};
+    /// use bitworks::prelude::{Bitset, Bitset8};
     ///
-    /// let mut bitfield = Bitfield8::from(0b01010100);
-    /// let mut iter = bitfield.bits_mut();
+    /// let mut bitset = Bitset8::from(0b01010100);
+    /// let mut iter = bitset.bits_mut();
     ///
     /// for mut bit in iter {
     ///     *bit = !*bit;
     /// }
     ///
-    /// assert_eq!(bitfield.into_inner(), 0b10101011);
+    /// assert_eq!(bitset.into_inner(), 0b10101011);
     /// #   Ok(())
     /// # }
     /// ```
@@ -897,17 +898,17 @@ where
             .map(move |i| unsafe { p.as_mut().unwrap().bit_mut(i) })
     }
 
-    /// Returns iterator over [`indeces`][Index] of the set bits of the `Bitfield`.
+    /// Returns iterator over [`indeces`][Index] of the set bits of the `Bitset`.
     ///
     /// # Examples
     /// ```rust
     /// # use std::error::Error;
     /// #
     /// # fn main() -> Result<(), Box<dyn Error>> {
-    /// use simple_bitfield::prelude::{Bitfield, Bitfield8};
+    /// use bitworks::prelude::{Bitset, Bitset8};
     ///
-    /// let bitfield = Bitfield8::from(0b01010100);
-    /// let mut iter = bitfield.ones();
+    /// let bitset = Bitset8::from(0b01010100);
+    /// let mut iter = bitset.ones();
     ///
     /// assert_eq!(iter.next(), Some(2.try_into()?));
     /// assert_eq!(iter.next(), Some(4.try_into()?));
@@ -927,17 +928,17 @@ where
         })
     }
 
-    /// Returns iterator over [`indeces`][Index] of the unset bits of the `Bitfield`.
+    /// Returns iterator over [`indeces`][Index] of the unset bits of the `Bitset`.
     ///
     /// # Examples
     /// ```rust
     /// # use std::error::Error;
     /// #
     /// # fn main() -> Result<(), Box<dyn Error>> {
-    /// use simple_bitfield::prelude::{Bitfield, Bitfield8};
+    /// use bitworks::prelude::{Bitset, Bitset8};
     ///
-    /// let bitfield = Bitfield8::from(0b01010100);
-    /// let mut iter = bitfield.zeros();
+    /// let bitset = Bitset8::from(0b01010100);
+    /// let mut iter = bitset.zeros();
     ///
     /// assert_eq!(iter.next(), Some(0.try_into()?));
     /// assert_eq!(iter.next(), Some(1.try_into()?));
@@ -960,57 +961,57 @@ where
     }
 }
 
-/// Left-aligned [`Bitfield`].
+/// Left-aligned [`Bitset`].
 ///
-/// Implementors of this trait get access to these methods defined on `Bitfield`:
-/// * [`Bitfield::expand_optimized()`]
-/// * [`Bitfield::combine_optimized()`]
-/// * [`Bitfield::split_optimized()`]
+/// Implementors of this trait get access to these methods defined on `Bitset`:
+/// * [`Bitset::expand_optimized()`]
+/// * [`Bitset::combine_optimized()`]
+/// * [`Bitset::split_optimized()`]
 ///
 /// All the methods above have corresponding versions without `_optimized` suffix, which contains no `unsafe` code
 /// and aren't restricted to only `Simple` types.
 ///
 /// # Safety
 /// If you implement this trait, you are responsible for making sure, that part in memory of the implementor,
-/// which contains the inner representation of the bitfield, is aligned on the left.
+/// which contains the inner representation of the bitset, is aligned on the left.
 /// Alignment here is not the same as Rust struct alignment, so I'll provide an example here
 /// of what structs are valid and invalid for implementing this trait:
 ///
-/// ### ✅ LeftAligned Bitfield structs:
+/// ### ✅ LeftAligned Bitset structs:
 /// ```
-/// struct A(u8); // u8 here represents the bitfield.
+/// struct A(u8); // u8 here represents the bitset.
 ///
-/// struct B { bitfield: u8 }
+/// struct B { bitset: u8 }
 ///
 /// #[repr(C)]
-/// struct C(u8, String); // only u8 here represents the bitfield.
+/// struct C(u8, String); // only u8 here represents the bitset.
 ///
 /// #[repr(C)]
-/// struct D { bitfield: u8, metadata: String }
+/// struct D { bitset: u8, metadata: String }
 /// ```
 ///
-/// ### ❌ *NOT* LeftAligned Bitfield structs:
+/// ### ❌ *NOT* LeftAligned Bitset structs:
 /// ```
 /// struct E(u8, String); // exact ordreing is not guaranteed
 ///
-/// struct F { bitfield: u8, metadata: String } // exact ordreing is not guaranteed
+/// struct F { bitset: u8, metadata: String } // exact ordreing is not guaranteed
 ///
 /// #[repr(C)] // ordering is guaranteed, but order is incorrect
-/// struct G(String, u8); // only u8 here represents the Bitfield.
+/// struct G(String, u8); // only u8 here represents the Bitset.
 ///
 /// #[repr(C)] // ordering is guaranteed, but order is incorrect
-/// struct H { metadata: String, bitfield: u8 }
+/// struct H { metadata: String, bitset: u8 }
 /// ```
 ///
-/// In general, any `one-field tuple struct`s or `one-field C-like struct`s are good implementors of this trait,
-/// but only if the data in that field has consistent memory layout:<br/>
+/// In general, any `one-set tuple struct`s or `one-set C-like struct`s are good implementors of this trait,
+/// but only if the data in that set has consistent memory layout:<br/>
 /// E.g. any [`Sized`] owned primitive types or arrays of them, but not tuples, references, pointers etc.<br/>
 /// It is `unsafe` to implement this trait for second kind of structs and will lead to memory violations or
 /// unintended and undefined behaviour.
 ///
-/// If you're unsure about what this means, use built-in `Bitfield`s (they all implement `Simple`)
-/// or do not implement this trait for your custom `Bitfield` (the trade-off should be minimal).
-pub unsafe trait LeftAligned: Bitfield
+/// If you're unsure about what this means, use built-in `Bitset`s (they all implement `Simple`)
+/// or do not implement this trait for your custom `Bitset` (the trade-off should be minimal).
+pub unsafe trait LeftAligned: Bitset
 where
     Self::_Repr: Sized + Clone + PartialEq + Eq,
 {
@@ -1077,7 +1078,7 @@ where
     }
 }
 
-impl<T> Bitfield for T
+impl<T> Bitset for T
 where
     T: LeftAligned + Sized + Clone + PartialEq + Eq,
 {
