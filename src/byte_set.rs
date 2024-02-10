@@ -31,7 +31,6 @@ const fn bitmask<const N: usize>(index: BIndex<N>) -> u8 {
 /// [`Bitset`] of variable `size`.
 /// `N` is size in bytes of the `Byteset`.
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[repr(transparent)]
 pub struct Byteset<const N: usize>(pub(crate) Inner<N>);
 
@@ -353,6 +352,51 @@ impl<const N: usize> LowerHex for Byteset<N> {
             acc
         });
         write!(f, "{s}")
+    }
+}
+
+#[cfg(feature = "serde")]
+impl<const N: usize> serde::Serialize for Byteset<N> {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_bytes(&self.0)
+    }
+}
+
+#[cfg(feature = "serde")]
+impl<'de, const N: usize> serde::Deserialize<'de> for Byteset<N> {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        struct BytesetVisitor<const M: usize>;
+
+        impl<'de, const M: usize> serde::de::Visitor<'de> for BytesetVisitor<M> {
+            type Value = Byteset<M>;
+
+            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                formatter.write_str("a byte array")
+            }
+
+            fn visit_bytes<E>(self, v: &[u8]) -> Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                if v.len() != M {
+                    return Err(serde::de::Error::invalid_length(
+                        v.len(),
+                        &format!("array of length {}", M).as_str(),
+                    ));
+                }
+                let mut bytes = [0; M];
+                bytes.copy_from_slice(v);
+                Ok(Byteset(bytes))
+            }
+        }
+
+        deserializer.deserialize_bytes(BytesetVisitor::<N>)
     }
 }
 
