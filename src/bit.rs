@@ -123,7 +123,6 @@ impl Display for Bit {
 
 /// Smart pointer granting immutable access to a bit in [`Bitset`].
 #[derive(PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct BitRef<'a, T: Bitset + 'a>(pub(crate) Bit, pub(crate) Index<T>, pub(crate) &'a T);
 
 impl<'a, T: 'a> BitRef<'a, T>
@@ -205,7 +204,6 @@ where
 
 /// Smart pointer granting mutable access to a bit in [`Bitset`].
 #[derive(PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct BitMut<'a, T: Bitset + 'a>(pub(crate) Bit, pub(crate) Index<T>, pub(crate) &'a mut T);
 
 impl<'a, T: 'a> BitMut<'a, T>
