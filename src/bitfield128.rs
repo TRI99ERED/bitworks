@@ -24,11 +24,6 @@ const BITS: usize = 128;
 pub struct Bitfield128(pub(crate) Inner);
 
 impl Bitfield128 {
-    #[inline(always)]
-    pub const fn new(n: Inner) -> Self {
-        Self(n)
-    }
-
     /// Returns the inner representation of `Bitfield128`.
     ///
     /// # Examples
@@ -52,10 +47,16 @@ impl Bitfield128 {
 }
 
 unsafe impl LeftAligned for Bitfield128 {
+    type _Repr = Inner;
     const _BYTE_SIZE: usize = 16;
     const _ONE: Self = Self(1);
-    const _NONE: Self = Self(Inner::MIN);
     const _ALL: Self = Self(Inner::MAX);
+    const _NONE: Self = Self(Inner::MIN);
+
+    #[inline(always)]
+    fn _new(value: Self::Repr) -> Self {
+        Self(value)
+    }
 }
 
 impl From<Inner> for Bitfield128 {

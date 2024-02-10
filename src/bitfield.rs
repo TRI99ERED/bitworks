@@ -43,7 +43,12 @@ where
 /// representing the bitfield, as that would allow you to implement [`LeftAligned`] marker on it safely.
 /// If you want to get the benefits of `LeftAligned` on any struct, make it a wrapper around
 /// one of the `LeftAligned` types and use it's methods. All built-in `Bitfield` types are `LeftAligned`.
-pub trait Bitfield: Sized + Clone + PartialEq + Eq {
+pub trait Bitfield: Sized + Clone + PartialEq + Eq
+where
+    Self::Repr: Sized + Clone + PartialEq + Eq,
+{
+    type Repr;
+
     /// Number of bytes (`size` in bytes) of the `Bitfield`.
     ///
     /// If the implementor contains additional data, its bytes
@@ -116,6 +121,8 @@ pub trait Bitfield: Sized + Clone + PartialEq + Eq {
     /// # }
     /// ```
     const ALL: Self;
+
+    fn new(value: Self::Repr) -> Self;
 
     /// Build `Bitfield` from a mutable reference.<br/>
     /// Useful for chaining bit modifications.
@@ -1003,11 +1010,21 @@ pub trait Bitfield: Sized + Clone + PartialEq + Eq {
 ///
 /// If you're unsure about what this means, use built-in `Bitfield`s (they all implement `Simple`)
 /// or do not implement this trait for your custom `Bitfield` (the trade-off should be minimal).
-pub unsafe trait LeftAligned: Bitfield {
+pub unsafe trait LeftAligned: Bitfield
+where
+    Self::_Repr: Sized + Clone + PartialEq + Eq,
+{
+    type _Repr;
+
     const _BYTE_SIZE: usize;
+
     const _ONE: Self;
+
     const _ALL: Self;
+
     const _NONE: Self;
+
+    fn _new(value: Self::Repr) -> Self;
 
     fn shift_left(mut self, amount: Index<Self>) -> Self {
         let byte_shift = byte_index(amount);
@@ -1064,13 +1081,16 @@ impl<T> Bitfield for T
 where
     T: LeftAligned + Sized + Clone + PartialEq + Eq,
 {
+    type Repr = <Self as LeftAligned>::_Repr;
     const BYTE_SIZE: usize = Self::_BYTE_SIZE;
-
     const ONE: Self = Self::_ONE;
-
     const NONE: Self = Self::_NONE;
-
     const ALL: Self = Self::_ALL;
+
+    #[inline(always)]
+    fn new(value: Self::Repr) -> Self {
+        Self::_new(value)
+    }
 
     #[inline(always)]
     fn from_index(index: &Index<Self>) -> Self {

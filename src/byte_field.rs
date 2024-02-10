@@ -37,11 +37,6 @@ pub struct ByteField<const N: usize>(pub(crate) Inner<N>);
 
 impl<const N: usize> ByteField<N> {
     #[inline(always)]
-    pub const fn new(arr: Inner<N>) -> Self {
-        Self(arr)
-    }
-
-    #[inline(always)]
     pub fn into_inner(&self) -> Inner<N> {
         self.0
     }
@@ -54,10 +49,16 @@ impl<const N: usize> ByteField<N> {
 }
 
 unsafe impl<const N: usize> LeftAligned for ByteField<N> {
+    type _Repr = Inner<N>;
     const _BYTE_SIZE: usize = N;
     const _ONE: Self = Self::__one();
-    const _NONE: Self = Self([0; N]);
     const _ALL: Self = Self([255; N]);
+    const _NONE: Self = Self([0; N]);
+
+    #[inline(always)]
+    fn _new(value: Self::Repr) -> Self {
+        Self(value)
+    }
 }
 
 impl<const N: usize> From<Inner<N>> for ByteField<N> {

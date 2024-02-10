@@ -1,10 +1,10 @@
 [package]
-name = "simple-bitfield"
-version = "0.1.0"
+name = "bitworks"
+version = "0.0.1"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 description = "Crate meant to provide easy to use bitfields, with some out of the box useful functionality."
-repository = "https://github.com/TRI99ERED/simple-bitfield/"
+repository = "https://github.com/TRI99ERED/bitworks"
 readme = "README.md"
 keywords = ["bitfield", "bitwise", "data-structure"]
 categories = ["data-structures"]

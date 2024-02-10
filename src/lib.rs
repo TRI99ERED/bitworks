@@ -17,7 +17,9 @@ pub mod prelude {
     use super::*;
 
     pub use bit::Bit::{self, One, Zero};
+
     pub use bitfield::Bitfield;
+
     pub use bitfield128::Bitfield128;
     pub use bitfield16::Bitfield16;
     pub use bitfield32::Bitfield32;
@@ -26,9 +28,4 @@ pub mod prelude {
     pub use byte_field::ByteField;
 
     pub use index::Index;
-}
-
-mod private {
-    #[deprecated]
-    pub trait Sealed {}
 }
