@@ -113,7 +113,7 @@ pub trait Bitset: Sized + Clone + PartialEq + Eq {
     /// ```
     const ALL: Self;
 
-    /// Constructs a new value of the `Bitset` from [`Bitfield::Repr`].
+    /// Constructs a new value of the `Bitset` from [`Bitset::Repr`].
     ///
     /// Prefer asignment, if `Self::Repr` is `Self`.
     ///
@@ -1352,7 +1352,7 @@ pub trait Bitset: Sized + Clone + PartialEq + Eq {
 /// Alternatively you can make a wrapper around one of the built-in bitsets and implement `Bitset` on it,
 /// delegating all of the methods to inner type's.
 pub unsafe trait LeftAligned: Bitset + Sized + Clone + PartialEq + Eq {
-    
+
     /// Type, that is the underlying representation of the `Bitset`.<br/>
     /// Usually one of the Rust built-in types, but can be `Self`.
     ///
@@ -1426,7 +1426,7 @@ pub unsafe trait LeftAligned: Bitset + Sized + Clone + PartialEq + Eq {
     /// ```
     const _ALL: Self;
 
-    /// Constructs a new value of the `Bitset` from [`Bitfield::Repr`].
+    /// Constructs a new value of the `Bitset` from [`Bitset::Repr`].
     ///
     /// Used to implement corresponding method [`Bitset::from_repr`].
     ///
