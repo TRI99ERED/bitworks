@@ -60,7 +60,7 @@ unsafe impl LeftAligned for Bitset128 {
     const _NONE: Self = Self(Inner::MIN);
 
     #[inline(always)]
-    fn _new(value: Self::Repr) -> Self {
+    fn _from_repr(value: Self::Repr) -> Self {
         Self(value)
     }
 }

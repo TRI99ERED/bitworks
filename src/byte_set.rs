@@ -62,7 +62,7 @@ unsafe impl<const N: usize> LeftAligned for Byteset<N> {
     const _NONE: Self = Self([0; N]);
 
     #[inline(always)]
-    fn _new(value: Self::Repr) -> Self {
+    fn _from_repr(value: Self::Repr) -> Self {
         Self(value)
     }
 }
@@ -708,6 +708,22 @@ mod tests {
         let b: Tested1 = [0b11001100].into();
 
         assert_eq!(a.sym_difference(b), [0b00111100].into());
+    }
+
+    #[test]
+    fn bits() {
+        let bitset: Tested1 = [0b11110000].into();
+        let mut iter = bitset.bits();
+
+        assert_eq!(iter.next(), Some(Zero));
+        assert_eq!(iter.next(), Some(Zero));
+        assert_eq!(iter.next(), Some(Zero));
+        assert_eq!(iter.next(), Some(Zero));
+        assert_eq!(iter.next(), Some(One));
+        assert_eq!(iter.next(), Some(One));
+        assert_eq!(iter.next(), Some(One));
+        assert_eq!(iter.next(), Some(One));
+        assert_eq!(iter.next(), None);
     }
 
     #[test]

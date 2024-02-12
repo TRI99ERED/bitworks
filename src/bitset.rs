@@ -49,9 +49,12 @@ where
 /// If you want to get the benefits of `LeftAligned` on any struct, make it a wrapper around
 /// one of the `LeftAligned` types and use it's methods. All built-in `Bitset` types are `LeftAligned`.
 pub trait Bitset: Sized + Clone + PartialEq + Eq {
+
     /// Type, that is the underlying representation of the `Bitset`.<br/>
     /// Usually one of the Rust built-in types, but can be `Self`.
     type Repr: Sized + Clone + PartialEq + Eq;
+
+    /// Marker type, used for compile time checks on some methods.
     type Size: SizeMarker;
 
     /// Number of bytes (`size` in bytes) of the bitset part.
@@ -1161,17 +1164,14 @@ pub trait Bitset: Sized + Clone + PartialEq + Eq {
     /// # }
     /// ```
     #[inline(always)]
-    fn bits(self) -> impl Iterator<Item = Bit>
-    where
-        Self: Copy,
-    {
+    fn bits(self) -> impl Iterator<Item = Bit> {
         (0..bit_len::<Self>())
             .map(|i| Index::<Self>::from_usize(i))
             .map(move |i| self.bit(i))
     }
 
     /// Returns iterator over [`BitRef`] holding immutable references
-    /// to bits of the bitset.
+    /// to bits of the `Bitset`.
     ///
     /// # Examples
     /// ```rust
@@ -1203,7 +1203,7 @@ pub trait Bitset: Sized + Clone + PartialEq + Eq {
     }
 
     /// Returns iterator over [`BitMut`] holding mutable references
-    /// to bits of the bitset.
+    /// to bits of the `Bitset`.
     ///
     /// # Examples
     /// ```rust
@@ -1296,13 +1296,17 @@ pub trait Bitset: Sized + Clone + PartialEq + Eq {
 
 /// Left-aligned [`Bitset`].
 ///
-/// Implementors of this trait get access to these methods defined on `Bitset`:
+/// Implementors of this trait get blanket implementation of `Bitset`.
+/// They also get access to these methods defined on `Bitset`:
 /// * [`Bitset::expand_optimized()`]
+/// * [`Bitset::try_expand_optimized()`]
 /// * [`Bitset::combine_optimized()`]
+/// * [`Bitset::try_combine_optimized()`]
 /// * [`Bitset::split_optimized()`]
+/// * [`Bitset::try_split_optimized()`]
 ///
 /// All the methods above have corresponding versions without `_optimized` suffix, which contains no `unsafe` code
-/// and aren't restricted to only `Simple` types.
+/// and aren't restricted to only `LeftAligned` types.
 ///
 /// # Safety
 /// If you implement this trait, you are responsible for making sure, that part in memory of the implementor,
@@ -1336,27 +1340,115 @@ pub trait Bitset: Sized + Clone + PartialEq + Eq {
 /// struct H { metadata: String, bitset: u8 }
 /// ```
 ///
-/// In general, any `one-set tuple struct`s or `one-set C-like struct`s are good implementors of this trait,
+/// In general, any `one-field tuple struct`s or `one-field C-like struct`s are good implementors of this trait,
 /// but only if the data in that set has consistent memory layout:<br/>
-/// E.g. any [`Sized`] owned primitive types or arrays of them, but not tuples, references, pointers etc.<br/>
+/// E.g. any [`Sized`] owned primitive types or arrays of them, but *NOT* tuples, references, pointers,
+/// non-LeftAligned structs etc.<br/>
 /// It is `unsafe` to implement this trait for second kind of structs and will lead to memory violations or
 /// unintended and undefined behaviour.
 ///
-/// If you're unsure about what this means, use built-in `Bitset`s (they all implement `Simple`)
-/// or do not implement this trait for your custom `Bitset` (the trade-off should be minimal).
-pub unsafe trait LeftAligned: Bitset {
+/// If you're unsure about what this means, use built-in `Bitset`s (they all implement `LeftAligned`)
+/// or do not implement this trait for your custom `Bitset` and use unoptimized methods.
+/// Alternatively you can make a wrapper around one of the built-in bitsets and implement `Bitset` on it,
+/// delegating all of the methods to inner type's.
+pub unsafe trait LeftAligned: Bitset + Sized + Clone + PartialEq + Eq {
+    
+    /// Type, that is the underlying representation of the `Bitset`.<br/>
+    /// Usually one of the Rust built-in types, but can be `Self`.
+    ///
+    /// Used to set corresponding field [`Bitset::Repr`].
     type _Repr: Sized + Clone + PartialEq + Eq;
 
+    /// Marker type, used for compile time checks on some methods.
+    ///
+    /// Used to set corresponding field [`Bitset::Size`].
     type _Size: SizeMarker;
 
+    /// Number of bytes (`size` in bytes) of the bitset part.
+    ///
+    /// Used to set corresponding field [`Bitset::BYTE_SIZE`].
+    ///
+    /// If the implementor contains additional data, its bytes
+    /// should *NOT* be included when initializing this constant.
+    ///
+    /// Refer to [core::mem::size_of] if you need actual size of the type in other contexts.
+    ///
+    /// # Examples
+    /// ```rust
+    /// # use std::error::Error;
+    /// #
+    /// # fn main() -> Result<(), Box<dyn Error>> {
+    /// use bitworks::prelude::{Bitset, Bitset8};
+    ///
+    /// let size_in_bytes = Bitset8::BYTE_SIZE;
+    ///
+    /// assert_eq!(size_in_bytes, 1);
+    /// #   Ok(())
+    /// # }
+    /// ```
     const _BYTE_SIZE: usize;
 
-    const _ALL: Self;
-
+    /// Value of the `Bitset` with every bit not set.
+    ///
+    /// Used to set corresponding field [`Bitset::NONE`].
+    ///
+    /// # Examples
+    /// ```rust
+    /// # use std::error::Error;
+    /// #
+    /// # fn main() -> Result<(), Box<dyn Error>> {
+    /// use bitworks::prelude::{Bitset, Bitset8};
+    ///
+    /// let bitset = Bitset8::NONE;
+    ///
+    /// assert_eq!(bitset.into_inner(), 0b00000000);
+    /// #   Ok(())
+    /// # }
+    /// ```
     const _NONE: Self;
 
-    fn _new(value: Self::Repr) -> Self;
+    /// Value of the `Bitset` with every bit not set.
+    ///
+    /// Used to set corresponding field [`Bitset::ALL`].
+    ///
+    /// # Examples
+    /// ```rust
+    /// # use std::error::Error;
+    /// #
+    /// # fn main() -> Result<(), Box<dyn Error>> {
+    /// use bitworks::prelude::{Bitset, Bitset8};
+    ///
+    /// let bitset = Bitset8::NONE;
+    ///
+    /// assert_eq!(bitset.into_inner(), 0b00000000);
+    /// #   Ok(())
+    /// # }
+    /// ```
+    const _ALL: Self;
 
+    /// Constructs a new value of the `Bitset` from [`Bitfield::Repr`].
+    ///
+    /// Used to implement corresponding method [`Bitset::from_repr`].
+    ///
+    /// Prefer asignment, if `Self::Repr` is `Self`.
+    ///
+    /// # Examples
+    /// ```rust
+    /// # use std::error::Error;
+    /// #
+    /// # fn main() -> Result<(), Box<dyn Error>> {
+    /// use bitworks::prelude::{Bitset, Bitset8};
+    ///
+    /// let bitset = Bitset8::new(1);
+    ///
+    /// assert_eq!(bitset.into_inner(), 0b00000001);
+    /// #   Ok(())
+    /// # }
+    /// ```
+    fn _from_repr(value: Self::Repr) -> Self;
+
+    /// Shifts bit representation of the `Bitset` left by amount.
+    /// Has signature identical to [`core::ops::Shl<Index<Self>>`][core::ops::Shl].
     fn _shift_left(mut self, amount: Index<Self>) -> Self {
         let byte_shift = byte_index(amount);
         let bit_shift = bit_index(amount);
@@ -1382,6 +1474,8 @@ pub unsafe trait LeftAligned: Bitset {
         self
     }
 
+    /// Shifts bit representation of the `Bitset` right by amount.
+    /// Has signature identical to [`core::ops::Shr<Index<Self>>`][core::ops::Shr].
     fn _shift_right(mut self, amount: Index<Self>) -> Self {
         let byte_shift = byte_index(amount);
         let bit_shift = bit_index(amount);
@@ -1420,7 +1514,7 @@ where
 
     #[inline(always)]
     fn from_repr(value: Self::Repr) -> Self {
-        Self::_new(value)
+        Self::_from_repr(value)
     }
 
     #[inline(always)]
