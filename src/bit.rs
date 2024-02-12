@@ -153,7 +153,7 @@ impl Display for Bit {
 }
 
 /// Smart pointer granting immutable access to a bit in [`Bitset`].
-/// 
+///
 /// Is not meant to be created manually, instead use methods defined on `Bitset`
 /// to get a value of this type.
 /// This type isn't magic, it actually holds the [`Bit`] value.
@@ -256,7 +256,7 @@ where
 }
 
 /// Smart pointer granting mutable access to a bit in [`Bitset`].
-/// 
+///
 /// Is not meant to be created manually, instead use methods defined on `Bitset`
 /// to get a value of this type.
 /// This type isn't magic, it actually holds the [`Bit`] value.
