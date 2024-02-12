@@ -11,7 +11,7 @@ use std::{
 ///
 /// Closely resembles [`bool`] type, but is specific to this crate and used in place of `bool`,
 /// where it's appropriate to guarantee type safety.
-/// Implements [From<bool>][core::convert::From], and bool implements `From<Bit>`,
+/// Implements [`From<bool>`][core::convert::From], and bool implements `From<Bit>`,
 /// if conversion is needed.
 ///
 /// # Examples
