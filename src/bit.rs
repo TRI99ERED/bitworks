@@ -7,7 +7,7 @@ use std::{
 };
 
 /// Enum representing all possible states of a bit in a [`Bitset`].
-/// Variants are reexported and don't require `Bit::` prefix.
+/// Variants are re-exported and don't require `Bit::` prefix.
 ///
 /// Closely resembles [`bool`] type, but is specific to this crate and used in place of `bool`,
 /// where it's appropriate to guarantee type safety.
