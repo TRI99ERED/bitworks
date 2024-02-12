@@ -5,6 +5,7 @@ use crate::{
     bitset::{Bitset, LeftAligned},
     error::{ConvError, ConvTarget},
     prelude::{Bitset128, Bitset16, Bitset64, Bitset8, Byteset, Index},
+    size_marker::Size,
 };
 use std::{
     fmt::{Binary, Debug, Display, LowerHex, Octal, UpperHex},
@@ -25,6 +26,11 @@ const BITS: usize = 32;
 pub struct Bitset32(pub(crate) Inner);
 
 impl Bitset32 {
+    #[inline(always)]
+    pub const fn new(inner: Inner) -> Self {
+        Self(inner)
+    }
+
     /// Returns the inner representation of `Bitset32`.
     ///
     /// # Examples
@@ -49,8 +55,8 @@ impl Bitset32 {
 
 unsafe impl LeftAligned for Bitset32 {
     type _Repr = Inner;
+    type _Size = Size<4>;
     const _BYTE_SIZE: usize = 4;
-    const _ONE: Self = Self(1);
     const _ALL: Self = Self(Inner::MAX);
     const _NONE: Self = Self(Inner::MIN);
 
@@ -715,12 +721,12 @@ mod tests {
     #[test]
     fn expand() -> TestResult {
         let bitset1 = Bitset32::from(0b00011011);
-        let bitset2: Bitset64 = bitset1.expand()?;
+        let bitset2: Bitset64 = bitset1.try_expand()?;
 
         assert_eq!(bitset2, Bitset64::from(0b00011011));
 
         let bitset1 = Bitset32::from(0b00011011);
-        let bitset2: Bitset128 = bitset1.expand()?;
+        let bitset2: Bitset128 = bitset1.try_expand()?;
 
         assert_eq!(bitset2, Bitset128::from(0b00011011));
 
@@ -730,12 +736,12 @@ mod tests {
     #[test]
     fn fast_expand() -> TestResult {
         let bitset1 = Bitset32::from(0b00011011);
-        let bitset2: Bitset64 = bitset1.expand_optimized()?;
+        let bitset2: Bitset64 = bitset1.try_expand_optimized()?;
 
         assert_eq!(bitset2, Bitset64::from(0b00011011));
 
         let bitset1 = Bitset32::from(0b00011011);
-        let bitset2: Bitset128 = bitset1.expand_optimized()?;
+        let bitset2: Bitset128 = bitset1.try_expand_optimized()?;
 
         assert_eq!(bitset2, Bitset128::from(0b00011011));
 
@@ -747,7 +753,7 @@ mod tests {
         let bitset1 = Bitset32::NONE.clone().set_bit(1.try_into()?, One).build();
         let bitset2 = Bitset32::NONE.clone().set_bit(1.try_into()?, One).build();
 
-        let bitset3: Bitset64 = bitset1.combine(bitset2)?;
+        let bitset3: Bitset64 = bitset1.try_combine(bitset2)?;
 
         assert_eq!(
             bitset3,
@@ -767,7 +773,7 @@ mod tests {
             .set_bit(1.try_into()?, One)
             .set_bit((32 + 1).try_into()?, One)
             .build();
-        let (bitset2, bitset3): (Bitset32, Bitset32) = bitset1.split()?;
+        let (bitset2, bitset3): (Bitset32, Bitset32) = bitset1.try_split()?;
 
         assert_eq!(
             bitset2,
@@ -785,7 +791,7 @@ mod tests {
         let bitset1 = Bitset32::NONE.clone().set_bit(1.try_into()?, One).build();
         let bitset2 = Bitset32::NONE.clone().set_bit(1.try_into()?, One).build();
 
-        let bitset3: Bitset64 = bitset1.combine_optimized(bitset2)?;
+        let bitset3: Bitset64 = bitset1.try_combine_optimized(bitset2)?;
 
         assert_eq!(
             bitset3,
@@ -805,7 +811,7 @@ mod tests {
             .set_bit(1.try_into()?, One)
             .set_bit((32 + 1).try_into()?, One)
             .build();
-        let (bitset2, bitset3): (Bitset32, Bitset32) = bitset1.split_optimized()?;
+        let (bitset2, bitset3): (Bitset32, Bitset32) = bitset1.try_split_optimized()?;
 
         assert_eq!(
             bitset2,

@@ -4,8 +4,10 @@ use crate::{
     bit::{Bit, BitMut, BitRef},
     error::{ConvError, ConvResult, ConvTarget},
     index::Index,
+    size_marker::{Bigger, Combines, SizeMarker, Smaller, Splits},
 };
 
+// Length of Bitset in bits.
 pub(crate) const fn bit_len<T>() -> usize
 where
     T: Bitset,
@@ -13,6 +15,7 @@ where
     T::BYTE_SIZE * 8
 }
 
+// Returns index of byte (chunk), where the given index falls into.
 pub(crate) const fn byte_index<T>(index: Index<T>) -> usize
 where
     T: Bitset,
@@ -20,6 +23,7 @@ where
     index.into_inner() / 8
 }
 
+// Returns index of bit within a byte (chunk), where the given index falls into.
 pub(crate) const fn bit_index<T>(index: Index<T>) -> usize
 where
     T: Bitset,
@@ -27,6 +31,7 @@ where
     index.into_inner() % 8
 }
 
+// Returns a bitmask, with only given index bit set within a byte (chunk).
 pub(crate) const fn bitmask<T>(index: Index<T>) -> u8
 where
     T: Bitset,
@@ -39,22 +44,22 @@ where
 /// This trait is not meant to be implmented on enums, as beyond some extremely rare cases,
 /// they won't produce a valid bitset.
 ///
-/// It's recommended to prefer implementing this trait for one-set structs, where that sole set is
+/// It's recommended to prefer implementing this trait for structs, where  the field in field order is
 /// representing the bitset, as that would allow you to implement [`LeftAligned`] marker on it safely.
 /// If you want to get the benefits of `LeftAligned` on any struct, make it a wrapper around
 /// one of the `LeftAligned` types and use it's methods. All built-in `Bitset` types are `LeftAligned`.
-pub trait Bitset: Sized + Clone + PartialEq + Eq
-where
-    Self::Repr: Sized + Clone + PartialEq + Eq,
-{
-    type Repr;
+pub trait Bitset: Sized + Clone + PartialEq + Eq {
+    /// Type, that is the underlying representation of the `Bitset`.<br/>
+    /// Usually one of the Rust built-in types, but can be `Self`.
+    type Repr: Sized + Clone + PartialEq + Eq;
+    type Size: SizeMarker;
 
-    /// Number of bytes (`size` in bytes) of the `Bitset`.
+    /// Number of bytes (`size` in bytes) of the bitset part.
     ///
     /// If the implementor contains additional data, its bytes
     /// should *NOT* be included when initializing this constant.
     ///
-    /// Refer to [core::mem::size_of] if you need actual size of the type in your contexts.
+    /// Refer to [core::mem::size_of] if you need actual size of the type in other contexts.
     ///
     /// # Examples
     /// ```rust
@@ -70,23 +75,6 @@ where
     /// # }
     /// ```
     const BYTE_SIZE: usize;
-
-    /// Value of the `Bitset` with the least significant bit set.
-    ///
-    /// # Examples
-    /// ```rust
-    /// # use std::error::Error;
-    /// #
-    /// # fn main() -> Result<(), Box<dyn Error>> {
-    /// use bitworks::prelude::{Bitset, Bitset8};
-    ///
-    /// let bitset = Bitset8::ONE;
-    ///
-    /// assert_eq!(bitset.into_inner(), 0b00000001);
-    /// #   Ok(())
-    /// # }
-    /// ```
-    const ONE: Self;
 
     /// Value of the `Bitset` with every bit not set.
     ///
@@ -122,10 +110,26 @@ where
     /// ```
     const ALL: Self;
 
-    fn new(value: Self::Repr) -> Self;
+    /// Constructs a new value of the `Bitset` from [`Bitfield::Repr`].
+    ///
+    /// Prefer asignment, if `Self::Repr` is `Self`.
+    ///
+    /// # Examples
+    /// ```rust
+    /// # use std::error::Error;
+    /// #
+    /// # fn main() -> Result<(), Box<dyn Error>> {
+    /// use bitworks::prelude::{Bitset, Bitset8};
+    ///
+    /// let bitset = Bitset8::new(1);
+    ///
+    /// assert_eq!(bitset.into_inner(), 0b00000001);
+    /// #   Ok(())
+    /// # }
+    /// ```
+    fn from_repr(repr: Self::Repr) -> Self;
 
-    /// Build `Bitset` from a mutable reference.<br/>
-    /// Useful for chaining bit modifications.
+    /// Build `Bitset` from a mutable reference.
     ///
     /// # Examples
     /// ```rust
@@ -135,12 +139,13 @@ where
     /// use bitworks::prelude::*;
     ///
     /// let bitset = Bitset8::NONE
-    ///     .set_bit(0.try_into()?, One)
-    ///     .check_bit(6.try_into()?)
-    ///     .uncheck_bit(0.try_into()?)
+    ///     .insert(Bitset8::new(0b00101111))
+    ///     .set_bit(0.try_into()?, Zero)
+    ///     .check_bit(7.try_into()?)
+    ///     .uncheck_bit(2.try_into()?)
     ///     .build();
     ///
-    /// assert_eq!(bitset.into_inner(), 0b01000000);
+    /// assert_eq!(bitset.into_inner(), 0b10101010);
     /// #   Ok(())
     /// # }
     /// ```
@@ -158,12 +163,12 @@ where
     /// # fn main() -> Result<(), Box<dyn Error>> {
     /// use bitworks::prelude::{Bitset, Bitset8, Index};
     ///
-    /// let index = 0.try_into()?;
+    /// let index = Index::<_>::from_usize(0);
     /// let bitset = Bitset8::from_index(&index);
     ///
     /// assert_eq!(bitset.into_inner(), 0b00000001);
     ///
-    /// let index = 3.try_into()?;
+    /// let index = Index::<_>::from_usize(3);
     /// let bitset = Bitset8::from_index(&index);
     ///
     /// assert_eq!(bitset.into_inner(), 0b00001000);
@@ -175,8 +180,42 @@ where
     /// Expands `Bitset` to a bigger one.<br/>
     /// If available, you should prefer using [`Bitset::expand_optimized`].
     ///
+    /// # Examples
+    /// ```rust
+    /// # use std::error::Error;
+    /// #
+    /// # fn main() -> Result<(), Box<dyn Error>> {
+    /// use bitworks::prelude::{Bitset, Bitset8, Bitset16};
+    ///
+    /// let bitset8 = Bitset8::new(0b00000001);
+    /// let bitset16: Bitset16 = bitset8.expand();
+    ///
+    /// assert_eq!(bitset16.into_inner(), 0b0000000000000001);
+    /// #   Ok(())
+    /// # }
+    /// ```
+    fn expand<Res>(self) -> Res
+    where
+        Res: Bitset,
+        Self::Size: Smaller<Res::Size>,
+        Res::Size: Bigger<Self::Size>,
+    {
+        let result = self
+            .ones()
+            .map(|Index(i, ..)| Index::<Res>::from_usize(i))
+            .fold(&mut Res::NONE.clone(), |acc, i| acc.check_bit(i))
+            .build();
+
+        result
+    }
+
+    /// Attempts to expand `Bitset` to a bigger one.<br/>
+    /// If available, you should prefer using [`Bitset::try_expand_optimized`].
+    ///
     /// # Errors
     /// Size of `Res` is smaller, than size of `Self`.
+    ///
+    /// Alternative version with compile time checks instead: [`Bitset::expand`]
     ///
     /// # Examples
     /// ```rust
@@ -186,22 +225,21 @@ where
     /// use bitworks::prelude::{Bitset, Bitset8, Bitset16};
     ///
     /// let bitset8 = Bitset8::new(0b00000001);
-    /// let bitset16: Bitset16 = bitset8.expand()?;
+    /// let bitset16: Bitset16 = bitset8.try_expand()?;
     ///
     /// assert_eq!(bitset16.into_inner(), 0b0000000000000001);
     /// #   Ok(())
     /// # }
     /// ```
-    fn expand<Res>(self) -> ConvResult<Res>
+    fn try_expand<Res>(self) -> ConvResult<Res>
     where
         Res: Bitset,
     {
         if Self::BYTE_SIZE <= Res::BYTE_SIZE {
             let result = self
-                .bits_ref()
-                .enumerate()
-                .map(|(i, bit)| (Index::<Res>::try_from(i).unwrap(), bit))
-                .fold(&mut Res::NONE.clone(), |acc, (i, bit)| acc.set_bit(i, *bit))
+                .ones()
+                .map(|Index(i, ..)| Index::<Res>::from_usize(i))
+                .fold(&mut Res::NONE.clone(), |acc, i| acc.check_bit(i))
                 .build();
 
             Ok(result)
@@ -215,8 +253,45 @@ where
 
     /// Expands `Bitset` to a bigger one. Uses `unsafe` optimizations.
     ///
+    /// # Examples
+    /// ```rust
+    /// # use std::error::Error;
+    /// #
+    /// # fn main() -> Result<(), Box<dyn Error>> {
+    /// use bitworks::prelude::{Bitset, Bitset8, Bitset16};
+    ///
+    /// let bitset8 = Bitset8::new(0b00000001);
+    /// let bitset16: Bitset16 = bitset8.expand_optimized();
+    ///
+    /// assert_eq!(bitset16.into_inner(), 0b0000000000000001);
+    /// #   Ok(())
+    /// # }
+    /// ```
+    fn expand_optimized<Res>(self) -> Res
+    where
+        Self: LeftAligned,
+        Res: Bitset + LeftAligned,
+        Self::Size: Smaller<Res::Size>,
+        Res::Size: Bigger<Self::Size>,
+    {
+        let mut result = Res::NONE.clone();
+
+        unsafe {
+            std::ptr::copy_nonoverlapping(
+                &self as *const _ as *const u8,
+                &mut result as *mut _ as *mut u8,
+                Self::BYTE_SIZE,
+            );
+        }
+        result
+    }
+
+    /// Attempts to expand `Bitset` to a bigger one. Uses `unsafe` optimizations.
+    ///
     /// # Errors
     /// Size of `Res` is smaller, than size of `Self`.
+    ///
+    /// Alternative version with compile time checks instead: [`Bitset::expand_optimized`]
     ///
     /// # Examples
     /// ```rust
@@ -226,13 +301,13 @@ where
     /// use bitworks::prelude::{Bitset, Bitset8, Bitset16};
     ///
     /// let bitset8 = Bitset8::new(0b00000001);
-    /// let bitset16: Bitset16 = bitset8.expand_optimized()?;
+    /// let bitset16: Bitset16 = bitset8.try_expand_optimized()?;
     ///
     /// assert_eq!(bitset16.into_inner(), 0b0000000000000001);
     /// #   Ok(())
     /// # }
     /// ```
-    fn expand_optimized<Res>(self) -> ConvResult<Res>
+    fn try_expand_optimized<Res>(self) -> ConvResult<Res>
     where
         Self: LeftAligned,
         Res: Bitset + LeftAligned,
@@ -282,12 +357,14 @@ where
         iter.into_iter()
             .take(bit_len::<Self>())
             .enumerate()
-            .map(|(i, b)| (Index::<Self>::try_from(i).unwrap(), *b))
-            .fold(&mut Self::NONE.clone(), |acc, (i, b)| acc.set_bit(i, b))
+            .filter(|(_, &b)| bool::from(b))
+            .fold(&mut Self::NONE.clone(), |acc, (i, _)| {
+                acc.check_bit(Index::<_>::from_usize(i))
+            })
             .build()
     }
 
-    /// Count the number of all set bits.
+    /// Returns the count of all set bits.
     ///
     /// # Examples
     /// ```rust
@@ -304,16 +381,10 @@ where
     /// ```
     #[inline(always)]
     fn count_ones(&self) -> usize {
-        (0..bit_len::<Self>()).fold(0, |acc, i| {
-            acc + if bool::from(*self.bit_ref(i.try_into().unwrap())) {
-                1
-            } else {
-                0
-            }
-        })
+        self.ones().count()
     }
 
-    /// Count the number of all unset bits.
+    /// Returns the number of all not set bits.
     ///
     /// # Examples
     /// ```rust
@@ -330,16 +401,10 @@ where
     /// ```
     #[inline(always)]
     fn count_zeros(&self) -> usize {
-        (0..bit_len::<Self>()).fold(0, |acc, i| {
-            acc + (if bool::from(*self.bit_ref(i.try_into().unwrap())) {
-                0
-            } else {
-                1
-            })
-        })
+        self.zeros().count()
     }
 
-    /// Sets bit at [`index`][Index] to value. Returns a mutable reference to the `Bitset`.
+    /// Sets bit at [`index`][Index] to value. Returns a mutable reference to `self`.
     ///
     /// # Examples
     /// ```rust
@@ -372,7 +437,7 @@ where
         self
     }
 
-    /// Sets bit at [`index`][Index] to 1. Returns a mutable reference to the `Bitset`.
+    /// Sets bit at [`index`][Index] to 1. Returns a mutable reference to `self`.
     ///
     /// # Examples
     /// ```rust
@@ -395,7 +460,7 @@ where
     /// ```
     fn check_bit(&mut self, index: Index<Self>) -> &mut Self;
 
-    /// Sets bit at [`index`][Index] to 0. Returns a mutable reference to the `Bitset`.
+    /// Sets bit at [`index`][Index] to 0. Returns a mutable reference to `self`.
     ///
     /// # Examples
     /// ```rust
@@ -456,7 +521,7 @@ where
     /// ```
     fn remove(&mut self, other: Self) -> &mut Self;
 
-    /// Returns a copy of a bit at [`index`][Index].
+    /// Returns a copy of a [`Bit`] at [`index`][Index].
     ///
     /// # Examples
     /// ```rust
@@ -516,7 +581,7 @@ where
     fn bit_mut(&mut self, index: Index<Self>) -> BitMut<'_, Self>;
 
     /// Returns Set complement (`self′`) of `Bitset`.<br/>
-    /// Alias for [`!`] operator
+    /// Alias for [`!`] operator.
     ///
     /// # Examples
     /// ```rust
@@ -536,7 +601,7 @@ where
     fn complement(self) -> Self;
 
     /// Returns Set union (`self ∪ other`) of two `Bitset`s.<br/>
-    /// Alias for [`|`] operator
+    /// Alias for [`|`] operator.
     ///
     /// # Examples
     /// ```rust
@@ -556,7 +621,7 @@ where
     fn union(self, other: Self) -> Self;
 
     /// Returns Set intersection (`self ∩ other`) of two `Bitset`s.<br/>
-    /// Alias for [`&`] operator
+    /// Alias for [`&`] operator.
     ///
     /// # Examples
     /// ```rust
@@ -598,7 +663,7 @@ where
     }
 
     /// Returns Set symmetric difference (`self Δ other`) of two `Bitset`s.<br/>
-    /// Alias for [`^`] operator
+    /// Alias for [`^`] operator.
     ///
     /// # Examples
     /// ```rust
@@ -607,7 +672,7 @@ where
     /// # fn main() -> Result<(), Box<dyn Error>> {
     /// use bitworks::prelude::{Bitset, Bitset8};
     ///
-    /// let a = Bitset8::new(0b11001100); // implements Bitset
+    /// let a = Bitset8::new(0b11001100);
     /// let b = Bitset8::new(0b11110000);
     /// let c = a.sym_difference(b);
     ///
@@ -617,21 +682,64 @@ where
     /// ```
     fn sym_difference(self, other: Self) -> Self;
 
+    /// Returns [`true`], if `self` contains all of the set bits from `other` and [`false`] otherwise.
+    ///
+    /// # Examples
+    /// ```rust
+    /// # use std::error::Error;
+    /// #
+    /// # fn main() -> Result<(), Box<dyn Error>> {
+    /// use bitworks::prelude::{Bitset, Bitset8};
+    ///
+    /// let a = Bitset8::new(0b11111100);
+    /// let b = Bitset8::new(0b11110000);
+    /// let c = Bitset8::new(0b00001111);
+    ///
+    /// assert!(a.subset(&b));
+    /// assert!(!a.subset(&c));
+    /// #   Ok(())
+    /// # }
+    /// ```
     #[inline(always)]
-    fn super_set(self, other: Self) -> bool {
-        self.intersection(other.clone()) == other
+    fn subset(&self, other: &Self) -> bool {
+        for i in other.ones() {
+            if !bool::from(self.bit(i)) {
+                return false;
+            }
+        }
+        true
     }
 
+    /// Returns [`true`], if `self` shares any set bits with `other` and [`false`] otherwise.
+    ///
+    /// # Examples
+    /// ```rust
+    /// # use std::error::Error;
+    /// #
+    /// # fn main() -> Result<(), Box<dyn Error>> {
+    /// use bitworks::prelude::{Bitset, Bitset8};
+    ///
+    /// let a = Bitset8::new(0b11111100);
+    /// let b = Bitset8::new(0b00001111);
+    /// let c = Bitset8::new(0b00000011);
+    ///
+    /// assert!(a.intersects(&b));
+    /// assert!(!a.intersects(&c));
+    /// #   Ok(())
+    /// # }
+    /// ```
     #[inline(always)]
-    fn intersects(self, other: Self) -> bool {
-        self.intersection(other) != Self::NONE
+    fn intersects(&self, other: &Self) -> bool {
+        for i in other.ones() {
+            if bool::from(self.bit(i)) {
+                return true;
+            }
+        }
+        false
     }
 
     /// Combines two `Bitset`s to create a bigger one.<br/>
     /// If available, you should prefer using [`Bitset::combine_optimized`].
-    ///
-    /// # Errors
-    /// Size of `Res` is smaller, than the sum of size of `Self` and size of `Other`.
     ///
     /// # Examples
     /// ```rust
@@ -642,13 +750,58 @@ where
     ///
     /// let bitset8_1 = Bitset8::new(0b00000001);
     /// let bitset8_2 = Bitset8::new(0b00000011);
-    /// let bitset16: Bitset16 = bitset8_1.combine(bitset8_2)?;
+    /// let bitset16: Bitset16 = bitset8_1.combine(bitset8_2);
     ///
     /// assert_eq!(bitset16.into_inner(), 0b0000001100000001);
     /// #   Ok(())
     /// # }
     /// ```
-    fn combine<Other, Res>(self, other: Other) -> ConvResult<Res>
+    fn combine<Other, Res>(self, other: Other) -> Res
+    where
+        Other: Bitset,
+        Res: Bitset,
+        Self::Size: Combines<Other::Size, Res::Size> + Smaller<Res::Size>,
+        Other::Size: Combines<Self::Size, Res::Size> + Smaller<Res::Size>,
+        Res::Size: Splits<Self::Size, Other::Size> + Bigger<Self::Size> + Bigger<Other::Size>,
+    {
+        let mut result = self
+            .ones()
+            .map(|Index(i, ..)| Index::<Res>::from_usize(i))
+            .fold(&mut Res::NONE.clone(), |acc, i| acc.check_bit(i))
+            .build();
+
+        let result = other
+            .ones()
+            .map(|Index(i, ..)| Index::<Res>::from_usize(i + bit_len::<Self>()))
+            .fold(&mut result, |acc, i| acc.check_bit(i))
+            .build();
+        result
+    }
+
+    /// Attempts to combine two `Bitset`s to create a bigger one.<br/>
+    /// If available, you should prefer using [`Bitset::try_combine_optimized`].
+    ///
+    /// # Errors
+    /// Size of `Res` is smaller, than the sum of size of `Self` and size of `Other`.
+    ///
+    /// Alternative version with compile time checks instead: [`Bitset::combine`]
+    ///
+    /// # Examples
+    /// ```rust
+    /// # use std::error::Error;
+    /// #
+    /// # fn main() -> Result<(), Box<dyn Error>> {
+    /// use bitworks::prelude::{Bitset, Bitset8, Bitset16};
+    ///
+    /// let bitset8_1 = Bitset8::new(0b00000001);
+    /// let bitset8_2 = Bitset8::new(0b00000011);
+    /// let bitset16: Bitset16 = bitset8_1.try_combine(bitset8_2)?;
+    ///
+    /// assert_eq!(bitset16.into_inner(), 0b0000001100000001);
+    /// #   Ok(())
+    /// # }
+    /// ```
+    fn try_combine<Other, Res>(self, other: Other) -> ConvResult<Res>
     where
         Other: Bitset,
         Res: Bitset,
@@ -656,17 +809,15 @@ where
         let combined = Self::BYTE_SIZE + Other::BYTE_SIZE;
         if Res::BYTE_SIZE == combined {
             let mut result = self
-                .bits_ref()
-                .enumerate()
-                .map(|(i, bit)| (Index::<Res>::try_from(i).unwrap(), bit))
-                .fold(&mut Res::NONE.clone(), |acc, (i, bit)| acc.set_bit(i, *bit))
+                .ones()
+                .map(|Index(i, ..)| Index::<Res>::from_usize(i))
+                .fold(&mut Res::NONE.clone(), |acc, i| acc.check_bit(i))
                 .build();
 
             let result = other
-                .bits_ref()
-                .enumerate()
-                .map(|(i, bit)| (Index::<Res>::try_from(i + bit_len::<Self>()).unwrap(), bit))
-                .fold(&mut result, |acc, (i, bit)| acc.set_bit(i, *bit))
+                .ones()
+                .map(|Index(i, ..)| Index::<Res>::from_usize(i + bit_len::<Self>()))
+                .fold(&mut result, |acc, i| acc.check_bit(i))
                 .build();
             Ok(result)
         } else {
@@ -677,67 +828,7 @@ where
         }
     }
 
-    /// Splits `Bitset` into two smaller ones.<br/>
-    /// If available, you should prefer using [`Bitset::split_optimized`].
-    ///
-    /// # Errors
-    /// Size of `Self` is smaller, than the sum of size of `Res1` and size of `Res2`.
-    ///
-    /// # Examples
-    /// ```rust
-    /// # use std::error::Error;
-    /// #
-    /// # fn main() -> Result<(), Box<dyn Error>> {
-    /// use bitworks::prelude::{Bitset, Bitset8, Bitset16};
-    ///
-    /// let bitset16 = Bitset16::from(0b0000001100000001);
-    /// let (bitset8_1, bitset8_2): (Bitset8, Bitset8) = bitset16.split()?;
-    ///
-    /// assert_eq!(bitset8_1.into_inner(), 0b00000001);
-    /// assert_eq!(bitset8_2.into_inner(), 0b00000011);
-    /// #   Ok(())
-    /// # }
-    /// ```
-    fn split<Res1, Res2>(self) -> ConvResult<(Res1, Res2)>
-    where
-        Res1: Bitset,
-        Res2: Bitset,
-    {
-        let combined = Res1::BYTE_SIZE + Res2::BYTE_SIZE;
-        if Self::BYTE_SIZE == combined {
-            let result1 = self
-                .bits_ref()
-                .take(bit_len::<Res1>())
-                .enumerate()
-                .map(|(i, bit)| (Index::<Res1>::try_from(i).unwrap(), bit))
-                .fold(&mut Res1::NONE.clone(), |acc, (i, bit)| {
-                    acc.set_bit(i, *bit)
-                })
-                .build();
-
-            let result2 = self
-                .bits_ref()
-                .skip(bit_len::<Res1>())
-                .enumerate()
-                .map(|(i, bit)| (Index::<Res2>::try_from(i).unwrap(), bit))
-                .fold(&mut Res2::NONE.clone(), |acc, (i, bit)| {
-                    acc.set_bit(i, *bit)
-                })
-                .build();
-
-            Ok((result1, result2))
-        } else {
-            Err(ConvError::new(
-                ConvTarget::Set(bit_len::<Self>()),
-                ConvTarget::Set(combined * 8),
-            ))
-        }
-    }
-
     /// Combines two `Bitset`s to create a bigger one. Uses `unsafe` optimizations.
-    ///
-    /// # Errors
-    /// Size of `Res` is smaller, than the sum of size of `Self` and size of `Other`.
     ///
     /// # Examples
     /// ```rust
@@ -748,13 +839,62 @@ where
     ///
     /// let bitset8_1 = Bitset8::new(0b00000001);
     /// let bitset8_2 = Bitset8::new(0b00000011);
-    /// let bitset16: Bitset16 = bitset8_1.combine_optimized(bitset8_2)?;
+    /// let bitset16: Bitset16 = bitset8_1.combine_optimized(bitset8_2);
     ///
     /// assert_eq!(bitset16.into_inner(), 0b0000001100000001);
     /// #   Ok(())
     /// # }
     /// ```
-    fn combine_optimized<Other, Res>(self, other: Other) -> ConvResult<Res>
+    fn combine_optimized<Other, Res>(self, other: Other) -> Res
+    where
+        Self: LeftAligned,
+        Other: Bitset + LeftAligned,
+        Res: Bitset + LeftAligned,
+        Self::Size: Combines<Other::Size, Res::Size> + Smaller<Res::Size>,
+        Other::Size: Combines<Self::Size, Res::Size> + Smaller<Res::Size>,
+        Res::Size: Splits<Self::Size, Other::Size> + Bigger<Self::Size> + Bigger<Other::Size>,
+    {
+        let mut result = Res::NONE.clone();
+
+        unsafe {
+            std::ptr::copy_nonoverlapping(
+                &self as *const _ as *const u8,
+                &mut result as *mut _ as *mut u8,
+                Self::BYTE_SIZE,
+            );
+
+            std::ptr::copy_nonoverlapping(
+                &other as *const _ as *const u8,
+                (&mut result as *mut _ as *mut u8).add(Self::BYTE_SIZE),
+                Other::BYTE_SIZE,
+            );
+        }
+        result
+    }
+
+    /// Attempts to combine two `Bitset`s to create a bigger one. Uses `unsafe` optimizations.
+    ///
+    /// # Errors
+    /// Size of `Res` is smaller, than the sum of size of `Self` and size of `Other`.
+    ///
+    /// Alternative version with compile time checks instead: [`Bitset::combine_optimized`]
+    ///
+    /// # Examples
+    /// ```rust
+    /// # use std::error::Error;
+    /// #
+    /// # fn main() -> Result<(), Box<dyn Error>> {
+    /// use bitworks::prelude::{Bitset, Bitset8, Bitset16};
+    ///
+    /// let bitset8_1 = Bitset8::new(0b00000001);
+    /// let bitset8_2 = Bitset8::new(0b00000011);
+    /// let bitset16: Bitset16 = bitset8_1.try_combine_optimized(bitset8_2)?;
+    ///
+    /// assert_eq!(bitset16.into_inner(), 0b0000001100000001);
+    /// #   Ok(())
+    /// # }
+    /// ```
+    fn try_combine_optimized<Other, Res>(self, other: Other) -> ConvResult<Res>
     where
         Self: LeftAligned,
         Other: Bitset + LeftAligned,
@@ -787,10 +927,8 @@ where
         }
     }
 
-    /// Splits `Bitset` into two smaller ones. Uses `unsafe` optimizations.
-    ///
-    /// # Errors
-    /// Size of `Self` is smaller, than the sum of size of `Res1` and size of `Res2`.
+    /// Splits `Bitset` into two smaller ones.<br/>
+    /// If available, you should prefer using [`Bitset::split_optimized`].
     ///
     /// # Examples
     /// ```rust
@@ -800,14 +938,171 @@ where
     /// use bitworks::prelude::{Bitset, Bitset8, Bitset16};
     ///
     /// let bitset16 = Bitset16::from(0b0000001100000001);
-    /// let (bitset8_1, bitset8_2): (Bitset8, Bitset8) = bitset16.split_optimized()?;
+    /// let (bitset8_1, bitset8_2): (Bitset8, Bitset8) = bitset16.split();
     ///
     /// assert_eq!(bitset8_1.into_inner(), 0b00000001);
     /// assert_eq!(bitset8_2.into_inner(), 0b00000011);
     /// #   Ok(())
     /// # }
     /// ```
-    fn split_optimized<Res1, Res2>(self) -> ConvResult<(Res1, Res2)>
+    fn split<Res1, Res2>(self) -> (Res1, Res2)
+    where
+        Res1: Bitset,
+        Res2: Bitset,
+        Self::Size: Splits<Res1::Size, Res2::Size> + Bigger<Res1::Size> + Bigger<Res2::Size>,
+        Res1::Size: Combines<Res2::Size, Self::Size> + Smaller<Self::Size>,
+        Res2::Size: Combines<Res1::Size, Self::Size> + Smaller<Self::Size>,
+    {
+        let result1 = self
+            .bits_ref()
+            .take(bit_len::<Res1>())
+            .enumerate()
+            .map(|(i, bit)| (Index::<Res1>::from_usize(i), bit))
+            .fold(&mut Res1::NONE.clone(), |acc, (i, bit)| {
+                acc.set_bit(i, *bit)
+            })
+            .build();
+
+        let result2 = self
+            .bits_ref()
+            .skip(bit_len::<Res1>())
+            .enumerate()
+            .map(|(i, bit)| (Index::<Res2>::from_usize(i), bit))
+            .fold(&mut Res2::NONE.clone(), |acc, (i, bit)| {
+                acc.set_bit(i, *bit)
+            })
+            .build();
+
+        (result1, result2)
+    }
+
+    /// Attempts to split `Bitset` into two smaller ones.<br/>
+    /// If available, you should prefer using [`Bitset::try_split_optimized`].
+    ///
+    /// # Errors
+    /// Size of `Self` is smaller, than the sum of size of `Res1` and size of `Res2`.
+    ///
+    /// Alternative version with compile time checks instead: [`Bitset::split`]
+    ///
+    /// # Examples
+    /// ```rust
+    /// # use std::error::Error;
+    /// #
+    /// # fn main() -> Result<(), Box<dyn Error>> {
+    /// use bitworks::prelude::{Bitset, Bitset8, Bitset16};
+    ///
+    /// let bitset16 = Bitset16::from(0b0000001100000001);
+    /// let (bitset8_1, bitset8_2): (Bitset8, Bitset8) = bitset16.try_split()?;
+    ///
+    /// assert_eq!(bitset8_1.into_inner(), 0b00000001);
+    /// assert_eq!(bitset8_2.into_inner(), 0b00000011);
+    /// #   Ok(())
+    /// # }
+    /// ```
+    fn try_split<Res1, Res2>(self) -> ConvResult<(Res1, Res2)>
+    where
+        Res1: Bitset,
+        Res2: Bitset,
+    {
+        let combined = Res1::BYTE_SIZE + Res2::BYTE_SIZE;
+        if Self::BYTE_SIZE == combined {
+            let result1 = self
+                .bits_ref()
+                .take(bit_len::<Res1>())
+                .enumerate()
+                .map(|(i, bit)| (Index::<Res1>::from_usize(i), bit))
+                .fold(&mut Res1::NONE.clone(), |acc, (i, bit)| {
+                    acc.set_bit(i, *bit)
+                })
+                .build();
+
+            let result2 = self
+                .bits_ref()
+                .skip(bit_len::<Res1>())
+                .enumerate()
+                .map(|(i, bit)| (Index::<Res2>::from_usize(i), bit))
+                .fold(&mut Res2::NONE.clone(), |acc, (i, bit)| {
+                    acc.set_bit(i, *bit)
+                })
+                .build();
+
+            Ok((result1, result2))
+        } else {
+            Err(ConvError::new(
+                ConvTarget::Set(bit_len::<Self>()),
+                ConvTarget::Set(combined * 8),
+            ))
+        }
+    }
+
+    /// Splits `Bitset` into two smaller ones. Uses `unsafe` optimizations.
+    ///
+    /// # Examples
+    /// ```rust
+    /// # use std::error::Error;
+    /// #
+    /// # fn main() -> Result<(), Box<dyn Error>> {
+    /// use bitworks::prelude::{Bitset, Bitset8, Bitset16};
+    ///
+    /// let bitset16 = Bitset16::from(0b0000001100000001);
+    /// let (bitset8_1, bitset8_2): (Bitset8, Bitset8) = bitset16.split_optimized();
+    ///
+    /// assert_eq!(bitset8_1.into_inner(), 0b00000001);
+    /// assert_eq!(bitset8_2.into_inner(), 0b00000011);
+    /// #   Ok(())
+    /// # }
+    /// ```
+    fn split_optimized<Res1, Res2>(self) -> (Res1, Res2)
+    where
+        Self: LeftAligned,
+        Res1: Bitset + LeftAligned,
+        Res2: Bitset + LeftAligned,
+        Self::Size: Splits<Res1::Size, Res2::Size> + Bigger<Res1::Size> + Bigger<Res2::Size>,
+        Res1::Size: Combines<Res2::Size, Self::Size> + Smaller<Self::Size>,
+        Res2::Size: Combines<Res1::Size, Self::Size> + Smaller<Self::Size>,
+    {
+        let mut result1 = Res1::NONE.clone();
+        let mut result2 = Res2::NONE.clone();
+
+        unsafe {
+            std::ptr::copy_nonoverlapping(
+                &self as *const _ as *const u8,
+                &mut result1 as *mut _ as *mut u8,
+                Res1::BYTE_SIZE,
+            );
+
+            std::ptr::copy_nonoverlapping(
+                (&self as *const _ as *const u8).add(Res1::BYTE_SIZE),
+                &mut result2 as *mut _ as *mut u8,
+                Res2::BYTE_SIZE,
+            );
+        }
+        (result1, result2)
+    }
+
+    /// Attempts to split `Bitset` into two smaller ones. Uses `unsafe` optimizations.
+    ///
+    /// # Errors
+    /// Size of `Self` is smaller, than the sum of size of `Res1` and size of `Res2`.
+    ///
+    /// Alternative version with compile time checks instead: [`Bitset::split_optimized`]
+    ///
+    /// # Examples
+    /// ```rust
+    /// # use std::error::Error;
+    /// #
+    /// # fn main() -> Result<(), Box<dyn Error>> {
+    /// use bitworks::prelude::{Bitset, Bitset8, Bitset16};
+    ///
+    /// let bitset16 = Bitset16::from(0b0000001100000001);
+    /// let (bitset8_1, bitset8_2): (Bitset8, Bitset8) = bitset16.try_split_optimized()?;
+    ///
+    /// assert_eq!(bitset8_1.into_inner(), 0b00000001);
+    /// assert_eq!(bitset8_2.into_inner(), 0b00000011);
+    /// #   Ok(())
+    /// # }
+    /// ```
+    fn try_split_optimized<Res1, Res2>(self) -> ConvResult<(Res1, Res2)>
     where
         Self: LeftAligned,
         Res1: Bitset + LeftAligned,
@@ -871,7 +1166,7 @@ where
         Self: Copy,
     {
         (0..bit_len::<Self>())
-            .map(|i| Index::<Self>::try_from(i).unwrap())
+            .map(|i| Index::<Self>::from_usize(i))
             .map(move |i| self.bit(i))
     }
 
@@ -903,7 +1198,7 @@ where
     #[inline(always)]
     fn bits_ref(&self) -> impl Iterator<Item = BitRef<'_, Self>> {
         (0..bit_len::<Self>())
-            .map(|i| Index::<Self>::try_from(i).unwrap())
+            .map(|i| Index::<Self>::from_usize(i))
             .map(|i| self.bit_ref(i))
     }
 
@@ -932,7 +1227,7 @@ where
     fn bits_mut(&mut self) -> impl Iterator<Item = BitMut<'_, Self>> {
         let p = self as *mut Self;
         (0..bit_len::<Self>())
-            .map(|i| Index::<Self>::try_from(i).unwrap())
+            .map(|i| Index::<Self>::from_usize(i))
             .map(move |i| unsafe { p.as_mut().unwrap().bit_mut(i) })
     }
 
@@ -966,7 +1261,7 @@ where
         })
     }
 
-    /// Returns iterator over [`indeces`][Index] of the unset bits of the `Bitset`.
+    /// Returns iterator over [`indeces`][Index] of the not set bits of the `Bitset`.
     ///
     /// # Examples
     /// ```rust
@@ -1049,15 +1344,12 @@ where
 ///
 /// If you're unsure about what this means, use built-in `Bitset`s (they all implement `Simple`)
 /// or do not implement this trait for your custom `Bitset` (the trade-off should be minimal).
-pub unsafe trait LeftAligned: Bitset
-where
-    Self::_Repr: Sized + Clone + PartialEq + Eq,
-{
-    type _Repr;
+pub unsafe trait LeftAligned: Bitset {
+    type _Repr: Sized + Clone + PartialEq + Eq;
+
+    type _Size: SizeMarker;
 
     const _BYTE_SIZE: usize;
-
-    const _ONE: Self;
 
     const _ALL: Self;
 
@@ -1065,7 +1357,7 @@ where
 
     fn _new(value: Self::Repr) -> Self;
 
-    fn shift_left(mut self, amount: Index<Self>) -> Self {
+    fn _shift_left(mut self, amount: Index<Self>) -> Self {
         let byte_shift = byte_index(amount);
         let bit_shift = bit_index(amount);
 
@@ -1090,7 +1382,7 @@ where
         self
     }
 
-    fn shift_right(mut self, amount: Index<Self>) -> Self {
+    fn _shift_right(mut self, amount: Index<Self>) -> Self {
         let byte_shift = byte_index(amount);
         let bit_shift = bit_index(amount);
 
@@ -1121,13 +1413,13 @@ where
     T: LeftAligned + Sized + Clone + PartialEq + Eq,
 {
     type Repr = <Self as LeftAligned>::_Repr;
+    type Size = <Self as LeftAligned>::_Size;
     const BYTE_SIZE: usize = Self::_BYTE_SIZE;
-    const ONE: Self = Self::_ONE;
     const NONE: Self = Self::_NONE;
     const ALL: Self = Self::_ALL;
 
     #[inline(always)]
-    fn new(value: Self::Repr) -> Self {
+    fn from_repr(value: Self::Repr) -> Self {
         Self::_new(value)
     }
 
@@ -1174,9 +1466,8 @@ where
 
     #[inline(always)]
     fn insert(&mut self, other: Self) -> &mut Self {
-        let self_bytes: &mut [u8] = unsafe {
-            std::slice::from_raw_parts_mut(self as *mut _ as *mut u8, Self::BYTE_SIZE)
-        };
+        let self_bytes: &mut [u8] =
+            unsafe { std::slice::from_raw_parts_mut(self as *mut _ as *mut u8, Self::BYTE_SIZE) };
         let other_bytes: &[u8] =
             unsafe { std::slice::from_raw_parts(&other as *const _ as *const u8, Self::BYTE_SIZE) };
 
@@ -1188,9 +1479,8 @@ where
 
     #[inline(always)]
     fn remove(&mut self, other: Self) -> &mut Self {
-        let self_bytes: &mut [u8] = unsafe {
-            std::slice::from_raw_parts_mut(self as *mut _ as *mut u8, Self::BYTE_SIZE)
-        };
+        let self_bytes: &mut [u8] =
+            unsafe { std::slice::from_raw_parts_mut(self as *mut _ as *mut u8, Self::BYTE_SIZE) };
         let other_bytes: &[u8] =
             unsafe { std::slice::from_raw_parts(&other as *const _ as *const u8, Self::BYTE_SIZE) };
 
@@ -1287,5 +1577,33 @@ where
             self_bytes[i] ^= other_bytes[i];
         }
         self
+    }
+
+    fn subset(&self, other: &Self) -> bool {
+        let self_bytes: &[u8] =
+            unsafe { std::slice::from_raw_parts(self as *const _ as *const u8, Self::BYTE_SIZE) };
+        let other_bytes: &[u8] =
+            unsafe { std::slice::from_raw_parts(other as *const _ as *const u8, Self::BYTE_SIZE) };
+
+        for i in 0..Self::BYTE_SIZE {
+            if self_bytes[i] & other_bytes[i] != other_bytes[i] {
+                return false;
+            }
+        }
+        true
+    }
+
+    fn intersects(&self, other: &Self) -> bool {
+        let self_bytes: &[u8] =
+            unsafe { std::slice::from_raw_parts(self as *const _ as *const u8, Self::BYTE_SIZE) };
+        let other_bytes: &[u8] =
+            unsafe { std::slice::from_raw_parts(other as *const _ as *const u8, Self::BYTE_SIZE) };
+
+        for i in 0..Self::BYTE_SIZE {
+            if self_bytes[i] & other_bytes[i] != 0 {
+                return true;
+            }
+        }
+        false
     }
 }

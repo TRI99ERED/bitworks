@@ -11,6 +11,7 @@ pub mod byte_set;
 pub mod bit;
 pub mod error;
 pub mod index;
+pub mod size_marker;
 
 /// Prelude.
 pub mod prelude {
@@ -29,3 +30,4 @@ pub mod prelude {
 
     pub use index::Index;
 }
+

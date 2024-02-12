@@ -4,6 +4,7 @@ use crate::{
     bit::Bit,
     bitset::{Bitset, LeftAligned},
     prelude::{Bitset16, Bitset32, Bitset64, Bitset8, Byteset, Index},
+    size_marker::Size,
 };
 use std::{
     fmt::{Binary, Debug, Display, LowerHex, Octal, UpperHex},
@@ -24,6 +25,11 @@ const BITS: usize = 128;
 pub struct Bitset128(pub(crate) Inner);
 
 impl Bitset128 {
+    #[inline(always)]
+    pub const fn new(inner: Inner) -> Self {
+        Self(inner)
+    }
+
     /// Returns the inner representation of `Bitset128`.
     ///
     /// # Examples
@@ -48,8 +54,8 @@ impl Bitset128 {
 
 unsafe impl LeftAligned for Bitset128 {
     type _Repr = Inner;
+    type _Size = Size<16>;
     const _BYTE_SIZE: usize = 16;
-    const _ONE: Self = Self(1);
     const _ALL: Self = Self(Inner::MAX);
     const _NONE: Self = Self(Inner::MIN);
 

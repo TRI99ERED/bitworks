@@ -5,6 +5,7 @@ use crate::{
     bitset::{Bitset, LeftAligned},
     error::{ConvError, ConvTarget},
     prelude::{Bitset128, Bitset16, Bitset32, Bitset64, Byteset, Index},
+    size_marker::Size,
 };
 use std::{
     fmt::{Binary, Debug, Display, LowerHex, Octal, UpperHex},
@@ -25,6 +26,11 @@ const BITS: usize = 8;
 pub struct Bitset8(pub(crate) Inner);
 
 impl Bitset8 {
+    #[inline(always)]
+    pub const fn new(inner: Inner) -> Self {
+        Self(inner)
+    }
+
     /// Returns the inner representation of `Bitset8`.
     ///
     /// # Examples
@@ -49,8 +55,8 @@ impl Bitset8 {
 
 unsafe impl LeftAligned for Bitset8 {
     type _Repr = Inner;
+    type _Size = Size<1>;
     const _BYTE_SIZE: usize = 1;
-    const _ONE: Self = Self(1);
     const _ALL: Self = Self(Inner::MAX);
     const _NONE: Self = Self(Inner::MIN);
 
@@ -697,22 +703,22 @@ mod tests {
     #[test]
     fn expand() -> TestResult {
         let bitset1 = Bitset8::from(0b00011011);
-        let bitset2: Bitset16 = bitset1.expand()?;
+        let bitset2: Bitset16 = bitset1.try_expand()?;
 
         assert_eq!(bitset2, Bitset16::from(0b00011011));
 
         let bitset1 = Bitset8::from(0b00011011);
-        let bitset2: Bitset32 = bitset1.expand()?;
+        let bitset2: Bitset32 = bitset1.try_expand()?;
 
         assert_eq!(bitset2, Bitset32::from(0b00011011));
 
         let bitset1 = Bitset8::from(0b00011011);
-        let bitset2: Bitset64 = bitset1.expand()?;
+        let bitset2: Bitset64 = bitset1.try_expand()?;
 
         assert_eq!(bitset2, Bitset64::from(0b00011011));
 
         let bitset1 = Bitset8::from(0b00011011);
-        let bitset2: Bitset128 = bitset1.expand()?;
+        let bitset2: Bitset128 = bitset1.try_expand()?;
 
         assert_eq!(bitset2, Bitset128::from(0b00011011));
 
@@ -722,22 +728,22 @@ mod tests {
     #[test]
     fn fast_expand() -> TestResult {
         let bitset1 = Bitset8::from(0b00011011);
-        let bitset2: Bitset16 = bitset1.expand_optimized()?;
+        let bitset2: Bitset16 = bitset1.try_expand_optimized()?;
 
         assert_eq!(bitset2, Bitset16::from(0b00011011));
 
         let bitset1 = Bitset8::from(0b00011011);
-        let bitset2: Bitset32 = bitset1.expand_optimized()?;
+        let bitset2: Bitset32 = bitset1.try_expand_optimized()?;
 
         assert_eq!(bitset2, Bitset32::from(0b00011011));
 
         let bitset1 = Bitset8::from(0b00011011);
-        let bitset2: Bitset64 = bitset1.expand_optimized()?;
+        let bitset2: Bitset64 = bitset1.try_expand_optimized()?;
 
         assert_eq!(bitset2, Bitset64::from(0b00011011));
 
         let bitset1 = Bitset8::from(0b00011011);
-        let bitset2: Bitset128 = bitset1.expand_optimized()?;
+        let bitset2: Bitset128 = bitset1.try_expand_optimized()?;
 
         assert_eq!(bitset2, Bitset128::from(0b00011011));
 
@@ -749,7 +755,7 @@ mod tests {
         let bitset1 = Bitset8::from(0b00011011);
         let bitset2 = Bitset8::from(0b11101000);
 
-        let bitset3: Bitset16 = bitset1.combine(bitset2)?;
+        let bitset3: Bitset16 = bitset1.try_combine(bitset2)?;
 
         assert_eq!(bitset3, Bitset16::from(0b1110100000011011));
         Ok(())
@@ -758,7 +764,7 @@ mod tests {
     #[test]
     fn split() -> TestResult {
         let bitset1 = Bitset16::from(0b1110100000011011);
-        let (bitset2, bitset3): (Bitset8, Bitset8) = bitset1.split()?;
+        let (bitset2, bitset3): (Bitset8, Bitset8) = bitset1.try_split()?;
 
         assert_eq!(bitset2, Bitset8::from(0b00011011));
         assert_eq!(bitset3, Bitset8::from(0b11101000));
@@ -770,7 +776,7 @@ mod tests {
         let bitset1 = Bitset8::from(0b00011011);
         let bitset2 = Bitset8::from(0b11101000);
 
-        let bitset3: Bitset16 = bitset1.combine_optimized(bitset2)?;
+        let bitset3: Bitset16 = bitset1.try_combine_optimized(bitset2)?;
 
         assert_eq!(bitset3, Bitset16::from(0b1110100000011011));
         Ok(())
@@ -779,7 +785,7 @@ mod tests {
     #[test]
     fn fast_split() -> TestResult {
         let bitset1 = Bitset16::from(0b1110100000011011);
-        let (bitset2, bitset3): (Bitset8, Bitset8) = bitset1.split_optimized()?;
+        let (bitset2, bitset3): (Bitset8, Bitset8) = bitset1.try_split_optimized()?;
 
         assert_eq!(bitset2, Bitset8::from(0b00011011));
         assert_eq!(bitset3, Bitset8::from(0b11101000));
