@@ -325,9 +325,9 @@ mod tests {
     fn construction() -> TestResult {
         let bitset = Tested::NONE
             .clone()
-            .set_bit(0.try_into()?, One)
-            .check_bit(1.try_into()?)
-            .uncheck_bit(0.try_into()?)
+            .replace(0.try_into()?, One)
+            .set(1.try_into()?)
+            .unset(0.try_into()?)
             .build();
 
         assert_eq!(bitset, 0b00000010.into());
@@ -359,7 +359,7 @@ mod tests {
     fn bit_set_to_true() -> TestResult {
         let mut bitset: Tested = 0b10101010.into();
 
-        bitset.set_bit(6.try_into()?, One);
+        bitset.replace(6.try_into()?, One);
 
         assert_eq!(bitset.0, 0b11101010);
         Ok(())
@@ -369,7 +369,7 @@ mod tests {
     fn bit_set_to_false() -> TestResult {
         let mut bitset: Tested = 0b10101010.into();
 
-        bitset.set_bit(7.try_into()?, Zero);
+        bitset.replace(7.try_into()?, Zero);
 
         assert_eq!(bitset.0, 0b00101010);
         Ok(())
@@ -388,7 +388,7 @@ mod tests {
     fn bit_check() -> TestResult {
         let mut bitset: Tested = 0b10101010.into();
 
-        bitset.check_bit(6.try_into()?);
+        bitset.set(6.try_into()?);
 
         assert_eq!(bitset.0, 0b11101010);
         Ok(())
@@ -398,7 +398,7 @@ mod tests {
     fn bit_uncheck() -> TestResult {
         let mut bitset: Tested = 0b10101010.into();
 
-        bitset.uncheck_bit(7.try_into()?);
+        bitset.unset(7.try_into()?);
 
         assert_eq!(bitset.0, 0b00101010);
         Ok(())
@@ -736,8 +736,8 @@ mod tests {
 
     #[test]
     fn combine() -> TestResult {
-        let bitset1 = Bitset64::NONE.clone().set_bit(1.try_into()?, One).build();
-        let bitset2 = Bitset64::NONE.clone().set_bit(1.try_into()?, One).build();
+        let bitset1 = Bitset64::NONE.clone().replace(1.try_into()?, One).build();
+        let bitset2 = Bitset64::NONE.clone().replace(1.try_into()?, One).build();
 
         let bitset3: Bitset128 = bitset1.try_combine(bitset2)?;
 
@@ -745,8 +745,8 @@ mod tests {
             bitset3,
             Bitset128::NONE
                 .clone()
-                .set_bit(1.try_into()?, One)
-                .set_bit((64 + 1).try_into()?, One)
+                .replace(1.try_into()?, One)
+                .replace((64 + 1).try_into()?, One)
                 .build()
         );
         Ok(())
@@ -756,26 +756,26 @@ mod tests {
     fn split() -> TestResult {
         let bitset1 = Bitset128::NONE
             .clone()
-            .set_bit(1.try_into()?, One)
-            .set_bit((64 + 1).try_into()?, One)
+            .replace(1.try_into()?, One)
+            .replace((64 + 1).try_into()?, One)
             .build();
         let (bitset2, bitset3): (Bitset64, Bitset64) = bitset1.try_split()?;
 
         assert_eq!(
             bitset2,
-            Bitset64::NONE.clone().set_bit(1.try_into()?, One).build()
+            Bitset64::NONE.clone().replace(1.try_into()?, One).build()
         );
         assert_eq!(
             bitset3,
-            Bitset64::NONE.clone().set_bit(1.try_into()?, One).build()
+            Bitset64::NONE.clone().replace(1.try_into()?, One).build()
         );
         Ok(())
     }
 
     #[test]
     fn fast_combine() -> TestResult {
-        let bitset1 = Bitset64::NONE.clone().set_bit(1.try_into()?, One).build();
-        let bitset2 = Bitset64::NONE.clone().set_bit(1.try_into()?, One).build();
+        let bitset1 = Bitset64::NONE.clone().replace(1.try_into()?, One).build();
+        let bitset2 = Bitset64::NONE.clone().replace(1.try_into()?, One).build();
 
         let bitset3: Bitset128 = bitset1.try_combine_optimized(bitset2)?;
 
@@ -783,8 +783,8 @@ mod tests {
             bitset3,
             Bitset128::NONE
                 .clone()
-                .set_bit(1.try_into()?, One)
-                .set_bit((64 + 1).try_into()?, One)
+                .replace(1.try_into()?, One)
+                .replace((64 + 1).try_into()?, One)
                 .build()
         );
         Ok(())
@@ -794,18 +794,18 @@ mod tests {
     fn fast_split() -> TestResult {
         let bitset1 = Bitset128::NONE
             .clone()
-            .set_bit(1.try_into()?, One)
-            .set_bit((64 + 1).try_into()?, One)
+            .replace(1.try_into()?, One)
+            .replace((64 + 1).try_into()?, One)
             .build();
         let (bitset2, bitset3): (Bitset64, Bitset64) = bitset1.try_split_optimized()?;
 
         assert_eq!(
             bitset2,
-            Bitset64::NONE.clone().set_bit(1.try_into()?, One).build()
+            Bitset64::NONE.clone().replace(1.try_into()?, One).build()
         );
         assert_eq!(
             bitset3,
-            Bitset64::NONE.clone().set_bit(1.try_into()?, One).build()
+            Bitset64::NONE.clone().replace(1.try_into()?, One).build()
         );
         Ok(())
     }

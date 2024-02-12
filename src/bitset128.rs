@@ -320,9 +320,9 @@ mod tests {
     fn construction() -> TestResult {
         let bitset = Tested::NONE
             .clone()
-            .set_bit(0.try_into()?, One)
-            .check_bit(1.try_into()?)
-            .uncheck_bit(0.try_into()?)
+            .replace(0.try_into()?, One)
+            .set(1.try_into()?)
+            .unset(0.try_into()?)
             .build();
 
         assert_eq!(bitset, 0b00000010.into());
@@ -354,7 +354,7 @@ mod tests {
     fn bit_set_to_true() -> TestResult {
         let mut bitset: Tested = 0b10101010.into();
 
-        bitset.set_bit(6.try_into()?, One);
+        bitset.replace(6.try_into()?, One);
 
         assert_eq!(bitset.0, 0b11101010);
         Ok(())
@@ -364,7 +364,7 @@ mod tests {
     fn bit_set_to_false() -> TestResult {
         let mut bitset: Tested = 0b10101010.into();
 
-        bitset.set_bit(7.try_into()?, Zero);
+        bitset.replace(7.try_into()?, Zero);
 
         assert_eq!(bitset.0, 0b00101010);
         Ok(())
@@ -383,7 +383,7 @@ mod tests {
     fn bit_check() -> TestResult {
         let mut bitset: Tested = 0b10101010.into();
 
-        bitset.check_bit(6.try_into()?);
+        bitset.set(6.try_into()?);
 
         assert_eq!(bitset.0, 0b11101010);
         Ok(())
@@ -393,7 +393,7 @@ mod tests {
     fn bit_uncheck() -> TestResult {
         let mut bitset: Tested = 0b10101010.into();
 
-        bitset.uncheck_bit(7.try_into()?);
+        bitset.unset(7.try_into()?);
 
         assert_eq!(bitset.0, 0b00101010);
         Ok(())

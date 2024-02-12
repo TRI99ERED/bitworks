@@ -6,10 +6,41 @@ use std::{
     ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Deref, DerefMut, Not},
 };
 
+/// Enum representing all possible states of a bit in a [`Bitset`].
+/// Variants are reexported and don't require `Bit::` prefix.
+///
+/// Closely resembles [`bool`] type, but is specific to this crate and used in place of `bool`,
+/// where it's appropriate to guarantee type safety.
+/// Implements [From<bool>][core::convert::From], and bool implements `From<Bit>`,
+/// if conversion is needed.
+///
+/// # Examples
+/// ```rust
+/// # use std::error::Error;
+/// #
+/// # fn main() -> Result<(), Box<dyn Error>> {
+/// use bitworks::{bit::*, prelude::{Bitset, Bitset8}};
+///
+/// assert_eq!(!One, Zero);
+/// assert_eq!(One | Zero, One);
+/// assert_eq!(One & Zero, Zero);
+/// assert_eq!(One ^ Zero, One);
+/// assert_eq!(One ^ One, Zero);
+///
+/// let bitset = Bitset8::NONE
+///     .replace(0.try_into()?, One)
+///     .build();
+///
+/// assert_eq!(bitset.into_inner(), 0b00000001);
+/// #   Ok(())
+/// # }
+/// ```
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum Bit {
+    /// Also known as `unset` state of the bit.
     Zero,
+    /// Also known as `set` state of the bit.
     One,
 }
 
@@ -122,6 +153,25 @@ impl Display for Bit {
 }
 
 /// Smart pointer granting immutable access to a bit in [`Bitset`].
+/// 
+/// Is not meant to be created manually, instead use methods defined on `Bitset`
+/// to get a value of this type.
+/// This type isn't magic, it actually holds the [`Bit`] value.
+///
+/// # Examples
+/// ```rust
+/// # use std::error::Error;
+/// #
+/// # fn main() -> Result<(), Box<dyn Error>> {
+/// use bitworks::prelude::*;
+///
+/// let bitset = Bitset8::NONE.set(1.try_into()?).build();
+///
+/// assert_eq!(*bitset.bit_ref(0.try_into()?), Zero);
+/// assert_eq!(*bitset.bit_ref(1.try_into()?), One);
+/// #   Ok(())
+/// # }
+/// ```
 #[derive(PartialEq, Eq)]
 pub struct BitRef<'a, T: Bitset + 'a>(pub(crate) Bit, pub(crate) Index<T>, pub(crate) &'a T);
 
@@ -181,7 +231,10 @@ where
     Self: 'a,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_tuple("BitRef").field(&self.0).field(&self.1).finish()
+        f.debug_tuple("BitRef")
+            .field(&self.0)
+            .field(&self.1)
+            .finish()
     }
 }
 
@@ -203,6 +256,30 @@ where
 }
 
 /// Smart pointer granting mutable access to a bit in [`Bitset`].
+/// 
+/// Is not meant to be created manually, instead use methods defined on `Bitset`
+/// to get a value of this type.
+/// This type isn't magic, it actually holds the [`Bit`] value.
+///
+/// # Examples
+/// ```rust
+/// # use std::error::Error;
+/// #
+/// # fn main() -> Result<(), Box<dyn Error>> {
+/// use bitworks::prelude::*;
+///
+/// let mut bitset = Bitset8::NONE;
+///
+/// assert_eq!(bitset.bit(0.try_into()?), Zero);
+/// assert_eq!(bitset.bit(1.try_into()?), Zero);
+///
+/// *bitset.bit_mut(0.try_into()?) = One;
+///
+/// assert_eq!(bitset.bit(0.try_into()?), One);
+/// assert_eq!(bitset.bit(1.try_into()?), Zero);
+/// #   Ok(())
+/// # }
+/// ```
 #[derive(PartialEq, Eq)]
 pub struct BitMut<'a, T: Bitset + 'a>(pub(crate) Bit, pub(crate) Index<T>, pub(crate) &'a mut T);
 
@@ -228,7 +305,7 @@ where
     Self: 'a,
 {
     fn drop(&mut self) {
-        self.2.set_bit(self.1, self.0);
+        self.2.replace(self.1, self.0);
     }
 }
 
@@ -280,7 +357,10 @@ where
     Self: 'a,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_tuple("BitMut").field(&self.0).field(&self.1).finish()
+        f.debug_tuple("BitMut")
+            .field(&self.0)
+            .field(&self.1)
+            .finish()
     }
 }
 

@@ -44,17 +44,16 @@ where
 /// This trait is not meant to be implmented on enums, as beyond some extremely rare cases,
 /// they won't produce a valid bitset.
 ///
-/// It's recommended to prefer implementing this trait for structs, where  the field in field order is
+/// It's recommended to prefer implementing this trait for structs, where  the first in order field is
 /// representing the bitset, as that would allow you to implement [`LeftAligned`] marker on it safely.
 /// If you want to get the benefits of `LeftAligned` on any struct, make it a wrapper around
 /// one of the `LeftAligned` types and use it's methods. All built-in `Bitset` types are `LeftAligned`.
 pub trait Bitset: Sized + Clone + PartialEq + Eq {
-
     /// Type, that is the underlying representation of the `Bitset`.<br/>
-    /// Usually one of the Rust built-in types, but can be `Self`.
+    /// Usually one of the Rust built-in types, but can be another `Bitset` or even `Self`.
     type Repr: Sized + Clone + PartialEq + Eq;
 
-    /// Marker type, used for compile time checks on some methods.
+    /// Marker type representing size ordering. Used for compile time checks on some methods.
     type Size: SizeMarker;
 
     /// Number of bytes (`size` in bytes) of the bitset part.
@@ -124,7 +123,7 @@ pub trait Bitset: Sized + Clone + PartialEq + Eq {
     /// # fn main() -> Result<(), Box<dyn Error>> {
     /// use bitworks::prelude::{Bitset, Bitset8};
     ///
-    /// let bitset = Bitset8::new(1);
+    /// let bitset = Bitset8::from_repr(1);
     ///
     /// assert_eq!(bitset.into_inner(), 0b00000001);
     /// #   Ok(())
@@ -142,10 +141,10 @@ pub trait Bitset: Sized + Clone + PartialEq + Eq {
     /// use bitworks::prelude::*;
     ///
     /// let bitset = Bitset8::NONE
-    ///     .insert(Bitset8::new(0b00101111))
-    ///     .set_bit(0.try_into()?, Zero)
-    ///     .check_bit(7.try_into()?)
-    ///     .uncheck_bit(2.try_into()?)
+    ///     .include(Bitset8::new(0b00101111))
+    ///     .replace(0.try_into()?, Zero)
+    ///     .set(7.try_into()?)
+    ///     .unset(2.try_into()?)
     ///     .build();
     ///
     /// assert_eq!(bitset.into_inner(), 0b10101010);
@@ -157,7 +156,7 @@ pub trait Bitset: Sized + Clone + PartialEq + Eq {
         self.clone()
     }
 
-    /// Constructs `Bitset` from [`Index`].
+    /// Constructs `Bitset` from [`Index`]. The resulting value always has only bit at index set.
     ///
     /// # Examples
     /// ```rust
@@ -166,12 +165,12 @@ pub trait Bitset: Sized + Clone + PartialEq + Eq {
     /// # fn main() -> Result<(), Box<dyn Error>> {
     /// use bitworks::prelude::{Bitset, Bitset8, Index};
     ///
-    /// let index = Index::<_>::from_usize(0);
+    /// let index = 0.try_into()?;
     /// let bitset = Bitset8::from_index(&index);
     ///
     /// assert_eq!(bitset.into_inner(), 0b00000001);
     ///
-    /// let index = Index::<_>::from_usize(3);
+    /// let index = 3.try_into()?;
     /// let bitset = Bitset8::from_index(&index);
     ///
     /// assert_eq!(bitset.into_inner(), 0b00001000);
@@ -190,10 +189,10 @@ pub trait Bitset: Sized + Clone + PartialEq + Eq {
     /// # fn main() -> Result<(), Box<dyn Error>> {
     /// use bitworks::prelude::{Bitset, Bitset8, Bitset16};
     ///
-    /// let bitset8 = Bitset8::new(0b00000001);
+    /// let bitset8 = Bitset8::new(0b10101010);
     /// let bitset16: Bitset16 = bitset8.expand();
     ///
-    /// assert_eq!(bitset16.into_inner(), 0b0000000000000001);
+    /// assert_eq!(bitset16.into_inner(), 0b0000000010101010);
     /// #   Ok(())
     /// # }
     /// ```
@@ -206,7 +205,7 @@ pub trait Bitset: Sized + Clone + PartialEq + Eq {
         let result = self
             .ones()
             .map(|Index(i, ..)| Index::<Res>::from_usize(i))
-            .fold(&mut Res::NONE.clone(), |acc, i| acc.check_bit(i))
+            .fold(&mut Res::NONE.clone(), |acc, i| acc.set(i))
             .build();
 
         result
@@ -216,7 +215,7 @@ pub trait Bitset: Sized + Clone + PartialEq + Eq {
     /// If available, you should prefer using [`Bitset::try_expand_optimized`].
     ///
     /// # Errors
-    /// Size of `Res` is smaller, than size of `Self`.
+    /// Returns error if the size of `Res` is smaller, than the size of `Self`.
     ///
     /// Alternative version with compile time checks instead: [`Bitset::expand`]
     ///
@@ -227,10 +226,10 @@ pub trait Bitset: Sized + Clone + PartialEq + Eq {
     /// # fn main() -> Result<(), Box<dyn Error>> {
     /// use bitworks::prelude::{Bitset, Bitset8, Bitset16};
     ///
-    /// let bitset8 = Bitset8::new(0b00000001);
+    /// let bitset8 = Bitset8::new(0b10101010);
     /// let bitset16: Bitset16 = bitset8.try_expand()?;
     ///
-    /// assert_eq!(bitset16.into_inner(), 0b0000000000000001);
+    /// assert_eq!(bitset16.into_inner(), 0b0000000010101010);
     /// #   Ok(())
     /// # }
     /// ```
@@ -242,7 +241,7 @@ pub trait Bitset: Sized + Clone + PartialEq + Eq {
             let result = self
                 .ones()
                 .map(|Index(i, ..)| Index::<Res>::from_usize(i))
-                .fold(&mut Res::NONE.clone(), |acc, i| acc.check_bit(i))
+                .fold(&mut Res::NONE.clone(), |acc, i| acc.set(i))
                 .build();
 
             Ok(result)
@@ -263,10 +262,10 @@ pub trait Bitset: Sized + Clone + PartialEq + Eq {
     /// # fn main() -> Result<(), Box<dyn Error>> {
     /// use bitworks::prelude::{Bitset, Bitset8, Bitset16};
     ///
-    /// let bitset8 = Bitset8::new(0b00000001);
+    /// let bitset8 = Bitset8::new(0b10101010);
     /// let bitset16: Bitset16 = bitset8.expand_optimized();
     ///
-    /// assert_eq!(bitset16.into_inner(), 0b0000000000000001);
+    /// assert_eq!(bitset16.into_inner(), 0b0000000010101010);
     /// #   Ok(())
     /// # }
     /// ```
@@ -292,7 +291,7 @@ pub trait Bitset: Sized + Clone + PartialEq + Eq {
     /// Attempts to expand `Bitset` to a bigger one. Uses `unsafe` optimizations.
     ///
     /// # Errors
-    /// Size of `Res` is smaller, than size of `Self`.
+    /// Returns error if the size of `Res` is smaller, than the size of `Self`.
     ///
     /// Alternative version with compile time checks instead: [`Bitset::expand_optimized`]
     ///
@@ -303,10 +302,10 @@ pub trait Bitset: Sized + Clone + PartialEq + Eq {
     /// # fn main() -> Result<(), Box<dyn Error>> {
     /// use bitworks::prelude::{Bitset, Bitset8, Bitset16};
     ///
-    /// let bitset8 = Bitset8::new(0b00000001);
+    /// let bitset8 = Bitset8::new(0b10101010);
     /// let bitset16: Bitset16 = bitset8.try_expand_optimized()?;
     ///
-    /// assert_eq!(bitset16.into_inner(), 0b0000000000000001);
+    /// assert_eq!(bitset16.into_inner(), 0b0000000010101010);
     /// #   Ok(())
     /// # }
     /// ```
@@ -334,8 +333,8 @@ pub trait Bitset: Sized + Clone + PartialEq + Eq {
         }
     }
 
-    /// Builds `Bitset` from collection of [`Bit`] values.<br/>
-    /// Maintains the same index order: leftmost `slice` item becomes the least significant bit.
+    /// Builds `Bitset` from the collection of [`Bit`] values.<br/>
+    /// Maintains the same index order: first `Bit` item becomes the least significant bit.
     ///
     /// # Examples
     /// ```rust
@@ -362,7 +361,7 @@ pub trait Bitset: Sized + Clone + PartialEq + Eq {
             .enumerate()
             .filter(|(_, &b)| bool::from(b))
             .fold(&mut Self::NONE.clone(), |acc, (i, _)| {
-                acc.check_bit(Index::<_>::from_usize(i))
+                acc.set(Index::<_>::from_usize(i))
             })
             .build()
     }
@@ -387,7 +386,7 @@ pub trait Bitset: Sized + Clone + PartialEq + Eq {
         self.ones().count()
     }
 
-    /// Returns the number of all not set bits.
+    /// Returns the number of all unset bits.
     ///
     /// # Examples
     /// ```rust
@@ -407,7 +406,7 @@ pub trait Bitset: Sized + Clone + PartialEq + Eq {
         self.zeros().count()
     }
 
-    /// Sets bit at [`index`][Index] to value. Returns a mutable reference to `self`.
+    /// Replaces the bit at [`index`][Index] to the value. Returns a mutable reference to `self`.
     ///
     /// # Examples
     /// ```rust
@@ -417,13 +416,13 @@ pub trait Bitset: Sized + Clone + PartialEq + Eq {
     /// use bitworks::prelude::*;
     ///
     /// let bitset = Bitset8::new(0b01010100)
-    ///     .set_bit(1.try_into()?, One)
-    ///     .set_bit(2.try_into()?, Zero)
-    ///     .set_bit(3.try_into()?, One)
-    ///     .set_bit(4.try_into()?, Zero)
-    ///     .set_bit(5.try_into()?, One)
-    ///     .set_bit(6.try_into()?, Zero)
-    ///     .set_bit(7.try_into()?, One)
+    ///     .replace(1.try_into()?, One)
+    ///     .replace(2.try_into()?, Zero)
+    ///     .replace(3.try_into()?, One)
+    ///     .replace(4.try_into()?, Zero)
+    ///     .replace(5.try_into()?, One)
+    ///     .replace(6.try_into()?, Zero)
+    ///     .replace(7.try_into()?, One)
     ///     .build();
     ///
     /// assert_eq!(bitset.into_inner(), 0b10101010);
@@ -431,16 +430,16 @@ pub trait Bitset: Sized + Clone + PartialEq + Eq {
     /// # }
     /// ```
     #[inline(always)]
-    fn set_bit(&mut self, index: Index<Self>, value: Bit) -> &mut Self {
+    fn replace(&mut self, index: Index<Self>, value: Bit) -> &mut Self {
         if bool::from(value) {
-            self.check_bit(index);
+            self.set(index);
         } else {
-            self.uncheck_bit(index);
+            self.unset(index);
         }
         self
     }
 
-    /// Sets bit at [`index`][Index] to 1. Returns a mutable reference to `self`.
+    /// Sets bit at [`index`][Index]. Returns a mutable reference to `self`.
     ///
     /// # Examples
     /// ```rust
@@ -451,19 +450,19 @@ pub trait Bitset: Sized + Clone + PartialEq + Eq {
     ///
     /// let bitset = Bitset8::NONE
     ///     .clone()
-    ///     .check_bit(1.try_into()?)
-    ///     .check_bit(3.try_into()?)
-    ///     .check_bit(5.try_into()?)
-    ///     .check_bit(7.try_into()?)
+    ///     .set(1.try_into()?)
+    ///     .set(3.try_into()?)
+    ///     .set(5.try_into()?)
+    ///     .set(7.try_into()?)
     ///     .build();
     ///
     /// assert_eq!(bitset.into_inner(), 0b10101010);
     /// #   Ok(())
     /// # }
     /// ```
-    fn check_bit(&mut self, index: Index<Self>) -> &mut Self;
+    fn set(&mut self, index: Index<Self>) -> &mut Self;
 
-    /// Sets bit at [`index`][Index] to 0. Returns a mutable reference to `self`.
+    /// Unsets bit at [`index`][Index]. Returns a mutable reference to `self`.
     ///
     /// # Examples
     /// ```rust
@@ -474,19 +473,41 @@ pub trait Bitset: Sized + Clone + PartialEq + Eq {
     ///
     /// let bitset = Bitset8::ALL
     ///     .clone()
-    ///     .uncheck_bit(0.try_into()?)
-    ///     .uncheck_bit(2.try_into()?)
-    ///     .uncheck_bit(4.try_into()?)
-    ///     .uncheck_bit(6.try_into()?)
+    ///     .unset(0.try_into()?)
+    ///     .unset(2.try_into()?)
+    ///     .unset(4.try_into()?)
+    ///     .unset(6.try_into()?)
     ///     .build();
     ///
     /// assert_eq!(bitset.into_inner(), 0b10101010);
     /// #   Ok(())
     /// # }
     /// ```
-    fn uncheck_bit(&mut self, index: Index<Self>) -> &mut Self;
+    fn unset(&mut self, index: Index<Self>) -> &mut Self;
 
-    /// Inserts all bits of `other` to `self`. Returns a mutable reference to `self`.
+    /// Flips bit at [`index`][Index]. Returns a mutable reference to `self`.
+    ///
+    /// # Examples
+    /// ```rust
+    /// # use std::error::Error;
+    /// #
+    /// # fn main() -> Result<(), Box<dyn Error>> {
+    /// use bitworks::prelude::{Bitset, Bitset8};
+    ///
+    /// let bitset = Bitset8::new(0b11110000)
+    ///     .flip(1.try_into()?)
+    ///     .flip(3.try_into()?)
+    ///     .flip(4.try_into()?)
+    ///     .flip(6.try_into()?)
+    ///     .build();
+    ///
+    /// assert_eq!(bitset.into_inner(), 0b10101010);
+    /// #   Ok(())
+    /// # }
+    /// ```
+    fn flip(&mut self, index: Index<Self>) -> &mut Self;
+
+    /// Includes all set bits of `other` in `self`. Returns a mutable reference to `self`.
     ///
     /// # Examples
     /// ```rust
@@ -495,17 +516,17 @@ pub trait Bitset: Sized + Clone + PartialEq + Eq {
     /// # fn main() -> Result<(), Box<dyn Error>> {
     /// use bitworks::prelude::*;
     ///
-    /// let bitset = Bitset8::new(0b01010100)
-    ///     .insert(Bitset8::new(0b10101010))
+    /// let bitset = Bitset8::new(0b00100010)
+    ///     .include(Bitset8::new(0b10001000))
     ///     .build();
     ///
-    /// assert_eq!(bitset.into_inner(), 0b11111110);
+    /// assert_eq!(bitset.into_inner(), 0b10101010);
     /// #   Ok(())
     /// # }
     /// ```
-    fn insert(&mut self, other: Self) -> &mut Self;
+    fn include(&mut self, other: Self) -> &mut Self;
 
-    /// Removes all bits of `other` from `self`. Returns a mutable reference to `self`.
+    /// Excludes all set bits of `other` from `self`. Returns a mutable reference to `self`.
     ///
     /// # Examples
     /// ```rust
@@ -515,16 +536,16 @@ pub trait Bitset: Sized + Clone + PartialEq + Eq {
     /// use bitworks::prelude::*;
     ///
     /// let bitset = Bitset8::new(0b11111110)
-    ///     .remove(Bitset8::new(0b01010100))
+    ///     .exclude(Bitset8::new(0b01010100))
     ///     .build();
     ///
     /// assert_eq!(bitset.into_inner(), 0b10101010);
     /// #   Ok(())
     /// # }
     /// ```
-    fn remove(&mut self, other: Self) -> &mut Self;
+    fn exclude(&mut self, other: Self) -> &mut Self;
 
-    /// Returns a copy of a [`Bit`] at [`index`][Index].
+    /// Returns a copy of the [`Bit`] at [`index`][Index].
     ///
     /// # Examples
     /// ```rust
@@ -533,7 +554,7 @@ pub trait Bitset: Sized + Clone + PartialEq + Eq {
     /// # fn main() -> Result<(), Box<dyn Error>> {
     /// use bitworks::prelude::*;
     ///
-    /// let bitset = Bitset8::NONE.set_bit(1.try_into()?, One).build();
+    /// let bitset = Bitset8::NONE.set(1.try_into()?).build();
     ///
     /// assert_eq!(bitset.bit(0.try_into()?), Zero);
     /// assert_eq!(bitset.bit(1.try_into()?), One);
@@ -551,7 +572,7 @@ pub trait Bitset: Sized + Clone + PartialEq + Eq {
     /// # fn main() -> Result<(), Box<dyn Error>> {
     /// use bitworks::prelude::*;
     ///
-    /// let bitset = Bitset8::NONE.set_bit(1.try_into()?, One).build();
+    /// let bitset = Bitset8::NONE.set(1.try_into()?).build();
     ///
     /// assert_eq!(*bitset.bit_ref(0.try_into()?), Zero);
     /// assert_eq!(*bitset.bit_ref(1.try_into()?), One);
@@ -584,7 +605,7 @@ pub trait Bitset: Sized + Clone + PartialEq + Eq {
     fn bit_mut(&mut self, index: Index<Self>) -> BitMut<'_, Self>;
 
     /// Returns Set complement (`self′`) of `Bitset`.<br/>
-    /// Alias for [`!`] operator.
+    /// Alias for [`!`][core::ops::Not] operator.
     ///
     /// # Examples
     /// ```rust
@@ -604,7 +625,7 @@ pub trait Bitset: Sized + Clone + PartialEq + Eq {
     fn complement(self) -> Self;
 
     /// Returns Set union (`self ∪ other`) of two `Bitset`s.<br/>
-    /// Alias for [`|`] operator.
+    /// Alias for [`|`][core::ops::BitOr] operator.
     ///
     /// # Examples
     /// ```rust
@@ -624,7 +645,7 @@ pub trait Bitset: Sized + Clone + PartialEq + Eq {
     fn union(self, other: Self) -> Self;
 
     /// Returns Set intersection (`self ∩ other`) of two `Bitset`s.<br/>
-    /// Alias for [`&`] operator.
+    /// Alias for [`&`][core::ops::BitAnd] operator.
     ///
     /// # Examples
     /// ```rust
@@ -666,7 +687,7 @@ pub trait Bitset: Sized + Clone + PartialEq + Eq {
     }
 
     /// Returns Set symmetric difference (`self Δ other`) of two `Bitset`s.<br/>
-    /// Alias for [`^`] operator.
+    /// Alias for [`^`][core::ops::BitXor] operator.
     ///
     /// # Examples
     /// ```rust
@@ -698,13 +719,13 @@ pub trait Bitset: Sized + Clone + PartialEq + Eq {
     /// let b = Bitset8::new(0b11110000);
     /// let c = Bitset8::new(0b00001111);
     ///
-    /// assert!(a.subset(&b));
-    /// assert!(!a.subset(&c));
+    /// assert!(a.includes(&b));
+    /// assert!(!a.includes(&c));
     /// #   Ok(())
     /// # }
     /// ```
     #[inline(always)]
-    fn subset(&self, other: &Self) -> bool {
+    fn includes(&self, other: &Self) -> bool {
         for i in other.ones() {
             if !bool::from(self.bit(i)) {
                 return false;
@@ -770,13 +791,13 @@ pub trait Bitset: Sized + Clone + PartialEq + Eq {
         let mut result = self
             .ones()
             .map(|Index(i, ..)| Index::<Res>::from_usize(i))
-            .fold(&mut Res::NONE.clone(), |acc, i| acc.check_bit(i))
+            .fold(&mut Res::NONE.clone(), |acc, i| acc.set(i))
             .build();
 
         let result = other
             .ones()
             .map(|Index(i, ..)| Index::<Res>::from_usize(i + bit_len::<Self>()))
-            .fold(&mut result, |acc, i| acc.check_bit(i))
+            .fold(&mut result, |acc, i| acc.set(i))
             .build();
         result
     }
@@ -785,7 +806,7 @@ pub trait Bitset: Sized + Clone + PartialEq + Eq {
     /// If available, you should prefer using [`Bitset::try_combine_optimized`].
     ///
     /// # Errors
-    /// Size of `Res` is smaller, than the sum of size of `Self` and size of `Other`.
+    /// Returns error if the size of `Res` isn't equal to the sum of the sizes of `Self` and `Other`.
     ///
     /// Alternative version with compile time checks instead: [`Bitset::combine`]
     ///
@@ -814,13 +835,13 @@ pub trait Bitset: Sized + Clone + PartialEq + Eq {
             let mut result = self
                 .ones()
                 .map(|Index(i, ..)| Index::<Res>::from_usize(i))
-                .fold(&mut Res::NONE.clone(), |acc, i| acc.check_bit(i))
+                .fold(&mut Res::NONE.clone(), |acc, i| acc.set(i))
                 .build();
 
             let result = other
                 .ones()
                 .map(|Index(i, ..)| Index::<Res>::from_usize(i + bit_len::<Self>()))
-                .fold(&mut result, |acc, i| acc.check_bit(i))
+                .fold(&mut result, |acc, i| acc.set(i))
                 .build();
             Ok(result)
         } else {
@@ -878,7 +899,7 @@ pub trait Bitset: Sized + Clone + PartialEq + Eq {
     /// Attempts to combine two `Bitset`s to create a bigger one. Uses `unsafe` optimizations.
     ///
     /// # Errors
-    /// Size of `Res` is smaller, than the sum of size of `Self` and size of `Other`.
+    /// Returns error if the size of `Res` isn't equal to the sum of the sizes of `Self` and `Other`.
     ///
     /// Alternative version with compile time checks instead: [`Bitset::combine_optimized`]
     ///
@@ -962,7 +983,7 @@ pub trait Bitset: Sized + Clone + PartialEq + Eq {
             .enumerate()
             .map(|(i, bit)| (Index::<Res1>::from_usize(i), bit))
             .fold(&mut Res1::NONE.clone(), |acc, (i, bit)| {
-                acc.set_bit(i, *bit)
+                acc.replace(i, *bit)
             })
             .build();
 
@@ -972,7 +993,7 @@ pub trait Bitset: Sized + Clone + PartialEq + Eq {
             .enumerate()
             .map(|(i, bit)| (Index::<Res2>::from_usize(i), bit))
             .fold(&mut Res2::NONE.clone(), |acc, (i, bit)| {
-                acc.set_bit(i, *bit)
+                acc.replace(i, *bit)
             })
             .build();
 
@@ -983,7 +1004,7 @@ pub trait Bitset: Sized + Clone + PartialEq + Eq {
     /// If available, you should prefer using [`Bitset::try_split_optimized`].
     ///
     /// # Errors
-    /// Size of `Self` is smaller, than the sum of size of `Res1` and size of `Res2`.
+    /// Returns error if the size of `Self` isn't equal to the sum of the sizes of `Res1` and `Res2`.
     ///
     /// Alternative version with compile time checks instead: [`Bitset::split`]
     ///
@@ -1015,7 +1036,7 @@ pub trait Bitset: Sized + Clone + PartialEq + Eq {
                 .enumerate()
                 .map(|(i, bit)| (Index::<Res1>::from_usize(i), bit))
                 .fold(&mut Res1::NONE.clone(), |acc, (i, bit)| {
-                    acc.set_bit(i, *bit)
+                    acc.replace(i, *bit)
                 })
                 .build();
 
@@ -1025,7 +1046,7 @@ pub trait Bitset: Sized + Clone + PartialEq + Eq {
                 .enumerate()
                 .map(|(i, bit)| (Index::<Res2>::from_usize(i), bit))
                 .fold(&mut Res2::NONE.clone(), |acc, (i, bit)| {
-                    acc.set_bit(i, *bit)
+                    acc.replace(i, *bit)
                 })
                 .build();
 
@@ -1086,7 +1107,7 @@ pub trait Bitset: Sized + Clone + PartialEq + Eq {
     /// Attempts to split `Bitset` into two smaller ones. Uses `unsafe` optimizations.
     ///
     /// # Errors
-    /// Size of `Self` is smaller, than the sum of size of `Res1` and size of `Res2`.
+    /// Returns error if the size of `Self` isn't equal to the sum of the sizes of `Res1` and `Res2`.
     ///
     /// Alternative version with compile time checks instead: [`Bitset::split_optimized`]
     ///
@@ -1212,14 +1233,14 @@ pub trait Bitset: Sized + Clone + PartialEq + Eq {
     /// # fn main() -> Result<(), Box<dyn Error>> {
     /// use bitworks::prelude::{Bitset, Bitset8};
     ///
-    /// let mut bitset = Bitset8::new(0b01010100);
+    /// let mut bitset = Bitset8::new(0b01010101);
     /// let mut iter = bitset.bits_mut();
     ///
     /// for mut bit in iter {
     ///     *bit = !*bit;
     /// }
     ///
-    /// assert_eq!(bitset.into_inner(), 0b10101011);
+    /// assert_eq!(bitset.into_inner(), 0b10101010);
     /// #   Ok(())
     /// # }
     /// ```
@@ -1352,14 +1373,13 @@ pub trait Bitset: Sized + Clone + PartialEq + Eq {
 /// Alternatively you can make a wrapper around one of the built-in bitsets and implement `Bitset` on it,
 /// delegating all of the methods to inner type's.
 pub unsafe trait LeftAligned: Bitset + Sized + Clone + PartialEq + Eq {
-
     /// Type, that is the underlying representation of the `Bitset`.<br/>
     /// Usually one of the Rust built-in types, but can be `Self`.
     ///
     /// Used to set corresponding field [`Bitset::Repr`].
     type _Repr: Sized + Clone + PartialEq + Eq;
 
-    /// Marker type, used for compile time checks on some methods.
+    /// Marker type representing size ordering. Used for compile time checks on some methods.
     ///
     /// Used to set corresponding field [`Bitset::Size`].
     type _Size: SizeMarker;
@@ -1519,7 +1539,7 @@ where
 
     #[inline(always)]
     fn from_index(index: &Index<Self>) -> Self {
-        Self::NONE.clone().check_bit(*index).clone()
+        Self::NONE.clone().set(*index).clone()
     }
 
     #[inline(always)]
@@ -1539,7 +1559,7 @@ where
     }
 
     #[inline(always)]
-    fn check_bit(&mut self, index: Index<Self>) -> &mut Self {
+    fn set(&mut self, index: Index<Self>) -> &mut Self {
         let self_ptr = self as *mut _ as *mut u8;
         unsafe {
             let byte = self_ptr.add(byte_index(index));
@@ -1549,7 +1569,7 @@ where
     }
 
     #[inline(always)]
-    fn uncheck_bit(&mut self, index: Index<Self>) -> &mut Self {
+    fn unset(&mut self, index: Index<Self>) -> &mut Self {
         let self_ptr = self as *mut _ as *mut u8;
         unsafe {
             let byte = self_ptr.add(byte_index(index));
@@ -1559,7 +1579,17 @@ where
     }
 
     #[inline(always)]
-    fn insert(&mut self, other: Self) -> &mut Self {
+    fn flip(&mut self, index: Index<Self>) -> &mut Self {
+        let self_ptr = self as *mut _ as *mut u8;
+        unsafe {
+            let byte = self_ptr.add(byte_index(index));
+            *byte ^= 1 << bit_index(index);
+        }
+        self
+    }
+
+    #[inline(always)]
+    fn include(&mut self, other: Self) -> &mut Self {
         let self_bytes: &mut [u8] =
             unsafe { std::slice::from_raw_parts_mut(self as *mut _ as *mut u8, Self::BYTE_SIZE) };
         let other_bytes: &[u8] =
@@ -1572,7 +1602,7 @@ where
     }
 
     #[inline(always)]
-    fn remove(&mut self, other: Self) -> &mut Self {
+    fn exclude(&mut self, other: Self) -> &mut Self {
         let self_bytes: &mut [u8] =
             unsafe { std::slice::from_raw_parts_mut(self as *mut _ as *mut u8, Self::BYTE_SIZE) };
         let other_bytes: &[u8] =
@@ -1605,7 +1635,7 @@ where
         BitMut(Bit::from(byte & bitmask(index) != 0), index, self)
     }
 
-    #[inline(always)]
+    #[inline]
     fn complement(mut self) -> Self {
         let bytes: &mut [u8] = unsafe {
             std::slice::from_raw_parts_mut(&mut self as *mut _ as *mut u8, Self::BYTE_SIZE)
@@ -1617,7 +1647,7 @@ where
         self
     }
 
-    #[inline(always)]
+    #[inline]
     fn union(mut self, other: Self) -> Self {
         let self_bytes: &mut [u8] = unsafe {
             std::slice::from_raw_parts_mut(&mut self as *mut _ as *mut u8, Self::BYTE_SIZE)
@@ -1631,7 +1661,7 @@ where
         self
     }
 
-    #[inline(always)]
+    #[inline]
     fn intersection(mut self, other: Self) -> Self {
         let self_bytes: &mut [u8] = unsafe {
             std::slice::from_raw_parts_mut(&mut self as *mut _ as *mut u8, Self::BYTE_SIZE)
@@ -1645,7 +1675,7 @@ where
         self
     }
 
-    #[inline(always)]
+    #[inline]
     fn difference(mut self, other: Self) -> Self {
         let self_bytes: &mut [u8] = unsafe {
             std::slice::from_raw_parts_mut(&mut self as *mut _ as *mut u8, Self::BYTE_SIZE)
@@ -1659,7 +1689,7 @@ where
         self
     }
 
-    #[inline(always)]
+    #[inline]
     fn sym_difference(mut self, other: Self) -> Self {
         let self_bytes: &mut [u8] = unsafe {
             std::slice::from_raw_parts_mut(&mut self as *mut _ as *mut u8, Self::BYTE_SIZE)
@@ -1673,7 +1703,8 @@ where
         self
     }
 
-    fn subset(&self, other: &Self) -> bool {
+    #[inline]
+    fn includes(&self, other: &Self) -> bool {
         let self_bytes: &[u8] =
             unsafe { std::slice::from_raw_parts(self as *const _ as *const u8, Self::BYTE_SIZE) };
         let other_bytes: &[u8] =
@@ -1687,6 +1718,7 @@ where
         true
     }
 
+    #[inline]
     fn intersects(&self, other: &Self) -> bool {
         let self_bytes: &[u8] =
             unsafe { std::slice::from_raw_parts(self as *const _ as *const u8, Self::BYTE_SIZE) };
