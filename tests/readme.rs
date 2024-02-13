@@ -1,5 +1,6 @@
 use bitworks::prelude::*;
 
+#[test]
 fn main() {
     let mut bitset = Bitset8::NONE
         .clone()

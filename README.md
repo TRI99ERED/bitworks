@@ -5,7 +5,7 @@ Crate meant to provide easy to use bitfields, with some out of the box functiona
 Enable feature "serde" to enable `serde::Serialize` and `serde::Deserialize` for most applicable types.
 
 ## Usage overview
-```
+```rust
 use bitworks::prelude::*;
 
 fn main() {
