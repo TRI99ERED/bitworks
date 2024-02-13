@@ -44,9 +44,9 @@ where
     /// # use std::error::Error;
     /// #
     /// # fn main() -> Result<(), Box<dyn Error>> {
-    /// use bitworks::prelude::{Bitset8, Index};
+    /// use bitworks::prelude::{Bitset8, Index, Index8};
     ///
-    /// let index = Index::<Bitset8>::from_usize(7);
+    /// let index = Index8::from_usize(7);
     /// assert_eq!(index.into_inner(), 7);
     /// #   Ok(())
     /// # }
@@ -72,9 +72,9 @@ where
     /// # use std::error::Error;
     /// #
     /// # fn main() -> Result<(), Box<dyn Error>> {
-    /// use bitworks::prelude::{Bitset8, Index};
+    /// use bitworks::prelude::{Bitset8, Index, Index8};
     ///
-    /// let index = Index::<Bitset8>::try_from_usize(7)?;
+    /// let index = Index8::try_from_usize(7)?;
     /// assert_eq!(index.into_inner(), 7);
     /// #   Ok(())
     /// # }
@@ -97,9 +97,9 @@ where
     /// # use std::error::Error;
     /// #
     /// # fn main() -> Result<(), Box<dyn Error>> {
-    /// use bitworks::prelude::{Bitset8, Index};
+    /// use bitworks::prelude::{Bitset8, Index, Index8};
     ///
-    /// let index = Index::<Bitset8>::MAX;
+    /// let index = Index8::MAX;
     /// assert_eq!(index.into_inner(), 7);
     /// #   Ok(())
     /// # }
@@ -116,15 +116,15 @@ where
     /// # use std::error::Error;
     /// #
     /// # fn main() -> Result<(), Box<dyn Error>> {
-    /// use bitworks::prelude::{Bitset8, Index};
+    /// use bitworks::prelude::{Bitset8, Index, Index8};
     ///
-    /// let a = Index::<Bitset8>::ONE;
-    /// let b = Index::<Bitset8>::ONE;
+    /// let a = Index8::ONE;
+    /// let b = Index8::ONE;
     /// let c = a.checked_add(b);
     /// assert_eq!(c.unwrap().into_inner(), 2);
     ///
-    /// let d = Index::<Bitset8>::MAX;
-    /// let e = Index::<Bitset8>::ONE;
+    /// let d = Index8::MAX;
+    /// let e = Index8::ONE;
     /// let f = d.checked_add(e);
     /// assert_eq!(f, None);
     /// #   Ok(())
@@ -145,15 +145,15 @@ where
     /// # use std::error::Error;
     /// #
     /// # fn main() -> Result<(), Box<dyn Error>> {
-    /// use bitworks::prelude::{Bitset8, Index};
+    /// use bitworks::prelude::{Bitset8, Index, Index8};
     ///
-    /// let a = Index::<Bitset8>::MAX;
-    /// let b = Index::<Bitset8>::ONE;
+    /// let a = Index8::MAX;
+    /// let b = Index8::ONE;
     /// let c = a.checked_sub(b);
     /// assert_eq!(c.unwrap().into_inner(), 6);
     ///
-    /// let d = Index::<Bitset8>::MIN;
-    /// let e = Index::<Bitset8>::ONE;
+    /// let d = Index8::MIN;
+    /// let e = Index8::ONE;
     /// let f = d.checked_sub(e);
     /// assert_eq!(f, None);
     /// #   Ok(())
@@ -175,15 +175,15 @@ where
     /// # use std::error::Error;
     /// #
     /// # fn main() -> Result<(), Box<dyn Error>> {
-    /// use bitworks::prelude::{Bitset8, Index};
+    /// use bitworks::prelude::{Bitset8, Index, Index8};
     ///
-    /// let a = Index::<Bitset8>::ONE;
-    /// let b = Index::<Bitset8>::ONE;
+    /// let a = Index8::ONE;
+    /// let b = Index8::ONE;
     /// let c = a.saturating_add(b);
     /// assert_eq!(c.into_inner(), 2);
     ///
-    /// let d = Index::<Bitset8>::MAX;
-    /// let e = Index::<Bitset8>::ONE;
+    /// let d = Index8::MAX;
+    /// let e = Index8::ONE;
     /// let f = d.saturating_add(e);
     /// assert_eq!(f.into_inner(), 7);
     /// #   Ok(())
@@ -205,15 +205,15 @@ where
     /// # use std::error::Error;
     /// #
     /// # fn main() -> Result<(), Box<dyn Error>> {
-    /// use bitworks::prelude::{Bitset8, Index};
+    /// use bitworks::prelude::{Bitset8, Index, Index8};
     ///
-    /// let a = Index::<Bitset8>::MAX;
-    /// let b = Index::<Bitset8>::ONE;
+    /// let a = Index8::MAX;
+    /// let b = Index8::ONE;
     /// let c = a.saturating_sub(b);
     /// assert_eq!(c.into_inner(), 6);
     ///
-    /// let d = Index::<Bitset8>::MIN;
-    /// let e = Index::<Bitset8>::ONE;
+    /// let d = Index8::MIN;
+    /// let e = Index8::ONE;
     /// let f = d.saturating_sub(e);
     /// assert_eq!(f.into_inner(), 0);
     /// #   Ok(())
@@ -231,22 +231,22 @@ where
     ///
     /// # Panics
     /// Panics if `U::BIT_SIZE` is smaller, than `T::BIT_SIZE`.
-    /// 
+    ///
     /// # Examples
     /// ```rust
     /// # use std::error::Error;
     /// #
     /// # fn main() -> Result<(), Box<dyn Error>> {
-    /// use bitworks::prelude::{Bitset8, Bitset16, Index};
+    /// use bitworks::prelude::{Bitset8, Bitset16, Index, Index8, Index16};
     ///
-    /// let a16 = Index::<Bitset16>::from_usize(7);
-    /// let b16 = Index::<Bitset16>::from_usize(8);
-    /// 
-    /// let a8: Index::<Bitset8> = a16.to_other();
+    /// let a16 = Index16::from_usize(7);
+    /// let b16 = Index16::from_usize(8);
+    ///
+    /// let a8: Index8 = a16.to_other();
     /// assert_eq!(a8.into_inner(), 7);
-    /// 
+    ///
     /// // The following will panic!
-    /// // let b8: Index::<Bitset8> = b16.to_other();
+    /// // let b8: Index8 = b16.to_other();
     /// #   Ok(())
     /// # }
     /// ```
@@ -268,21 +268,21 @@ where
     }
 
     /// Conversion between indeces, with saturation on overflow.
-    /// 
+    ///
     /// # Examples
     /// ```rust
     /// # use std::error::Error;
     /// #
     /// # fn main() -> Result<(), Box<dyn Error>> {
-    /// use bitworks::prelude::{Bitset8, Bitset16, Index};
+    /// use bitworks::prelude::{Bitset8, Bitset16, Index, Index8, Index16};
     ///
-    /// let a16 = Index::<Bitset16>::from_usize(7);
-    /// let b16 = Index::<Bitset16>::from_usize(8);
-    /// 
-    /// let a8: Index::<Bitset8> = a16.to_other_saturating();
+    /// let a16 = Index16::from_usize(7);
+    /// let b16 = Index16::from_usize(8);
+    ///
+    /// let a8: Index8 = a16.to_other_saturating();
     /// assert_eq!(a8.into_inner(), 7);
-    /// 
-    /// let b8: Index::<Bitset8> = b16.to_other_saturating();
+    ///
+    /// let b8: Index8 = b16.to_other_saturating();
     /// assert_eq!(b8.into_inner(), 7);
     /// #   Ok(())
     /// # }
@@ -303,20 +303,20 @@ where
     ///
     /// # Errors
     /// `U::BIT_SIZE` is smaller, than `T::BIT_SIZE`.
-    /// 
+    ///
     /// # Examples
     /// ```rust
     /// # use std::error::Error;
     /// #
     /// # fn main() -> Result<(), Box<dyn Error>> {
-    /// use bitworks::prelude::{Bitset8, Bitset16, Index};
+    /// use bitworks::prelude::{Bitset8, Bitset16, Index, Index8, Index16};
     ///
-    /// let a16 = Index::<Bitset16>::from_usize(7);
-    /// let b16 = Index::<Bitset16>::from_usize(8);
-    /// 
+    /// let a16 = Index16::from_usize(7);
+    /// let b16 = Index16::from_usize(8);
+    ///
     /// let a8 = a16.try_to_other::<Bitset8>();
-    /// assert_eq!(a8.ok(), Some(Index::<Bitset8>::from_usize(7)));
-    /// 
+    /// assert_eq!(a8.ok(), Some(Index8::from_usize(7)));
+    ///
     /// let b8 = b16.try_to_other::<Bitset8>();
     /// assert_eq!(b8.ok(), None);
     /// #   Ok(())
@@ -340,21 +340,21 @@ where
     }
 
     /// Returns index of byte, where the given index falls into.
-    /// 
+    ///
     /// This function is useful in cases, where you are working with `Bitset`
     /// as with an array of bytes. As `Index` is always valid, this function will
     /// return a valid index of the byte in the `Bitset`.
-    /// 
+    ///
     /// # Examples
     /// ```rust
     /// # use std::error::Error;
     /// #
     /// # fn main() -> Result<(), Box<dyn Error>> {
-    /// use bitworks::prelude::{Bitset8, Bitset16, Index};
+    /// use bitworks::prelude::{Bitset8, Bitset16, Index, Index16};
     ///
-    /// let a = Index::<Bitset16>::from_usize(7);
-    /// let b = Index::<Bitset16>::from_usize(8);
-    /// 
+    /// let a = Index16::from_usize(7);
+    /// let b = Index16::from_usize(8);
+    ///
     /// assert_eq!(a.byte_index(), 0); // 7 / 8 = 0
     /// assert_eq!(b.byte_index(), 1); // 8 / 8 = 1
     /// #   Ok(())
@@ -365,21 +365,21 @@ where
     }
 
     /// Returns index of bit within it's byte.
-    /// 
+    ///
     /// This function is useful in cases, where you are working with `Bitset`
     /// as with an array of bytes. As `Index` is always valid, this function will
     /// return a valid index of the bit in it's byte in the `Bitset`.
-    /// 
+    ///
     /// # Examples
     /// ```rust
     /// # use std::error::Error;
     /// #
     /// # fn main() -> Result<(), Box<dyn Error>> {
-    /// use bitworks::prelude::{Bitset8, Bitset16, Index};
+    /// use bitworks::prelude::{Bitset8, Bitset16, Index, Index16};
     ///
-    /// let a = Index::<Bitset16>::from_usize(7);
-    /// let b = Index::<Bitset16>::from_usize(8);
-    /// 
+    /// let a = Index16::from_usize(7);
+    /// let b = Index16::from_usize(8);
+    ///
     /// assert_eq!(a.bit_index(), 7); // 7 % 8 = 7
     /// assert_eq!(b.bit_index(), 0); // 8 % 8 = 0
     /// #   Ok(())
@@ -390,21 +390,21 @@ where
     }
 
     /// Returns a bitmask, with only given index bit set within it's byte.
-    /// 
+    ///
     /// This function is useful in cases, where you are working with `Bitset`
     /// as with an array of bytes. As `Index` is always valid, this function will
     /// return a valid bitmask. This function is defined as (1 << [`Index::bit_index`]).
-    /// 
+    ///
     /// # Examples
     /// ```rust
     /// # use std::error::Error;
     /// #
     /// # fn main() -> Result<(), Box<dyn Error>> {
-    /// use bitworks::prelude::{Bitset8, Bitset16, Index};
+    /// use bitworks::prelude::{Bitset8, Bitset16, Index, Index16};
     ///
-    /// let a = Index::<Bitset16>::from_usize(7);
-    /// let b = Index::<Bitset16>::from_usize(8);
-    /// 
+    /// let a = Index16::from_usize(7);
+    /// let b = Index16::from_usize(8);
+    ///
     /// assert_eq!(a.bitmask(), 0b10000000); // 1 << 7
     /// assert_eq!(b.bitmask(), 0b00000001); // 1 << 0
     /// #   Ok(())

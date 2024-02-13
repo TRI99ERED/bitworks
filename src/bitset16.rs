@@ -719,7 +719,7 @@ mod tests {
     fn from_slice_bool() {
         // Same index order
         let slice: &[Bit] = &[One, Zero, One, Zero, One, Zero, One, Zero];
-        let bitset: Tested = Tested::from_bits_col(slice);
+        let bitset: Tested = Tested::from_iterable(slice);
 
         assert_eq!(bitset, 0b01010101.into());
     }

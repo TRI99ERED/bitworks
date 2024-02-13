@@ -138,7 +138,7 @@ pub trait Bitset: Sized + Clone + PartialEq + Eq {
     /// # use std::error::Error;
     /// #
     /// # fn main() -> Result<(), Box<dyn Error>> {
-    /// use bitworks::prelude::{Bitset, Bitset8, Index};
+    /// use bitworks::prelude::{Bitset, Bitset8};
     ///
     /// let index = 0.try_into()?;
     /// let bitset = Bitset8::from_index(&index);
@@ -233,18 +233,19 @@ pub trait Bitset: Sized + Clone + PartialEq + Eq {
     ///
     /// // Same index order
     /// let slice: &[Bit] = &[One, Zero, One, Zero, One, Zero, One, Zero];
-    /// let bitset = Bitset8::from_bits_col(slice);
+    /// let bitset = Bitset8::from_iterable(slice);
     ///
     /// assert_eq!(bitset.into_inner(), 0b01010101);
     /// #   Ok(())
     /// # }
     /// ```
-    fn from_bits_col<'a, I>(iter: I) -> Self
+    fn from_iterable<'a, I>(iterable: I) -> Self
     where
         Self: 'a,
         I: IntoIterator<Item = &'a Bit>,
     {
-        iter.into_iter()
+        iterable
+            .into_iter()
             .take(bit_len::<Self>())
             .enumerate()
             .filter(|(_, &b)| bool::from(b))
@@ -853,7 +854,7 @@ pub trait Bitset: Sized + Clone + PartialEq + Eq {
     /// # }
     /// ```
     #[inline(always)]
-    fn bits(self) -> impl Iterator<Item = Bit> {
+    fn bits(self) -> impl Iterator<Item = Bit> + DoubleEndedIterator {
         (0..bit_len::<Self>())
             .map(|i| Index::<Self>::from_usize(i))
             .map(move |i| self.bit(i))
@@ -885,7 +886,7 @@ pub trait Bitset: Sized + Clone + PartialEq + Eq {
     /// # }
     /// ```
     #[inline(always)]
-    fn bits_ref(&self) -> impl Iterator<Item = BitRef<'_, Self>> {
+    fn bits_ref(&self) -> impl Iterator<Item = BitRef<'_, Self>> + DoubleEndedIterator {
         (0..bit_len::<Self>())
             .map(|i| Index::<Self>::from_usize(i))
             .map(|i| self.bit_ref(i))
@@ -913,7 +914,7 @@ pub trait Bitset: Sized + Clone + PartialEq + Eq {
     /// # }
     /// ```
     #[inline(always)]
-    fn bits_mut(&mut self) -> impl Iterator<Item = BitMut<'_, Self>> {
+    fn bits_mut(&mut self) -> impl Iterator<Item = BitMut<'_, Self>> + DoubleEndedIterator {
         let p = self as *mut Self;
         (0..bit_len::<Self>())
             .map(|i| Index::<Self>::from_usize(i))
@@ -940,7 +941,7 @@ pub trait Bitset: Sized + Clone + PartialEq + Eq {
     /// # }
     /// ```
     #[inline(always)]
-    fn ones(&self) -> impl Iterator<Item = Index<Self>> {
+    fn ones(&self) -> impl Iterator<Item = Index<Self>> + DoubleEndedIterator {
         self.bits_ref().filter_map(|bit| {
             if bool::from(*bit) {
                 Some(BitRef::index(&bit))
@@ -972,7 +973,7 @@ pub trait Bitset: Sized + Clone + PartialEq + Eq {
     /// # }
     /// ```
     #[inline(always)]
-    fn zeros(&self) -> impl Iterator<Item = Index<Self>> {
+    fn zeros(&self) -> impl Iterator<Item = Index<Self>> + DoubleEndedIterator {
         self.bits_ref().filter_map(|bit| {
             if bool::from(!*bit) {
                 Some(BitRef::index(&bit))
