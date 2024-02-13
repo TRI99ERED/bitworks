@@ -1,6 +1,6 @@
 [![Rust](https://github.com/TRI99ERED/simple-bitfield/actions/workflows/rust.yml/badge.svg)](https://github.com/TRI99ERED/simple-bitfield/actions/workflows/rust.yml)
 
-Crate meant to provide easy to use bitfields, with some out of the box functionality.
+Crate meant to provide easy to use bitsets, with some out of the box functionality.
 
 Enable feature "serde" to enable `serde::Serialize` and `serde::Deserialize` for most applicable types.
 
@@ -9,6 +9,7 @@ Enable feature "serde" to enable `serde::Serialize` and `serde::Deserialize` for
 use bitworks::prelude::*;
 
 fn main() {
+    // Build the bitset with variety of methods.
     let mut bitset = Bitset8::NONE
         .clone()
         .include(Bitset8::new(0b10000000))
@@ -19,6 +20,7 @@ fn main() {
 
     assert_eq!(bitset.into_inner(), 0b10101010);
 
+    // Iterate over bits as copies, references or mutable references.
     for mut bit in bitset.bits_mut() {
         *bit = !*bit;
     }
@@ -29,6 +31,7 @@ fn main() {
 
     let other = Bitset8::new(0b11110000);
 
+    // Use Set operations.
     let bitset = bitset.complement();
 
     assert_eq!(bitset.into_inner(), 0b10101010);
@@ -41,6 +44,7 @@ fn main() {
     assert!(!bitset.includes(&other));
     assert!(Bitset8::ALL.includes(&bitset));
 
+    // Expand, combine and split.
     let bigger_bitset: Bitset16 = bitset.expand();
 
     assert_eq!(bigger_bitset.into_inner(), 0b0000000010101010);
@@ -54,6 +58,7 @@ fn main() {
     assert_eq!(bitset.into_inner(), 0b10101010);
     assert_eq!(other.into_inner(), 0b11110000);
 
+    // Collect in other collections and construct from them.
     let v: Vec<Bit> = bitset.bits().rev().collect();
 
     assert_eq!(&v, &[One, Zero, One, Zero, One, Zero, One, Zero]);
