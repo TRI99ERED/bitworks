@@ -2,7 +2,6 @@
 
 use crate::{
     bit::{Bit, BitMut, BitRef},
-    // error::{ConvError, ConvResult, ConvTarget},
     index::Index,
     safety_markers::{Bigger, Combines, SizeMarker, Smaller, Splits},
 };
@@ -187,48 +186,6 @@ pub trait Bitset: Sized + Clone + PartialEq + Eq {
         result
     }
 
-    // /// Attempts to expand `Bitset` to a bigger one.<br/>
-    // /// If available, you should prefer using [`Bitset::try_expand_optimized`].
-    // ///
-    // /// # Errors
-    // /// Returns error if the size of `Res` is smaller, than the size of `Self`.
-    // ///
-    // /// Alternative version with compile time checks instead: [`Bitset::expand`]
-    // ///
-    // /// # Examples
-    // /// ```rust
-    // /// # use std::error::Error;
-    // /// #
-    // /// # fn main() -> Result<(), Box<dyn Error>> {
-    // /// use bitworks::prelude::{Bitset, Bitset8, Bitset16};
-    // ///
-    // /// let bitset8 = Bitset8::new(0b10101010);
-    // /// let bitset16: Bitset16 = bitset8.try_expand()?;
-    // ///
-    // /// assert_eq!(bitset16.into_inner(), 0b0000000010101010);
-    // /// #   Ok(())
-    // /// # }
-    // /// ```
-    // fn try_expand<Res>(self) -> ConvResult<Res>
-    // where
-    //     Res: Bitset,
-    // {
-    //     if Self::BYTE_SIZE <= Res::BYTE_SIZE {
-    //         let result = self
-    //             .ones()
-    //             .map(|Index(i, ..)| Index::<Res>::from_usize(i))
-    //             .fold(&mut Res::NONE.clone(), |acc, i| acc.set(i))
-    //             .build();
-
-    //         Ok(result)
-    //     } else {
-    //         Err(ConvError::new(
-    //             ConvTarget::Set(bit_len::<Self>()),
-    //             ConvTarget::Set(bit_len::<Res>()),
-    //         ))
-    //     }
-    // }
-
     /// Expands `Bitset` to a bigger one. Uses `unsafe` optimizations.
     ///
     /// # Examples
@@ -263,51 +220,6 @@ pub trait Bitset: Sized + Clone + PartialEq + Eq {
         }
         result
     }
-
-    // /// Attempts to expand `Bitset` to a bigger one. Uses `unsafe` optimizations.
-    // ///
-    // /// # Errors
-    // /// Returns error if the size of `Res` is smaller, than the size of `Self`.
-    // ///
-    // /// Alternative version with compile time checks instead: [`Bitset::expand_optimized`]
-    // ///
-    // /// # Examples
-    // /// ```rust
-    // /// # use std::error::Error;
-    // /// #
-    // /// # fn main() -> Result<(), Box<dyn Error>> {
-    // /// use bitworks::prelude::{Bitset, Bitset8, Bitset16};
-    // ///
-    // /// let bitset8 = Bitset8::new(0b10101010);
-    // /// let bitset16: Bitset16 = bitset8.try_expand_optimized()?;
-    // ///
-    // /// assert_eq!(bitset16.into_inner(), 0b0000000010101010);
-    // /// #   Ok(())
-    // /// # }
-    // /// ```
-    // fn try_expand_optimized<Res>(self) -> ConvResult<Res>
-    // where
-    //     Self: LeftAligned,
-    //     Res: Bitset + LeftAligned,
-    // {
-    //     if Self::BYTE_SIZE <= Res::BYTE_SIZE {
-    //         let mut result = Res::NONE.clone();
-
-    //         unsafe {
-    //             std::ptr::copy_nonoverlapping(
-    //                 &self as *const _ as *const u8,
-    //                 &mut result as *mut _ as *mut u8,
-    //                 Self::BYTE_SIZE,
-    //             );
-    //         }
-    //         Ok(result)
-    //     } else {
-    //         Err(ConvError::new(
-    //             ConvTarget::Set(bit_len::<Self>()),
-    //             ConvTarget::Set(bit_len::<Res>()),
-    //         ))
-    //     }
-    // }
 
     /// Builds `Bitset` from the collection of [`Bit`] values.<br/>
     /// Maintains the same index order: first `Bit` item becomes the least significant bit.
@@ -778,56 +690,6 @@ pub trait Bitset: Sized + Clone + PartialEq + Eq {
         result
     }
 
-    // /// Attempts to combine two `Bitset`s to create a bigger one.<br/>
-    // /// If available, you should prefer using [`Bitset::try_combine_optimized`].
-    // ///
-    // /// # Errors
-    // /// Returns error if the size of `Res` isn't equal to the sum of the sizes of `Self` and `Other`.
-    // ///
-    // /// Alternative version with compile time checks instead: [`Bitset::combine`]
-    // ///
-    // /// # Examples
-    // /// ```rust
-    // /// # use std::error::Error;
-    // /// #
-    // /// # fn main() -> Result<(), Box<dyn Error>> {
-    // /// use bitworks::prelude::{Bitset, Bitset8, Bitset16};
-    // ///
-    // /// let bitset8_1 = Bitset8::new(0b00000001);
-    // /// let bitset8_2 = Bitset8::new(0b00000011);
-    // /// let bitset16: Bitset16 = bitset8_1.try_combine(bitset8_2)?;
-    // ///
-    // /// assert_eq!(bitset16.into_inner(), 0b0000001100000001);
-    // /// #   Ok(())
-    // /// # }
-    // /// ```
-    // fn try_combine<Other, Res>(self, other: Other) -> ConvResult<Res>
-    // where
-    //     Other: Bitset,
-    //     Res: Bitset,
-    // {
-    //     let combined = Self::BYTE_SIZE + Other::BYTE_SIZE;
-    //     if Res::BYTE_SIZE == combined {
-    //         let mut result = self
-    //             .ones()
-    //             .map(|Index(i, ..)| Index::<Res>::from_usize(i))
-    //             .fold(&mut Res::NONE.clone(), |acc, i| acc.set(i))
-    //             .build();
-
-    //         let result = other
-    //             .ones()
-    //             .map(|Index(i, ..)| Index::<Res>::from_usize(i + bit_len::<Self>()))
-    //             .fold(&mut result, |acc, i| acc.set(i))
-    //             .build();
-    //         Ok(result)
-    //     } else {
-    //         Err(ConvError::new(
-    //             ConvTarget::Set(combined * 8),
-    //             ConvTarget::Set(bit_len::<Res>()),
-    //         ))
-    //     }
-    // }
-
     /// Combines two `Bitset`s to create a bigger one. Uses `unsafe` optimizations.
     ///
     /// # Examples
@@ -871,61 +733,6 @@ pub trait Bitset: Sized + Clone + PartialEq + Eq {
         }
         result
     }
-
-    // /// Attempts to combine two `Bitset`s to create a bigger one. Uses `unsafe` optimizations.
-    // ///
-    // /// # Errors
-    // /// Returns error if the size of `Res` isn't equal to the sum of the sizes of `Self` and `Other`.
-    // ///
-    // /// Alternative version with compile time checks instead: [`Bitset::combine_optimized`]
-    // ///
-    // /// # Examples
-    // /// ```rust
-    // /// # use std::error::Error;
-    // /// #
-    // /// # fn main() -> Result<(), Box<dyn Error>> {
-    // /// use bitworks::prelude::{Bitset, Bitset8, Bitset16};
-    // ///
-    // /// let bitset8_1 = Bitset8::new(0b00000001);
-    // /// let bitset8_2 = Bitset8::new(0b00000011);
-    // /// let bitset16: Bitset16 = bitset8_1.try_combine_optimized(bitset8_2)?;
-    // ///
-    // /// assert_eq!(bitset16.into_inner(), 0b0000001100000001);
-    // /// #   Ok(())
-    // /// # }
-    // /// ```
-    // fn try_combine_optimized<Other, Res>(self, other: Other) -> ConvResult<Res>
-    // where
-    //     Self: LeftAligned,
-    //     Other: Bitset + LeftAligned,
-    //     Res: Bitset + LeftAligned,
-    // {
-    //     let combined = Self::BYTE_SIZE + Other::BYTE_SIZE;
-
-    //     if Res::BYTE_SIZE == combined {
-    //         let mut result = Res::NONE.clone();
-
-    //         unsafe {
-    //             std::ptr::copy_nonoverlapping(
-    //                 &self as *const _ as *const u8,
-    //                 &mut result as *mut _ as *mut u8,
-    //                 Self::BYTE_SIZE,
-    //             );
-
-    //             std::ptr::copy_nonoverlapping(
-    //                 &other as *const _ as *const u8,
-    //                 (&mut result as *mut _ as *mut u8).add(Self::BYTE_SIZE),
-    //                 Other::BYTE_SIZE,
-    //             );
-    //         }
-    //         Ok(result)
-    //     } else {
-    //         Err(ConvError::new(
-    //             ConvTarget::Set(combined * 8),
-    //             ConvTarget::Set(bit_len::<Res>()),
-    //         ))
-    //     }
-    // }
 
     /// Splits `Bitset` into two smaller ones.<br/>
     /// If available, you should prefer using [`Bitset::split_optimized`].
@@ -976,65 +783,6 @@ pub trait Bitset: Sized + Clone + PartialEq + Eq {
         (result1, result2)
     }
 
-    // /// Attempts to split `Bitset` into two smaller ones.<br/>
-    // /// If available, you should prefer using [`Bitset::try_split_optimized`].
-    // ///
-    // /// # Errors
-    // /// Returns error if the size of `Self` isn't equal to the sum of the sizes of `Res1` and `Res2`.
-    // ///
-    // /// Alternative version with compile time checks instead: [`Bitset::split`]
-    // ///
-    // /// # Examples
-    // /// ```rust
-    // /// # use std::error::Error;
-    // /// #
-    // /// # fn main() -> Result<(), Box<dyn Error>> {
-    // /// use bitworks::prelude::{Bitset, Bitset8, Bitset16};
-    // ///
-    // /// let bitset16 = Bitset16::from(0b0000001100000001);
-    // /// let (bitset8_1, bitset8_2): (Bitset8, Bitset8) = bitset16.try_split()?;
-    // ///
-    // /// assert_eq!(bitset8_1.into_inner(), 0b00000001);
-    // /// assert_eq!(bitset8_2.into_inner(), 0b00000011);
-    // /// #   Ok(())
-    // /// # }
-    // /// ```
-    // fn try_split<Res1, Res2>(self) -> ConvResult<(Res1, Res2)>
-    // where
-    //     Res1: Bitset,
-    //     Res2: Bitset,
-    // {
-    //     let combined = Res1::BYTE_SIZE + Res2::BYTE_SIZE;
-    //     if Self::BYTE_SIZE == combined {
-    //         let result1 = self
-    //             .bits_ref()
-    //             .take(bit_len::<Res1>())
-    //             .enumerate()
-    //             .map(|(i, bit)| (Index::<Res1>::from_usize(i), bit))
-    //             .fold(&mut Res1::NONE.clone(), |acc, (i, bit)| {
-    //                 acc.replace(i, *bit)
-    //             })
-    //             .build();
-
-    //         let result2 = self
-    //             .bits_ref()
-    //             .skip(bit_len::<Res1>())
-    //             .enumerate()
-    //             .map(|(i, bit)| (Index::<Res2>::from_usize(i), bit))
-    //             .fold(&mut Res2::NONE.clone(), |acc, (i, bit)| {
-    //                 acc.replace(i, *bit)
-    //             })
-    //             .build();
-
-    //         Ok((result1, result2))
-    //     } else {
-    //         Err(ConvError::new(
-    //             ConvTarget::Set(bit_len::<Self>()),
-    //             ConvTarget::Set(combined * 8),
-    //         ))
-    //     }
-    // }
-
     /// Splits `Bitset` into two smaller ones. Uses `unsafe` optimizations.
     ///
     /// # Examples
@@ -1079,62 +827,6 @@ pub trait Bitset: Sized + Clone + PartialEq + Eq {
         }
         (result1, result2)
     }
-
-    // /// Attempts to split `Bitset` into two smaller ones. Uses `unsafe` optimizations.
-    // ///
-    // /// # Errors
-    // /// Returns error if the size of `Self` isn't equal to the sum of the sizes of `Res1` and `Res2`.
-    // ///
-    // /// Alternative version with compile time checks instead: [`Bitset::split_optimized`]
-    // ///
-    // /// # Examples
-    // /// ```rust
-    // /// # use std::error::Error;
-    // /// #
-    // /// # fn main() -> Result<(), Box<dyn Error>> {
-    // /// use bitworks::prelude::{Bitset, Bitset8, Bitset16};
-    // ///
-    // /// let bitset16 = Bitset16::from(0b0000001100000001);
-    // /// let (bitset8_1, bitset8_2): (Bitset8, Bitset8) = bitset16.try_split_optimized()?;
-    // ///
-    // /// assert_eq!(bitset8_1.into_inner(), 0b00000001);
-    // /// assert_eq!(bitset8_2.into_inner(), 0b00000011);
-    // /// #   Ok(())
-    // /// # }
-    // /// ```
-    // fn try_split_optimized<Res1, Res2>(self) -> ConvResult<(Res1, Res2)>
-    // where
-    //     Self: LeftAligned,
-    //     Res1: Bitset + LeftAligned,
-    //     Res2: Bitset + LeftAligned,
-    // {
-    //     let combined = Res1::BYTE_SIZE + Res2::BYTE_SIZE;
-
-    //     if Self::BYTE_SIZE == combined {
-    //         let mut result1 = Res1::NONE.clone();
-    //         let mut result2 = Res2::NONE.clone();
-
-    //         unsafe {
-    //             std::ptr::copy_nonoverlapping(
-    //                 &self as *const _ as *const u8,
-    //                 &mut result1 as *mut _ as *mut u8,
-    //                 Res1::BYTE_SIZE,
-    //             );
-
-    //             std::ptr::copy_nonoverlapping(
-    //                 (&self as *const _ as *const u8).add(Res1::BYTE_SIZE),
-    //                 &mut result2 as *mut _ as *mut u8,
-    //                 Res2::BYTE_SIZE,
-    //             );
-    //         }
-    //         Ok((result1, result2))
-    //     } else {
-    //         Err(ConvError::new(
-    //             ConvTarget::Set(bit_len::<Self>()),
-    //             ConvTarget::Set(combined * 8),
-    //         ))
-    //     }
-    // }
 
     /// Returns iterator over bits of the `Bitset` in [`Bit`] representation.
     ///
@@ -1296,11 +988,8 @@ pub trait Bitset: Sized + Clone + PartialEq + Eq {
 /// Implementors of this trait get blanket implementation of `Bitset`.
 /// They also get access to these methods defined on `Bitset`:
 /// * [`Bitset::expand_optimized()`]
-/// * [`Bitset::try_expand_optimized()`]
 /// * [`Bitset::combine_optimized()`]
-/// * [`Bitset::try_combine_optimized()`]
 /// * [`Bitset::split_optimized()`]
-/// * [`Bitset::try_split_optimized()`]
 ///
 /// All the methods above have corresponding versions without `_optimized` suffix, which contains no `unsafe` code
 /// and aren't restricted to only `LeftAligned` types.
@@ -1326,9 +1015,9 @@ pub trait Bitset: Sized + Clone + PartialEq + Eq {
 ///
 /// ### ❌ *NOT* LeftAligned Bitset structs:
 /// ```
-/// struct E(u8, String); // exact ordreing is not guaranteed
+/// struct E(u8, String); // exact ordering is not guaranteed
 ///
-/// struct F { bitset: u8, metadata: String } // exact ordreing is not guaranteed
+/// struct F { bitset: u8, metadata: String } // exact ordering is not guaranteed
 ///
 /// #[repr(C)] // ordering is guaranteed, but order is incorrect
 /// struct G(String, u8); // only u8 here represents the Bitset.
