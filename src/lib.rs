@@ -1,4 +1,6 @@
 //! Crate meant to provide easy to use bitsets, with some out of the box functionality.
+//! 
+//! Enable feature "serde" to enable `serde::Serialize` and `serde::Deserialize` for most applicable types.
 
 pub mod bitset;
 pub mod bitset128;
