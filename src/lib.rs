@@ -38,7 +38,7 @@ pub mod prelude {
     pub type Index16 = Index<Bitset16>;
     /// Alias for [`Index<Bitset32>`][Index].
     pub type Index32 = Index<Bitset32>;
-    /// Alias for [`Index<Bitse64>`][Index].
+    /// Alias for [`Index<Bitset64>`][Index].
     pub type Index64 = Index<Bitset64>;
     /// Alias for [`Index<Bitset128>`][Index].
     pub type Index128 = Index<Bitset128>;
