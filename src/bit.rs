@@ -9,10 +9,8 @@ use std::{
 /// Enum representing all possible states of a bit in a [`Bitset`].
 /// Variants are re-exported and don't require `Bit::` prefix.
 ///
-/// Closely resembles [`bool`] type, but is specific to this crate and used in place of `bool`,
-/// where it's appropriate to improve correctness.
-/// Implements [`From<bool>`][core::convert::From], and bool implements `From<Bit>`,
-/// if conversion is needed.
+/// Closely resembles [`bool`] type. Implements [`From<bool>`][core::convert::From],
+/// and bool implements `From<Bit>`, if such conversion is needed.
 ///
 /// # Examples
 /// ```rust

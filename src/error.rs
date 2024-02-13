@@ -11,13 +11,16 @@ pub type ConvResult<T> = Result<T, ConvError>;
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum ConvTarget {
+    /// Represents [`Bitset`][crate::bitset::Bitset], bit size of which is contained inside.
     Set(usize),
+    /// Represents [`Index`][crate::index::Index], max value of which is contained inside.
     Index(usize),
-    Enum(usize),
+    // Enum(usize),
+    /// Represents a [`usize`] value, contained inside.
     Raw(usize),
 }
 
-/// Conversion error.
+/// Conversion error. Implements [`Error`].
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct ConvError {
@@ -30,7 +33,7 @@ impl Debug for ConvTarget {
         match self {
             Self::Set(size) => write!(f, "Bitset{size}"),
             Self::Index(size) => write!(f, "Index<Bitset{size}>"),
-            Self::Enum(size) => write!(f, "Enum({size} variants)"),
+            // Self::Enum(size) => write!(f, "Enum({size} variants)"),
             Self::Raw(n) => write!(f, "{n}usize"),
         }
     }
@@ -41,7 +44,7 @@ impl Display for ConvTarget {
         match *self {
             Self::Set(size) => write!(f, "Bitset (size {size})"),
             Self::Index(max) => write!(f, "Index (max = {max})"),
-            Self::Enum(size) => write!(f, "Enum ({size} variants)"),
+            // Self::Enum(size) => write!(f, "Enum ({size} variants)"),
             Self::Raw(n) => write!(f, "{n}usize"),
         }
     }
@@ -57,10 +60,10 @@ impl ConvError {
     /// # fn main() -> Result<(), Box<dyn Error>> {
     /// use bitworks::error::{ConvError, ConvTarget};
     ///
-    /// //Oh no! I couldn't convert from a bitset to my enum!
-    /// let error = ConvError::new(ConvTarget::Set(8), ConvTarget::Enum(8));
+    /// //Oh no! I couldn't convert from a raw usize to my index!
+    /// let error = ConvError::new(ConvTarget::Raw(19), ConvTarget::Index(8));
     ///
-    /// assert_eq!(error.to_string(), "failed to convert from Bitset (size 8) to Enum (8 variants)");
+    /// assert_eq!(error.to_string(), "failed to convert from 19usize to Index (max = 8)");
     /// #   Ok(())
     /// # }
     /// ```

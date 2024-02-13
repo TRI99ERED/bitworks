@@ -7,7 +7,7 @@ use crate::{
 };
 use std::{cmp::Ordering, fmt::Debug, hash::Hash, marker::PhantomData};
 
-/// Struct meant to safely index the `T`, where `T` implements [`Bitset`].
+/// Struct allowing to safely index `T`, where `T` implements [`Bitset`].
 #[derive(Default)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Index<T: Bitset>(pub(crate) usize, pub(crate) PhantomData<T>);
@@ -109,7 +109,7 @@ where
         self.0
     }
 
-    /// Returns [`Some`] `Index`, that is sum of `self` and `other`, or [`None`] on overflow.
+    /// Returns [`Some`] `Index`, that is the sum of `self` and `other`, or [`None`] on overflow.
     ///
     /// # Examples
     /// ```rust
@@ -131,14 +131,14 @@ where
     /// # }
     /// ```
     #[inline(always)]
-    pub fn checked_add(&self, other: Self) -> Option<Self> {
-        self.0
-            .checked_add(other.0)
-            .filter(|&i| i < crate::bitset::bit_len::<T>())
-            .map(|i| Self(i, PhantomData))
+    pub const fn checked_add(&self, other: Self) -> Option<Self> {
+        match self.0.checked_add(other.0) {
+            Some(i) if i < crate::bitset::bit_len::<T>() => Some(Self(i, PhantomData)),
+            _ => None,
+        }
     }
 
-    /// Returns [`Some`] `Index`, that is difference of `self` and `other`, or [`None`] on overflow.
+    /// Returns [`Some`] `Index`, that is the difference of `self` and `other`, or [`None`] on overflow.
     ///
     /// # Examples
     /// ```rust
@@ -160,8 +160,11 @@ where
     /// # }
     /// ```
     #[inline(always)]
-    pub fn checked_sub(&self, other: Self) -> Option<Self> {
-        self.0.checked_sub(other.0).map(|i| Self(i, PhantomData))
+    pub const fn checked_sub(&self, other: Self) -> Option<Self> {
+        match self.0.checked_sub(other.0) {
+            Some(i) => Some(Self(i, PhantomData)),
+            _ => None,
+        }
     }
 
     /// Returns `Index`, that is sum of `self` and `other`,
@@ -187,8 +190,11 @@ where
     /// # }
     /// ```
     #[inline(always)]
-    pub fn saturating_add(&self, other: Self) -> Self {
-        self.checked_add(other).unwrap_or(Self::MAX)
+    pub const fn saturating_add(&self, other: Self) -> Self {
+        match self.checked_add(other) {
+            Some(i) => i,
+            _ => Self::MAX,
+        }
     }
 
     /// Returns `Index`, that is difference of `self` and `other`,
@@ -214,17 +220,79 @@ where
     /// # }
     /// ```
     #[inline(always)]
-    pub fn saturating_sub(&self, other: Self) -> Self {
-        self.checked_sub(other).unwrap_or(Self::MIN)
+    pub const fn saturating_sub(&self, other: Self) -> Self {
+        match self.checked_sub(other) {
+            Some(i) => i,
+            _ => Self::MIN,
+        }
     }
 
-    /// Saturating conversion between `BisetIndex`es.
+    /// Conversion between indeces.
+    ///
+    /// # Panics
+    /// Panics if `U::BIT_SIZE` is smaller, than `T::BIT_SIZE`.
+    /// 
+    /// # Examples
+    /// ```rust
+    /// # use std::error::Error;
+    /// #
+    /// # fn main() -> Result<(), Box<dyn Error>> {
+    /// use bitworks::prelude::{Bitset8, Bitset16, Index};
+    ///
+    /// let a16 = Index::<Bitset16>::from_usize(7);
+    /// let b16 = Index::<Bitset16>::from_usize(8);
+    /// 
+    /// let a8: Index::<Bitset8> = a16.to_other();
+    /// assert_eq!(a8.into_inner(), 7);
+    /// 
+    /// // The following will panic!
+    /// // let b8: Index::<Bitset8> = b16.to_other();
+    /// #   Ok(())
+    /// # }
+    /// ```
     #[inline(always)]
-    pub const fn to_other<U>(self) -> Index<U>
+    pub fn to_other<U>(self) -> Index<U>
     where
         U: Bitset,
     {
-        if crate::bitset::bit_len::<U>() >= crate::bitset::bit_len::<T>() {
+        if Index::<U>::MAX.into_inner() >= self.into_inner() {
+            Index::<U>(self.0, PhantomData)
+        } else {
+            panic!(
+                "overflow on conversion from Index (value: {}, max: {}) to Index (max: {})",
+                self.into_inner(),
+                bitset::bit_len::<T>() - 1,
+                bitset::bit_len::<U>() - 1
+            )
+        }
+    }
+
+    /// Conversion between indeces, with saturation on overflow.
+    /// 
+    /// # Examples
+    /// ```rust
+    /// # use std::error::Error;
+    /// #
+    /// # fn main() -> Result<(), Box<dyn Error>> {
+    /// use bitworks::prelude::{Bitset8, Bitset16, Index};
+    ///
+    /// let a16 = Index::<Bitset16>::from_usize(7);
+    /// let b16 = Index::<Bitset16>::from_usize(8);
+    /// 
+    /// let a8: Index::<Bitset8> = a16.to_other_saturating();
+    /// assert_eq!(a8.into_inner(), 7);
+    /// 
+    /// let b8: Index::<Bitset8> = b16.to_other_saturating();
+    /// assert_eq!(b8.into_inner(), 7);
+    /// #   Ok(())
+    /// # }
+    /// ```
+    #[inline(always)]
+    pub fn to_other_saturating<U>(self) -> Index<U>
+    where
+        U: Bitset,
+    {
+        if Index::<U>::MAX.into_inner() >= self.into_inner() {
             Index::<U>(self.0, PhantomData)
         } else {
             Index::<U>::MAX
@@ -235,12 +303,31 @@ where
     ///
     /// # Errors
     /// `U::BIT_SIZE` is smaller, than `T::BIT_SIZE`.
+    /// 
+    /// # Examples
+    /// ```rust
+    /// # use std::error::Error;
+    /// #
+    /// # fn main() -> Result<(), Box<dyn Error>> {
+    /// use bitworks::prelude::{Bitset8, Bitset16, Index};
+    ///
+    /// let a16 = Index::<Bitset16>::from_usize(7);
+    /// let b16 = Index::<Bitset16>::from_usize(8);
+    /// 
+    /// let a8 = a16.try_to_other::<Bitset8>();
+    /// assert_eq!(a8.ok(), Some(Index::<Bitset8>::from_usize(7)));
+    /// 
+    /// let b8 = b16.try_to_other::<Bitset8>();
+    /// assert_eq!(b8.ok(), None);
+    /// #   Ok(())
+    /// # }
+    /// ```
     #[inline(always)]
     pub fn try_to_other<U>(self) -> ConvResult<Index<U>>
     where
         U: Bitset,
     {
-        if crate::bitset::bit_len::<U>() >= crate::bitset::bit_len::<T>() {
+        if Index::<U>::MAX.into_inner() >= self.into_inner() {
             Ok(Index::<U>(self.0, PhantomData))
         } else {
             Index::<U>::try_from(self.0).map_err(|_| {
@@ -250,6 +337,81 @@ where
                 )
             })
         }
+    }
+
+    /// Returns index of byte, where the given index falls into.
+    /// 
+    /// This function is useful in cases, where you are working with `Bitset`
+    /// as with an array of bytes. As `Index` is always valid, this function will
+    /// return a valid index of the byte in the `Bitset`.
+    /// 
+    /// # Examples
+    /// ```rust
+    /// # use std::error::Error;
+    /// #
+    /// # fn main() -> Result<(), Box<dyn Error>> {
+    /// use bitworks::prelude::{Bitset8, Bitset16, Index};
+    ///
+    /// let a = Index::<Bitset16>::from_usize(7);
+    /// let b = Index::<Bitset16>::from_usize(8);
+    /// 
+    /// assert_eq!(a.byte_index(), 0); // 7 / 8 = 0
+    /// assert_eq!(b.byte_index(), 1); // 8 / 8 = 1
+    /// #   Ok(())
+    /// # }
+    /// ```
+    pub const fn byte_index(self) -> usize {
+        self.into_inner() / 8
+    }
+
+    /// Returns index of bit within it's byte.
+    /// 
+    /// This function is useful in cases, where you are working with `Bitset`
+    /// as with an array of bytes. As `Index` is always valid, this function will
+    /// return a valid index of the bit in it's byte in the `Bitset`.
+    /// 
+    /// # Examples
+    /// ```rust
+    /// # use std::error::Error;
+    /// #
+    /// # fn main() -> Result<(), Box<dyn Error>> {
+    /// use bitworks::prelude::{Bitset8, Bitset16, Index};
+    ///
+    /// let a = Index::<Bitset16>::from_usize(7);
+    /// let b = Index::<Bitset16>::from_usize(8);
+    /// 
+    /// assert_eq!(a.bit_index(), 7); // 7 % 8 = 7
+    /// assert_eq!(b.bit_index(), 0); // 8 % 8 = 0
+    /// #   Ok(())
+    /// # }
+    /// ```
+    pub const fn bit_index(self) -> usize {
+        self.into_inner() % 8
+    }
+
+    /// Returns a bitmask, with only given index bit set within it's byte.
+    /// 
+    /// This function is useful in cases, where you are working with `Bitset`
+    /// as with an array of bytes. As `Index` is always valid, this function will
+    /// return a valid bitmask. This function is defined as (1 << [`Index::bit_index`]).
+    /// 
+    /// # Examples
+    /// ```rust
+    /// # use std::error::Error;
+    /// #
+    /// # fn main() -> Result<(), Box<dyn Error>> {
+    /// use bitworks::prelude::{Bitset8, Bitset16, Index};
+    ///
+    /// let a = Index::<Bitset16>::from_usize(7);
+    /// let b = Index::<Bitset16>::from_usize(8);
+    /// 
+    /// assert_eq!(a.bitmask(), 0b10000000); // 1 << 7
+    /// assert_eq!(b.bitmask(), 0b00000001); // 1 << 0
+    /// #   Ok(())
+    /// # }
+    /// ```
+    pub const fn bitmask(self) -> u8 {
+        1 << self.bit_index()
     }
 
     // Range unsafe sum of `self` and `other`.

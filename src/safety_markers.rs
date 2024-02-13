@@ -1,3 +1,5 @@
+//! Module containing size safety markers for compile time checks on some methods.
+
 pub trait SizeMarker: Sized {}
 
 pub trait Bigger<Small: SizeMarker>: SizeMarker {}

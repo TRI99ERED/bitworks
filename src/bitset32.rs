@@ -5,7 +5,7 @@ use crate::{
     bitset::{Bitset, LeftAligned},
     error::{ConvError, ConvTarget},
     prelude::{Bitset128, Bitset16, Bitset64, Bitset8, Byteset, Index},
-    size_marker::Size,
+    safety_markers::Size,
 };
 use std::{
     fmt::{Binary, Debug, Display, LowerHex, Octal, UpperHex},
@@ -19,19 +19,34 @@ type Inner = u32;
 type BIndex = Index<Bitset32>;
 const BITS: usize = 32;
 
-/// [`Bitset`] of size 32.
+/// [`Bitset`] of bit size 32.
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Default, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[repr(transparent)]
 pub struct Bitset32(pub(crate) Inner);
 
 impl Bitset32 {
+    /// Constructs a new value of `Bitset32`.
+    ///
+    /// # Examples
+    /// ```rust
+    /// # use std::error::Error;
+    /// #
+    /// # fn main() -> Result<(), Box<dyn Error>> {
+    /// use bitworks::prelude::{Bitset, Bitset32};
+    ///
+    /// let bitset = Bitset32::new(19);
+    ///
+    /// assert_eq!(bitset, Bitset32::from_repr(19));
+    /// #   Ok(())
+    /// # }
+    /// ```
     #[inline(always)]
     pub const fn new(inner: Inner) -> Self {
         Self(inner)
     }
 
-    /// Returns the inner representation of `Bitset32`.
+    /// Returns the inner [`u32`] representation of `Bitset32`.
     ///
     /// # Examples
     /// ```rust
@@ -40,7 +55,7 @@ impl Bitset32 {
     /// # fn main() -> Result<(), Box<dyn Error>> {
     /// use bitworks::prelude::Bitset32;
     ///
-    /// let bitset = Bitset32::from(19);
+    /// let bitset = Bitset32::new(19);
     /// let inner: u32 = bitset.into_inner();
     ///
     /// assert_eq!(inner, 19);

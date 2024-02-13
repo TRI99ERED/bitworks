@@ -4,7 +4,7 @@ use crate::{
     bit::{Bit, BitMut, BitRef},
     error::{ConvError, ConvResult, ConvTarget},
     index::Index,
-    size_marker::{Bigger, Combines, SizeMarker, Smaller, Splits},
+    safety_markers::{Bigger, Combines, SizeMarker, Smaller, Splits},
 };
 
 // Length of Bitset in bits.
@@ -13,30 +13,6 @@ where
     T: Bitset,
 {
     T::BYTE_SIZE * 8
-}
-
-// Returns index of byte (chunk), where the given index falls into.
-pub(crate) const fn byte_index<T>(index: Index<T>) -> usize
-where
-    T: Bitset,
-{
-    index.into_inner() / 8
-}
-
-// Returns index of bit within a byte (chunk), where the given index falls into.
-pub(crate) const fn bit_index<T>(index: Index<T>) -> usize
-where
-    T: Bitset,
-{
-    index.into_inner() % 8
-}
-
-// Returns a bitmask, with only given index bit set within a byte (chunk).
-pub(crate) const fn bitmask<T>(index: Index<T>) -> u8
-where
-    T: Bitset,
-{
-    1 << bit_index(index)
 }
 
 /// Trait defining common bitset logic.
@@ -1373,17 +1349,20 @@ pub trait Bitset: Sized + Clone + PartialEq + Eq {
 /// Alternatively you can make a wrapper around one of the built-in bitsets and implement `Bitset` on it,
 /// delegating all of the methods to inner type's.
 pub unsafe trait LeftAligned: Bitset + Sized + Clone + PartialEq + Eq {
+    #[doc(hidden)]
     /// Type, that is the underlying representation of the `Bitset`.<br/>
     /// Usually one of the Rust built-in types, but can be `Self`.
     ///
     /// Used to set corresponding field [`Bitset::Repr`].
     type _Repr: Sized + Clone + PartialEq + Eq;
 
+    #[doc(hidden)]
     /// Marker type representing size ordering. Used for compile time checks on some methods.
     ///
     /// Used to set corresponding field [`Bitset::Size`].
     type _Size: SizeMarker;
 
+    #[doc(hidden)]
     /// Number of bytes (`size` in bytes) of the bitset part.
     ///
     /// Used to set corresponding field [`Bitset::BYTE_SIZE`].
@@ -1408,6 +1387,7 @@ pub unsafe trait LeftAligned: Bitset + Sized + Clone + PartialEq + Eq {
     /// ```
     const _BYTE_SIZE: usize;
 
+    #[doc(hidden)]
     /// Value of the `Bitset` with every bit not set.
     ///
     /// Used to set corresponding field [`Bitset::NONE`].
@@ -1427,6 +1407,7 @@ pub unsafe trait LeftAligned: Bitset + Sized + Clone + PartialEq + Eq {
     /// ```
     const _NONE: Self;
 
+    #[doc(hidden)]
     /// Value of the `Bitset` with every bit not set.
     ///
     /// Used to set corresponding field [`Bitset::ALL`].
@@ -1446,6 +1427,7 @@ pub unsafe trait LeftAligned: Bitset + Sized + Clone + PartialEq + Eq {
     /// ```
     const _ALL: Self;
 
+    #[doc(hidden)]
     /// Constructs a new value of the `Bitset` from [`Bitset::Repr`].
     ///
     /// Used to implement corresponding method [`Bitset::from_repr`].
@@ -1468,10 +1450,10 @@ pub unsafe trait LeftAligned: Bitset + Sized + Clone + PartialEq + Eq {
     fn _from_repr(value: Self::Repr) -> Self;
 
     /// Shifts bit representation of the `Bitset` left by amount.
-    /// Has signature identical to [`core::ops::Shl<Index<Self>>`][core::ops::Shl].
-    fn _shift_left(mut self, amount: Index<Self>) -> Self {
-        let byte_shift = byte_index(amount);
-        let bit_shift = bit_index(amount);
+    /// Has signature and use identical to [`core::ops::Shl<Index<Self>>`][core::ops::Shl].
+    fn shift_left(mut self, amount: Index<Self>) -> Self {
+        let byte_shift = amount.byte_index();
+        let bit_shift = amount.bit_index();
 
         let ptr = &mut self as *mut _ as *mut u8;
 
@@ -1495,10 +1477,10 @@ pub unsafe trait LeftAligned: Bitset + Sized + Clone + PartialEq + Eq {
     }
 
     /// Shifts bit representation of the `Bitset` right by amount.
-    /// Has signature identical to [`core::ops::Shr<Index<Self>>`][core::ops::Shr].
-    fn _shift_right(mut self, amount: Index<Self>) -> Self {
-        let byte_shift = byte_index(amount);
-        let bit_shift = bit_index(amount);
+    /// Has signature and use identical to [`core::ops::Shr<Index<Self>>`][core::ops::Shr].
+    fn shift_right(mut self, amount: Index<Self>) -> Self {
+        let byte_shift = amount.byte_index();
+        let bit_shift = amount.bit_index();
 
         let ptr = &mut self as *mut _ as *mut u8;
 
@@ -1562,8 +1544,8 @@ where
     fn set(&mut self, index: Index<Self>) -> &mut Self {
         let self_ptr = self as *mut _ as *mut u8;
         unsafe {
-            let byte = self_ptr.add(byte_index(index));
-            *byte |= 1 << bit_index(index);
+            let byte = self_ptr.add(index.byte_index());
+            *byte |= index.bitmask();
         }
         self
     }
@@ -1572,8 +1554,8 @@ where
     fn unset(&mut self, index: Index<Self>) -> &mut Self {
         let self_ptr = self as *mut _ as *mut u8;
         unsafe {
-            let byte = self_ptr.add(byte_index(index));
-            *byte &= !(1 << bit_index(index));
+            let byte = self_ptr.add(index.byte_index());
+            *byte &= !index.bitmask();
         }
         self
     }
@@ -1582,8 +1564,8 @@ where
     fn flip(&mut self, index: Index<Self>) -> &mut Self {
         let self_ptr = self as *mut _ as *mut u8;
         unsafe {
-            let byte = self_ptr.add(byte_index(index));
-            *byte ^= 1 << bit_index(index);
+            let byte = self_ptr.add(index.byte_index());
+            *byte ^= index.bitmask();
         }
         self
     }
@@ -1617,22 +1599,22 @@ where
     #[inline(always)]
     fn bit(&self, index: Index<Self>) -> Bit {
         let self_ptr = self as *const _ as *const u8;
-        let byte = unsafe { *self_ptr.add(byte_index(index)) };
-        Bit::from(byte & bitmask(index) != 0)
+        let byte = unsafe { *self_ptr.add(index.byte_index()) };
+        Bit::from(byte & index.bitmask() != 0)
     }
 
     #[inline(always)]
     fn bit_ref(&self, index: Index<Self>) -> BitRef<'_, Self> {
         let self_ptr = self as *const _ as *const u8;
-        let byte = unsafe { *self_ptr.add(byte_index(index)) };
-        BitRef(Bit::from(byte & bitmask(index) != 0), index, self)
+        let byte = unsafe { *self_ptr.add(index.byte_index()) };
+        BitRef(Bit::from(byte & index.bitmask() != 0), index, self)
     }
 
     #[inline(always)]
     fn bit_mut(&mut self, index: Index<Self>) -> BitMut<'_, Self> {
         let self_ptr = self as *mut _ as *const u8;
-        let byte = unsafe { *self_ptr.add(byte_index(index)) };
-        BitMut(Bit::from(byte & bitmask(index) != 0), index, self)
+        let byte = unsafe { *self_ptr.add(index.byte_index()) };
+        BitMut(Bit::from(byte & index.bitmask() != 0), index, self)
     }
 
     #[inline]

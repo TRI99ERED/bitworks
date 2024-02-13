@@ -6,12 +6,12 @@ pub mod bitset16;
 pub mod bitset32;
 pub mod bitset64;
 pub mod bitset8;
-pub mod byte_set;
+pub mod byteset;
 
 pub mod bit;
 pub mod error;
 pub mod index;
-pub mod size_marker;
+pub mod safety_markers;
 
 /// Prelude.
 pub mod prelude {
@@ -26,7 +26,7 @@ pub mod prelude {
     pub use bitset32::Bitset32;
     pub use bitset64::Bitset64;
     pub use bitset8::Bitset8;
-    pub use byte_set::Byteset;
+    pub use byteset::Byteset;
 
     pub use index::Index;
 }

@@ -4,7 +4,7 @@ use crate::{
     bit::Bit,
     bitset::{Bitset, LeftAligned},
     prelude::Index,
-    size_marker::Size,
+    safety_markers::Size,
 };
 use std::{
     fmt::{Binary, Debug, Display, LowerHex, Octal, UpperHex},
@@ -17,18 +17,6 @@ use std::{
 type Inner<const N: usize> = [u8; N];
 type BIndex<const N: usize> = Index<Byteset<N>>;
 
-const fn byte_index<const N: usize>(index: BIndex<N>) -> usize {
-    index.into_inner() / 8
-}
-
-const fn bit_index<const N: usize>(index: BIndex<N>) -> usize {
-    index.into_inner() % 8
-}
-
-const fn bitmask<const N: usize>(index: BIndex<N>) -> u8 {
-    1 << bit_index(index)
-}
-
 /// [`Bitset`] of variable `size`.
 /// `N` is size in bytes of the `Byteset`.
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -36,21 +24,45 @@ const fn bitmask<const N: usize>(index: BIndex<N>) -> u8 {
 pub struct Byteset<const N: usize>(pub(crate) Inner<N>);
 
 impl<const N: usize> Byteset<N> {
+    /// Constructs a new value of `Byteset`.
+    ///
+    /// # Examples
+    /// ```rust
+    /// # use std::error::Error;
+    /// #
+    /// # fn main() -> Result<(), Box<dyn Error>> {
+    /// use bitworks::prelude::{Bitset, Byteset};
+    ///
+    /// let bitset = Byteset::<1>::new([19]);
+    ///
+    /// assert_eq!(bitset, Byteset::<1>::from_repr([19]));
+    /// #   Ok(())
+    /// # }
+    /// ```
     #[inline(always)]
     pub const fn new(inner: Inner<N>) -> Self {
         Self(inner)
     }
 
+    /// Returns the inner [`[u8; N]`](https://doc.rust-lang.org/std/primitive.array.html) representation of `Byteset`.
+    ///
+    /// # Examples
+    /// ```rust
+    /// # use std::error::Error;
+    /// #
+    /// # fn main() -> Result<(), Box<dyn Error>> {
+    /// use bitworks::prelude::Byteset;
+    ///
+    /// let bitset = Byteset::<1>::new([19]);
+    /// let inner: [u8; 1] = bitset.into_inner();
+    ///
+    /// assert_eq!(inner, [19]);
+    /// #   Ok(())
+    /// # }
+    /// ```
     #[inline(always)]
     pub const fn into_inner(&self) -> Inner<N> {
         self.0
-    }
-
-    #[inline(always)]
-    pub const fn one() -> Self {
-        let mut inner: Inner<N> = [0; N];
-        inner[0] = 1;
-        Self(inner)
     }
 }
 
@@ -84,7 +96,7 @@ impl<const N: usize> From<Byteset<N>> for Inner<N> {
 impl<const N: usize> From<BIndex<N>> for Byteset<N> {
     fn from(index: BIndex<N>) -> Self {
         let mut inner = [0; N];
-        inner[byte_index(index)] = bitmask(index);
+        inner[index.byte_index()] = index.bitmask();
         Self(inner)
     }
 }
@@ -161,14 +173,14 @@ impl<const N: usize> Shl<BIndex<N>> for Byteset<N> {
     type Output = Self;
 
     fn shl(self, rhs: BIndex<N>) -> Self::Output {
-        Self::_shift_left(self, rhs)
+        Self::shift_left(self, rhs)
     }
 }
 
 impl<const N: usize> ShlAssign<BIndex<N>> for Byteset<N> {
     fn shl_assign(&mut self, rhs: BIndex<N>) {
-        let byte_shift = byte_index(rhs);
-        let bit_shift = bit_index(rhs);
+        let byte_shift = rhs.byte_index();
+        let bit_shift = rhs.bit_index();
 
         let ptr = self as *mut _ as *mut u8;
 
@@ -195,14 +207,14 @@ impl<const N: usize> Shr<BIndex<N>> for Byteset<N> {
     type Output = Self;
 
     fn shr(self, rhs: BIndex<N>) -> Self::Output {
-        Self::_shift_right(self, rhs)
+        Self::shift_right(self, rhs)
     }
 }
 
 impl<const N: usize> ShrAssign<BIndex<N>> for Byteset<N> {
     fn shr_assign(&mut self, rhs: BIndex<N>) {
-        let byte_shift = byte_index(rhs);
-        let bit_shift = bit_index(rhs);
+        let byte_shift = rhs.byte_index();
+        let bit_shift = rhs.bit_index();
 
         let ptr = self as *mut _ as *mut u8;
 
@@ -279,8 +291,13 @@ impl<const N: usize> FromIterator<Bit> for Byteset<N> {
             .take(N * 8)
             .enumerate()
             .filter_map(|(i, bit)| if bool::from(bit) { Some(i) } else { None })
-            .filter_map(|i| BIndex::try_from(i).ok())
-            .fold(Self::NONE, |acc, i| acc | Self::one() << i)
+            .filter_map(|i| BIndex::<N>::try_from(i).ok())
+            .fold(Self::NONE, |mut acc, i| {
+                let byte_index = i.byte_index();
+                let bitmask = i.bitmask();
+                acc.0[byte_index] |= bitmask;
+                acc
+            })
     }
 }
 
@@ -414,7 +431,7 @@ mod tests {
     use crate::{
         bit::Bit::*,
         prelude::Bitset,
-        size_marker::{Bigger, Splits},
+        safety_markers::{Bigger, Splits},
     };
 
     use super::*;
