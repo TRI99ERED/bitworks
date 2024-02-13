@@ -1,33 +1,76 @@
 //! Module containing size safety markers for compile time checks on some methods.
 
+/// Marker for [`Bitsets`][crate::bitset::Bitset] used in size comparisons.
+/// 
+/// Is not relevant to users of this crate, unless they intend to define their own methods using it or
+/// implement `Bitset` on custom types.
+/// 
+/// [`Size`] is a built-in implementor. Please use it, over defining your own type, if possible.
+/// It's not meant to be implemented on the implementors of `Bitset` itself.
 pub trait SizeMarker: Sized {}
 
-pub trait Bigger<Small: SizeMarker>: SizeMarker {}
+/// Marker for [`Bitsets`][crate::bitset::Bitset] used in size comparisons. Implementing this trait
+/// means, that `Self` is bigger in byte size, than `S`.
+/// 
+/// Is not relevant to users of this crate, unless they intend to define their own methods using it or
+/// implement `Bitset` on custom types.
+/// 
+/// [`Size`] is a built-in implementor. Please use it, over defining your own type, if possible.
+/// It's not meant to be implemented on the implementors of `Bitset` itself.
+pub trait Bigger<S: SizeMarker>: SizeMarker {}
 
-pub trait Smaller<Big: SizeMarker>: SizeMarker {}
+/// Marker for [`Bitsets`][crate::bitset::Bitset] used in size comparisons. Implementing this trait
+/// means, that `Self` is smaller in byte size, than `B`.
+/// 
+/// `Smaller<B>` is automatically implemented for `T`, if `B` implements `Bigger<T>`.
+/// 
+/// Is not relevant to users of this crate, unless they intend to define their own methods using it or
+/// implement `Bitset` on custom types.
+/// 
+/// [`Size`] is a built-in implementor. Please use it, over defining your own type, if possible.
+/// It's not meant to be implemented on the implementors of `Bitset` itself.
+pub trait Smaller<B: SizeMarker>: SizeMarker {}
 
-impl<Big, Small> Smaller<Big> for Small
+impl<B, S> Smaller<B> for S
 where
-    Big: SizeMarker + Bigger<Small>,
-    Small: SizeMarker,
+    B: SizeMarker + Bigger<S>,
+    S: SizeMarker,
 {
 }
 
-pub trait Splits<Part1: SizeMarker, Part2: SizeMarker>:
-    SizeMarker + Bigger<Part1> + Bigger<Part2>
+/// Marker for [`Bitsets`][crate::bitset::Bitset] used in size comparisons. Implementing this trait
+/// means, that the byte size of `Self` is exactly equal to the sum of the byte sizes of `P1` and `P2`.
+/// 
+/// Is not relevant to users of this crate, unless they intend to define their own methods using it or
+/// implement `Bitset` on custom types.
+/// 
+/// [`Size`] is a built-in implementor. Please use it, over defining your own type, if possible.
+/// It's not meant to be implemented on the implementors of `Bitset` itself.
+pub trait Splits<P1: SizeMarker, P2: SizeMarker>:
+    SizeMarker + Bigger<P1> + Bigger<P2>
 {
 }
 
-pub trait Combines<Other: SizeMarker, Whole: SizeMarker + Bigger<Self> + Bigger<Other>>:
+/// Marker for [`Bitsets`][crate::bitset::Bitset] used in size comparisons. Implementing this trait
+/// means, that the sum of the byte sizes of `Self` and `O` is exactly equal to the byte size of `W`.
+/// 
+/// `Combines<O, W>` is automatically implemented for `T`, if `W` implements `Split<T, O>`.
+/// 
+/// Is not relevant to users of this crate, unless they intend to define their own methods using it or
+/// implement `Bitset` on custom types.
+/// 
+/// [`Size`] is a built-in implementor. Please use it, over defining your own type, if possible.
+/// It's not meant to be implemented on the implementors of `Bitset` itself.
+pub trait Combines<O: SizeMarker, W: SizeMarker + Bigger<Self> + Bigger<O>>:
     SizeMarker
 {
 }
 
-impl<Whole, Part1, Part2> Combines<Part2, Whole> for Part1
+impl<W, P1, P2> Combines<P2, W> for P1
 where
-    Whole: SizeMarker + Splits<Part1, Part2> + Bigger<Part1> + Bigger<Part2>,
-    Part1: SizeMarker,
-    Part2: SizeMarker,
+    W: SizeMarker + Splits<P1, P2> + Bigger<P1> + Bigger<P2>,
+    P1: SizeMarker,
+    P2: SizeMarker,
 {
 }
 

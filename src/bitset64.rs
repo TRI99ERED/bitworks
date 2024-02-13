@@ -732,7 +732,7 @@ mod tests {
     #[test]
     fn expand() -> TestResult {
         let bitset1 = Bitset64::from(0b00011011);
-        let bitset2: Bitset128 = bitset1.try_expand()?;
+        let bitset2: Bitset128 = bitset1.expand();
 
         assert_eq!(bitset2, Bitset128::from(0b00011011));
 
@@ -742,7 +742,7 @@ mod tests {
     #[test]
     fn fast_expand() -> TestResult {
         let bitset1 = Bitset64::from(0b00011011);
-        let bitset2: Bitset128 = bitset1.try_expand_optimized()?;
+        let bitset2: Bitset128 = bitset1.expand_optimized();
 
         assert_eq!(bitset2, Bitset128::from(0b00011011));
 
@@ -754,7 +754,7 @@ mod tests {
         let bitset1 = Bitset64::NONE.clone().replace(1.try_into()?, One).build();
         let bitset2 = Bitset64::NONE.clone().replace(1.try_into()?, One).build();
 
-        let bitset3: Bitset128 = bitset1.try_combine(bitset2)?;
+        let bitset3: Bitset128 = bitset1.combine(bitset2);
 
         assert_eq!(
             bitset3,
@@ -774,7 +774,7 @@ mod tests {
             .replace(1.try_into()?, One)
             .replace((64 + 1).try_into()?, One)
             .build();
-        let (bitset2, bitset3): (Bitset64, Bitset64) = bitset1.try_split()?;
+        let (bitset2, bitset3): (Bitset64, Bitset64) = bitset1.split();
 
         assert_eq!(
             bitset2,
@@ -792,7 +792,7 @@ mod tests {
         let bitset1 = Bitset64::NONE.clone().replace(1.try_into()?, One).build();
         let bitset2 = Bitset64::NONE.clone().replace(1.try_into()?, One).build();
 
-        let bitset3: Bitset128 = bitset1.try_combine_optimized(bitset2)?;
+        let bitset3: Bitset128 = bitset1.combine_optimized(bitset2);
 
         assert_eq!(
             bitset3,
@@ -812,7 +812,7 @@ mod tests {
             .replace(1.try_into()?, One)
             .replace((64 + 1).try_into()?, One)
             .build();
-        let (bitset2, bitset3): (Bitset64, Bitset64) = bitset1.try_split_optimized()?;
+        let (bitset2, bitset3): (Bitset64, Bitset64) = bitset1.split_optimized();
 
         assert_eq!(
             bitset2,

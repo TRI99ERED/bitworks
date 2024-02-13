@@ -863,35 +863,35 @@ mod tests {
     #[test]
     fn expand() -> TestResult {
         let bitset1 = Tested1::from([0b00011011]);
-        let bitset2: Tested2 = bitset1.try_expand()?;
+        let bitset2: Tested2 = bitset1.expand();
 
         let mut arr = [0; 2];
         arr[0] = 0b00011011;
         assert_eq!(bitset2, Tested2::from(arr));
 
         let bitset1 = Tested1::from([0b00011011]);
-        let bitset2: Tested4 = bitset1.try_expand()?;
+        let bitset2: Tested4 = bitset1.expand();
 
         let mut arr = [0; 4];
         arr[0] = 0b00011011;
         assert_eq!(bitset2, Tested4::from(arr));
 
         let bitset1 = Tested1::from([0b00011011]);
-        let bitset2: Tested8 = bitset1.try_expand()?;
+        let bitset2: Tested8 = bitset1.expand();
 
         let mut arr = [0; 8];
         arr[0] = 0b00011011;
         assert_eq!(bitset2, Tested8::from(arr));
 
         let bitset1 = Tested1::from([0b00011011]);
-        let bitset2: Tested16 = bitset1.try_expand()?;
+        let bitset2: Tested16 = bitset1.expand();
 
         let mut arr = [0; 16];
         arr[0] = 0b00011011;
         assert_eq!(bitset2, Tested16::from(arr));
 
         let bitset1 = Tested1::from([0b00011011]);
-        let bitset2: TestedOdd = bitset1.try_expand()?;
+        let bitset2: TestedOdd = bitset1.expand();
 
         let mut arr = [0; 3];
         arr[0] = 0b00011011;
@@ -903,35 +903,35 @@ mod tests {
     #[test]
     fn fast_expand() -> TestResult {
         let bitset1 = Tested1::from([0b00011011]);
-        let bitset2: Tested2 = bitset1.try_expand_optimized()?;
+        let bitset2: Tested2 = bitset1.expand_optimized();
 
         let mut arr = [0; 2];
         arr[0] = 0b00011011;
         assert_eq!(bitset2, Tested2::from(arr));
 
         let bitset1 = Tested1::from([0b00011011]);
-        let bitset2: Tested4 = bitset1.try_expand_optimized()?;
+        let bitset2: Tested4 = bitset1.expand_optimized();
 
         let mut arr = [0; 4];
         arr[0] = 0b00011011;
         assert_eq!(bitset2, Tested4::from(arr));
 
         let bitset1 = Tested1::from([0b00011011]);
-        let bitset2: Tested8 = bitset1.try_expand_optimized()?;
+        let bitset2: Tested8 = bitset1.expand_optimized();
 
         let mut arr = [0; 8];
         arr[0] = 0b00011011;
         assert_eq!(bitset2, Tested8::from(arr));
 
         let bitset1 = Tested1::from([0b00011011]);
-        let bitset2: Tested16 = bitset1.try_expand_optimized()?;
+        let bitset2: Tested16 = bitset1.expand_optimized();
 
         let mut arr = [0; 16];
         arr[0] = 0b00011011;
         assert_eq!(bitset2, Tested16::from(arr));
 
         let bitset1 = Tested1::from([0b00011011]);
-        let bitset2: TestedOdd = bitset1.try_expand_optimized()?;
+        let bitset2: TestedOdd = bitset1.expand_optimized();
 
         let mut arr = [0; 3];
         arr[0] = 0b00011011;
@@ -945,14 +945,14 @@ mod tests {
         let bitset1 = Tested1::from([0b00011011]);
         let bitset2 = Tested1::from([0b11101000]);
 
-        let bitset3: Tested2 = bitset1.try_combine(bitset2)?;
+        let bitset3: Tested2 = bitset1.combine(bitset2);
 
         assert_eq!(bitset3, Tested2::from([0b00011011, 0b11101000]));
 
         let bitset1 = Tested1::from([0b00011011]);
         let bitset2 = Tested2::from([0b11011011, 0b11101000]);
 
-        let bitset3: TestedOdd = bitset1.try_combine(bitset2)?;
+        let bitset3: TestedOdd = bitset1.combine(bitset2);
 
         assert_eq!(
             bitset3,
@@ -964,13 +964,13 @@ mod tests {
     #[test]
     fn split() -> TestResult {
         let bitset1 = Tested2::from([0b00011011, 0b11101000]);
-        let (bitset2, bitset3): (Tested1, Tested1) = bitset1.try_split()?;
+        let (bitset2, bitset3): (Tested1, Tested1) = bitset1.split();
 
         assert_eq!(bitset2, Tested1::from([0b00011011]));
         assert_eq!(bitset3, Tested1::from([0b11101000]));
 
         let bitset1 = TestedOdd::from([0b00011011, 0b11011011, 0b11101000]);
-        let (bitset2, bitset3): (Tested1, Tested2) = bitset1.try_split()?;
+        let (bitset2, bitset3): (Tested1, Tested2) = bitset1.split();
 
         assert_eq!(bitset2, Tested1::from([0b00011011]));
         assert_eq!(bitset3, Tested2::from([0b11011011, 0b11101000]));
@@ -982,14 +982,14 @@ mod tests {
         let bitset1 = Tested1::from([0b00011011]);
         let bitset2 = Tested1::from([0b11101000]);
 
-        let bitset3: Tested2 = bitset1.try_combine_optimized(bitset2)?;
+        let bitset3: Tested2 = bitset1.combine_optimized(bitset2);
 
         assert_eq!(bitset3, Tested2::from([0b00011011, 0b11101000]));
 
         let bitset1 = Tested1::from([0b00011011]);
         let bitset2 = Tested2::from([0b11011011, 0b11101000]);
 
-        let bitset3: TestedOdd = bitset1.try_combine_optimized(bitset2)?;
+        let bitset3: TestedOdd = bitset1.combine_optimized(bitset2);
 
         assert_eq!(
             bitset3,
@@ -1001,13 +1001,13 @@ mod tests {
     #[test]
     fn fast_split() -> TestResult {
         let bitset1 = Tested2::from([0b00011011, 0b11101000]);
-        let (bitset2, bitset3): (Tested1, Tested1) = bitset1.try_split_optimized()?;
+        let (bitset2, bitset3): (Tested1, Tested1) = bitset1.split_optimized();
 
         assert_eq!(bitset2, Tested1::from([0b00011011]));
         assert_eq!(bitset3, Tested1::from([0b11101000]));
 
         let bitset1 = TestedOdd::from([0b00011011, 0b11011011, 0b11101000]);
-        let (bitset2, bitset3): (Tested1, Tested2) = bitset1.try_split_optimized()?;
+        let (bitset2, bitset3): (Tested1, Tested2) = bitset1.split_optimized();
 
         assert_eq!(bitset2, Tested1::from([0b00011011]));
         assert_eq!(bitset3, Tested2::from([0b11011011, 0b11101000]));
