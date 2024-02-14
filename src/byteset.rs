@@ -431,7 +431,6 @@ mod tests {
     use crate::{
         bit::Bit::*,
         prelude::Bitset,
-        safety_markers::{Bigger, Splits},
     };
 
     use super::*;
@@ -442,11 +441,6 @@ mod tests {
     type Tested16 = Byteset<16>;
 
     type TestedOdd = Byteset<3>;
-    // Necessary impls, but undesirable to make public.
-    impl Bigger<Size<1>> for Size<3> {}
-    impl Bigger<Size<2>> for Size<3> {}
-    impl Splits<Size<1>, Size<2>> for Size<3> {}
-    impl Splits<Size<2>, Size<1>> for Size<3> {}
 
     type TestResult = Result<(), Box<dyn Error>>;
 

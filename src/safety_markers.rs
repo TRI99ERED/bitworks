@@ -108,3 +108,288 @@ impl Splits<Size<8>, Size<8>> for Size<16> {}
 impl Splits<Size<16>, Size<16>> for Size<32> {}
 impl Splits<Size<32>, Size<32>> for Size<64> {}
 impl Splits<Size<64>, Size<64>> for Size<128> {}
+
+// Bigger than 1
+impl Bigger<Size<1>> for Size<3> {}
+impl Bigger<Size<1>> for Size<5> {}
+impl Bigger<Size<1>> for Size<6> {}
+impl Bigger<Size<1>> for Size<7> {}
+impl Bigger<Size<1>> for Size<9> {}
+impl Bigger<Size<1>> for Size<10> {}
+impl Bigger<Size<1>> for Size<11> {}
+impl Bigger<Size<1>> for Size<12> {}
+impl Bigger<Size<1>> for Size<13> {}
+impl Bigger<Size<1>> for Size<14> {}
+impl Bigger<Size<1>> for Size<15> {}
+
+// Bigger than 2
+impl Bigger<Size<2>> for Size<3> {}
+impl Bigger<Size<2>> for Size<5> {}
+impl Bigger<Size<2>> for Size<6> {}
+impl Bigger<Size<2>> for Size<7> {}
+impl Bigger<Size<2>> for Size<9> {}
+impl Bigger<Size<2>> for Size<10> {}
+impl Bigger<Size<2>> for Size<11> {}
+impl Bigger<Size<2>> for Size<12> {}
+impl Bigger<Size<2>> for Size<13> {}
+impl Bigger<Size<2>> for Size<14> {}
+impl Bigger<Size<2>> for Size<15> {}
+
+// Bigger than 3
+impl Bigger<Size<3>> for Size<3> {}
+impl Bigger<Size<3>> for Size<4> {}
+impl Bigger<Size<3>> for Size<5> {}
+impl Bigger<Size<3>> for Size<6> {}
+impl Bigger<Size<3>> for Size<7> {}
+impl Bigger<Size<3>> for Size<8> {}
+impl Bigger<Size<3>> for Size<9> {}
+impl Bigger<Size<3>> for Size<10> {}
+impl Bigger<Size<3>> for Size<11> {}
+impl Bigger<Size<3>> for Size<12> {}
+impl Bigger<Size<3>> for Size<13> {}
+impl Bigger<Size<3>> for Size<14> {}
+impl Bigger<Size<3>> for Size<15> {}
+impl Bigger<Size<3>> for Size<16> {}
+
+// Bigger than 4
+impl Bigger<Size<4>> for Size<5> {}
+impl Bigger<Size<4>> for Size<6> {}
+impl Bigger<Size<4>> for Size<7> {}
+impl Bigger<Size<4>> for Size<9> {}
+impl Bigger<Size<4>> for Size<10> {}
+impl Bigger<Size<4>> for Size<11> {}
+impl Bigger<Size<4>> for Size<12> {}
+impl Bigger<Size<4>> for Size<13> {}
+impl Bigger<Size<4>> for Size<14> {}
+impl Bigger<Size<4>> for Size<15> {}
+
+// Bigger than 5
+impl Bigger<Size<5>> for Size<6> {}
+impl Bigger<Size<5>> for Size<7> {}
+impl Bigger<Size<5>> for Size<8> {}
+impl Bigger<Size<5>> for Size<9> {}
+impl Bigger<Size<5>> for Size<10> {}
+impl Bigger<Size<5>> for Size<11> {}
+impl Bigger<Size<5>> for Size<12> {}
+impl Bigger<Size<5>> for Size<13> {}
+impl Bigger<Size<5>> for Size<14> {}
+impl Bigger<Size<5>> for Size<15> {}
+impl Bigger<Size<5>> for Size<16> {}
+
+// Bigger than 6
+impl Bigger<Size<6>> for Size<7> {}
+impl Bigger<Size<6>> for Size<8> {}
+impl Bigger<Size<6>> for Size<9> {}
+impl Bigger<Size<6>> for Size<10> {}
+impl Bigger<Size<6>> for Size<11> {}
+impl Bigger<Size<6>> for Size<12> {}
+impl Bigger<Size<6>> for Size<13> {}
+impl Bigger<Size<6>> for Size<14> {}
+impl Bigger<Size<6>> for Size<15> {}
+impl Bigger<Size<6>> for Size<16> {}
+
+// Bigger than 7
+impl Bigger<Size<7>> for Size<8> {}
+impl Bigger<Size<7>> for Size<9> {}
+impl Bigger<Size<7>> for Size<10> {}
+impl Bigger<Size<7>> for Size<11> {}
+impl Bigger<Size<7>> for Size<12> {}
+impl Bigger<Size<7>> for Size<13> {}
+impl Bigger<Size<7>> for Size<14> {}
+impl Bigger<Size<7>> for Size<15> {}
+impl Bigger<Size<7>> for Size<16> {}
+
+// Bigger than 8
+impl Bigger<Size<8>> for Size<9> {}
+impl Bigger<Size<8>> for Size<10> {}
+impl Bigger<Size<8>> for Size<11> {}
+impl Bigger<Size<8>> for Size<12> {}
+impl Bigger<Size<8>> for Size<13> {}
+impl Bigger<Size<8>> for Size<14> {}
+impl Bigger<Size<8>> for Size<15> {}
+
+// Bigger than 9
+impl Bigger<Size<9>> for Size<10> {}
+impl Bigger<Size<9>> for Size<11> {}
+impl Bigger<Size<9>> for Size<12> {}
+impl Bigger<Size<9>> for Size<13> {}
+impl Bigger<Size<9>> for Size<14> {}
+impl Bigger<Size<9>> for Size<15> {}
+impl Bigger<Size<9>> for Size<16> {}
+
+// Bigger than 10
+impl Bigger<Size<10>> for Size<11> {}
+impl Bigger<Size<10>> for Size<12> {}
+impl Bigger<Size<10>> for Size<13> {}
+impl Bigger<Size<10>> for Size<14> {}
+impl Bigger<Size<10>> for Size<15> {}
+impl Bigger<Size<10>> for Size<16> {}
+
+// Bigger than 11
+impl Bigger<Size<11>> for Size<12> {}
+impl Bigger<Size<11>> for Size<13> {}
+impl Bigger<Size<11>> for Size<14> {}
+impl Bigger<Size<11>> for Size<15> {}
+impl Bigger<Size<11>> for Size<16> {}
+
+// Bigger than 12
+impl Bigger<Size<12>> for Size<13> {}
+impl Bigger<Size<12>> for Size<14> {}
+impl Bigger<Size<12>> for Size<15> {}
+impl Bigger<Size<12>> for Size<16> {}
+
+// Bigger than 13
+impl Bigger<Size<13>> for Size<14> {}
+impl Bigger<Size<13>> for Size<15> {}
+impl Bigger<Size<13>> for Size<16> {}
+
+// Bigger than 14
+impl Bigger<Size<14>> for Size<15> {}
+impl Bigger<Size<14>> for Size<16> {}
+
+// Bigger than 15
+impl Bigger<Size<15>> for Size<16> {}
+
+// 3 splits into
+impl Splits<Size<1>, Size<2>> for Size<3> {}
+impl Splits<Size<2>, Size<1>> for Size<3> {}
+
+// 4 splits into
+impl Splits<Size<1>, Size<3>> for Size<4> {}
+impl Splits<Size<3>, Size<1>> for Size<4> {}
+
+// 5 splits into
+impl Splits<Size<1>, Size<4>> for Size<5> {}
+impl Splits<Size<4>, Size<1>> for Size<5> {}
+impl Splits<Size<2>, Size<3>> for Size<5> {}
+impl Splits<Size<3>, Size<2>> for Size<5> {}
+
+// 6 splits into
+impl Splits<Size<1>, Size<5>> for Size<6> {}
+impl Splits<Size<5>, Size<1>> for Size<6> {}
+impl Splits<Size<2>, Size<4>> for Size<6> {}
+impl Splits<Size<4>, Size<2>> for Size<6> {}
+impl Splits<Size<3>, Size<3>> for Size<6> {}
+
+// 7 splits into
+impl Splits<Size<1>, Size<6>> for Size<7> {}
+impl Splits<Size<6>, Size<1>> for Size<7> {}
+impl Splits<Size<2>, Size<5>> for Size<7> {}
+impl Splits<Size<5>, Size<2>> for Size<7> {}
+impl Splits<Size<3>, Size<4>> for Size<7> {}
+impl Splits<Size<4>, Size<3>> for Size<7> {}
+
+// 8 splits into
+impl Splits<Size<1>, Size<7>> for Size<8> {}
+impl Splits<Size<7>, Size<1>> for Size<8> {}
+impl Splits<Size<2>, Size<6>> for Size<8> {}
+impl Splits<Size<6>, Size<2>> for Size<8> {}
+impl Splits<Size<3>, Size<5>> for Size<8> {}
+impl Splits<Size<5>, Size<3>> for Size<8> {}
+
+// 9 splits into
+impl Splits<Size<1>, Size<8>> for Size<9> {}
+impl Splits<Size<8>, Size<1>> for Size<9> {}
+impl Splits<Size<2>, Size<7>> for Size<9> {}
+impl Splits<Size<7>, Size<2>> for Size<9> {}
+impl Splits<Size<3>, Size<6>> for Size<9> {}
+impl Splits<Size<6>, Size<3>> for Size<9> {}
+impl Splits<Size<4>, Size<5>> for Size<9> {}
+impl Splits<Size<5>, Size<4>> for Size<9> {}
+
+// 10 splits into
+impl Splits<Size<1>, Size<9>> for Size<10> {}
+impl Splits<Size<9>, Size<1>> for Size<10> {}
+impl Splits<Size<2>, Size<8>> for Size<10> {}
+impl Splits<Size<8>, Size<2>> for Size<10> {}
+impl Splits<Size<3>, Size<7>> for Size<10> {}
+impl Splits<Size<7>, Size<3>> for Size<10> {}
+impl Splits<Size<4>, Size<6>> for Size<10> {}
+impl Splits<Size<6>, Size<4>> for Size<10> {}
+impl Splits<Size<5>, Size<5>> for Size<10> {}
+
+// 11 splits into
+impl Splits<Size<1>, Size<10>> for Size<11> {}
+impl Splits<Size<10>, Size<1>> for Size<11> {}
+impl Splits<Size<2>, Size<9>> for Size<11> {}
+impl Splits<Size<9>, Size<2>> for Size<11> {}
+impl Splits<Size<3>, Size<8>> for Size<11> {}
+impl Splits<Size<8>, Size<3>> for Size<11> {}
+impl Splits<Size<4>, Size<7>> for Size<11> {}
+impl Splits<Size<7>, Size<4>> for Size<11> {}
+impl Splits<Size<5>, Size<6>> for Size<11> {}
+impl Splits<Size<6>, Size<5>> for Size<11> {}
+
+// 12 splits into
+impl Splits<Size<1>, Size<11>> for Size<12> {}
+impl Splits<Size<11>, Size<1>> for Size<12> {}
+impl Splits<Size<2>, Size<10>> for Size<12> {}
+impl Splits<Size<10>, Size<2>> for Size<12> {}
+impl Splits<Size<3>, Size<9>> for Size<12> {}
+impl Splits<Size<9>, Size<3>> for Size<12> {}
+impl Splits<Size<4>, Size<8>> for Size<12> {}
+impl Splits<Size<8>, Size<4>> for Size<12> {}
+impl Splits<Size<5>, Size<7>> for Size<12> {}
+impl Splits<Size<7>, Size<5>> for Size<12> {}
+impl Splits<Size<6>, Size<6>> for Size<12> {}
+
+// 13 splits into
+impl Splits<Size<1>, Size<12>> for Size<13> {}
+impl Splits<Size<12>, Size<1>> for Size<13> {}
+impl Splits<Size<2>, Size<11>> for Size<13> {}
+impl Splits<Size<11>, Size<2>> for Size<13> {}
+impl Splits<Size<3>, Size<10>> for Size<13> {}
+impl Splits<Size<10>, Size<3>> for Size<13> {}
+impl Splits<Size<4>, Size<9>> for Size<13> {}
+impl Splits<Size<9>, Size<4>> for Size<13> {}
+impl Splits<Size<5>, Size<8>> for Size<13> {}
+impl Splits<Size<8>, Size<5>> for Size<13> {}
+impl Splits<Size<6>, Size<7>> for Size<13> {}
+impl Splits<Size<7>, Size<6>> for Size<13> {}
+
+// 14 splits into
+impl Splits<Size<1>, Size<13>> for Size<14> {}
+impl Splits<Size<13>, Size<1>> for Size<14> {}
+impl Splits<Size<2>, Size<12>> for Size<14> {}
+impl Splits<Size<12>, Size<2>> for Size<14> {}
+impl Splits<Size<3>, Size<11>> for Size<14> {}
+impl Splits<Size<11>, Size<3>> for Size<14> {}
+impl Splits<Size<4>, Size<10>> for Size<14> {}
+impl Splits<Size<10>, Size<4>> for Size<14> {}
+impl Splits<Size<5>, Size<9>> for Size<14> {}
+impl Splits<Size<9>, Size<5>> for Size<14> {}
+impl Splits<Size<6>, Size<8>> for Size<14> {}
+impl Splits<Size<8>, Size<6>> for Size<14> {}
+impl Splits<Size<7>, Size<7>> for Size<14> {}
+
+// 15 splits into
+impl Splits<Size<1>, Size<14>> for Size<15> {}
+impl Splits<Size<14>, Size<1>> for Size<15> {}
+impl Splits<Size<2>, Size<13>> for Size<15> {}
+impl Splits<Size<13>, Size<2>> for Size<15> {}
+impl Splits<Size<3>, Size<12>> for Size<15> {}
+impl Splits<Size<12>, Size<3>> for Size<15> {}
+impl Splits<Size<4>, Size<11>> for Size<15> {}
+impl Splits<Size<11>, Size<4>> for Size<15> {}
+impl Splits<Size<5>, Size<10>> for Size<15> {}
+impl Splits<Size<10>, Size<5>> for Size<15> {}
+impl Splits<Size<6>, Size<9>> for Size<15> {}
+impl Splits<Size<9>, Size<6>> for Size<15> {}
+impl Splits<Size<7>, Size<8>> for Size<15> {}
+impl Splits<Size<8>, Size<7>> for Size<15> {}
+
+// 16 splits into
+impl Splits<Size<1>, Size<15>> for Size<16> {}
+impl Splits<Size<15>, Size<1>> for Size<16> {}
+impl Splits<Size<2>, Size<14>> for Size<16> {}
+impl Splits<Size<14>, Size<2>> for Size<16> {}
+impl Splits<Size<3>, Size<13>> for Size<16> {}
+impl Splits<Size<13>, Size<3>> for Size<16> {}
+impl Splits<Size<4>, Size<12>> for Size<16> {}
+impl Splits<Size<12>, Size<4>> for Size<16> {}
+impl Splits<Size<5>, Size<11>> for Size<16> {}
+impl Splits<Size<11>, Size<5>> for Size<16> {}
+impl Splits<Size<6>, Size<10>> for Size<16> {}
+impl Splits<Size<10>, Size<6>> for Size<16> {}
+impl Splits<Size<7>, Size<9>> for Size<16> {}
+impl Splits<Size<9>, Size<7>> for Size<16> {}
