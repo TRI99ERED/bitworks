@@ -1,4 +1,4 @@
-[![Rust](https://github.com/TRI99ERED/simple-bitfield/actions/workflows/rust.yml/badge.svg)](https://github.com/TRI99ERED/simple-bitfield/actions/workflows/rust.yml)
+[![Rust](https://github.com/TRI99ERED/bitworks/actions/workflows/rust.yml/badge.svg)](https://github.com/TRI99ERED/bitworks/actions/workflows/rust.yml)
 
 Crate meant to provide easy to use bitsets, with some out of the box functionality.
 
