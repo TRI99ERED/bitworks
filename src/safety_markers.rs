@@ -10,19 +10,7 @@
 pub trait SizeMarker: Sized {}
 
 /// Marker for [`Bitsets`][crate::bitset::Bitset] used in size comparisons. Implementing this trait
-/// means, that `Self` is bigger in byte size, than `S`.
-///
-/// Is not relevant to users of this crate, unless they intend to define their own methods using it or
-/// implement `Bitset` on custom types.
-///
-/// [`Size`] is a built-in implementor. Please use it, over defining your own type, if possible.
-/// It's not meant to be implemented on the implementors of `Bitset` itself.
-pub trait Bigger<S: SizeMarker>: SizeMarker {}
-
-/// Marker for [`Bitsets`][crate::bitset::Bitset] used in size comparisons. Implementing this trait
 /// means, that `Self` is smaller in byte size, than `B`.
-///
-/// `Smaller<B>` is automatically implemented for `T`, if `B` implements `Bigger<T>`.
 ///
 /// Is not relevant to users of this crate, unless they intend to define their own methods using it or
 /// implement `Bitset` on custom types.
@@ -31,10 +19,22 @@ pub trait Bigger<S: SizeMarker>: SizeMarker {}
 /// It's not meant to be implemented on the implementors of `Bitset` itself.
 pub trait Smaller<B: SizeMarker>: SizeMarker {}
 
-impl<B, S> Smaller<B> for S
+/// Marker for [`Bitsets`][crate::bitset::Bitset] used in size comparisons. Implementing this trait
+/// means, that `Self` is bigger in byte size, than `S`.
+///
+/// `Bigger<S>` is automatically implemented for `T`, if `S` implements `Smaller<T>`.
+///
+/// Is not relevant to users of this crate, unless they intend to define their own methods using it or
+/// implement `Bitset` on custom types.
+///
+/// [`Size`] is a built-in implementor. Please use it, over defining your own type, if possible.
+/// It's not meant to be implemented on the implementors of `Bitset` itself.
+pub trait Bigger<S: SizeMarker>: SizeMarker {}
+
+impl<S, B> Bigger<S> for B
 where
-    B: SizeMarker + Bigger<S>,
-    S: SizeMarker,
+    S: SizeMarker + Smaller<B>,
+    B: SizeMarker,
 {
 }
 
@@ -72,34 +72,34 @@ pub struct Size<const BYTES: usize>;
 
 impl<const BYTES: usize> SizeMarker for Size<BYTES> {}
 
-impl Bigger<Size<1>> for Size<2> {}
-impl Bigger<Size<1>> for Size<4> {}
-impl Bigger<Size<1>> for Size<8> {}
-impl Bigger<Size<1>> for Size<16> {}
-impl Bigger<Size<1>> for Size<32> {}
-impl Bigger<Size<1>> for Size<64> {}
-impl Bigger<Size<1>> for Size<128> {}
-impl Bigger<Size<2>> for Size<4> {}
-impl Bigger<Size<2>> for Size<8> {}
-impl Bigger<Size<2>> for Size<16> {}
-impl Bigger<Size<2>> for Size<32> {}
-impl Bigger<Size<2>> for Size<64> {}
-impl Bigger<Size<2>> for Size<128> {}
-impl Bigger<Size<4>> for Size<8> {}
-impl Bigger<Size<4>> for Size<16> {}
-impl Bigger<Size<4>> for Size<32> {}
-impl Bigger<Size<4>> for Size<64> {}
-impl Bigger<Size<4>> for Size<128> {}
-impl Bigger<Size<8>> for Size<16> {}
-impl Bigger<Size<8>> for Size<32> {}
-impl Bigger<Size<8>> for Size<64> {}
-impl Bigger<Size<8>> for Size<128> {}
-impl Bigger<Size<16>> for Size<32> {}
-impl Bigger<Size<16>> for Size<64> {}
-impl Bigger<Size<16>> for Size<128> {}
-impl Bigger<Size<32>> for Size<64> {}
-impl Bigger<Size<32>> for Size<128> {}
-impl Bigger<Size<64>> for Size<128> {}
+impl Smaller<Size<2>> for Size<1> {}
+impl Smaller<Size<4>> for Size<1> {}
+impl Smaller<Size<8>> for Size<1> {}
+impl Smaller<Size<16>> for Size<1> {}
+impl Smaller<Size<32>> for Size<1> {}
+impl Smaller<Size<64>> for Size<1> {}
+impl Smaller<Size<128>> for Size<1> {}
+impl Smaller<Size<4>> for Size<2> {}
+impl Smaller<Size<8>> for Size<2> {}
+impl Smaller<Size<16>> for Size<2> {}
+impl Smaller<Size<32>> for Size<2> {}
+impl Smaller<Size<64>> for Size<2> {}
+impl Smaller<Size<128>> for Size<2> {}
+impl Smaller<Size<8>> for Size<4> {}
+impl Smaller<Size<16>> for Size<4> {}
+impl Smaller<Size<32>> for Size<4> {}
+impl Smaller<Size<64>> for Size<4> {}
+impl Smaller<Size<128>> for Size<4> {}
+impl Smaller<Size<16>> for Size<8> {}
+impl Smaller<Size<32>> for Size<8> {}
+impl Smaller<Size<64>> for Size<8> {}
+impl Smaller<Size<128>> for Size<8> {}
+impl Smaller<Size<32>> for Size<16> {}
+impl Smaller<Size<64>> for Size<16> {}
+impl Smaller<Size<128>> for Size<16> {}
+impl Smaller<Size<64>> for Size<32> {}
+impl Smaller<Size<128>> for Size<32> {}
+impl Smaller<Size<128>> for Size<64> {}
 
 impl Splits<Size<1>, Size<1>> for Size<2> {}
 impl Splits<Size<2>, Size<2>> for Size<4> {}
@@ -110,145 +110,144 @@ impl Splits<Size<32>, Size<32>> for Size<64> {}
 impl Splits<Size<64>, Size<64>> for Size<128> {}
 
 // Bigger than 1
-impl Bigger<Size<1>> for Size<3> {}
-impl Bigger<Size<1>> for Size<5> {}
-impl Bigger<Size<1>> for Size<6> {}
-impl Bigger<Size<1>> for Size<7> {}
-impl Bigger<Size<1>> for Size<9> {}
-impl Bigger<Size<1>> for Size<10> {}
-impl Bigger<Size<1>> for Size<11> {}
-impl Bigger<Size<1>> for Size<12> {}
-impl Bigger<Size<1>> for Size<13> {}
-impl Bigger<Size<1>> for Size<14> {}
-impl Bigger<Size<1>> for Size<15> {}
+impl Smaller<Size<3>> for Size<1> {}
+impl Smaller<Size<5>> for Size<1> {}
+impl Smaller<Size<6>> for Size<1> {}
+impl Smaller<Size<7>> for Size<1> {}
+impl Smaller<Size<9>> for Size<1> {}
+impl Smaller<Size<10>> for Size<1> {}
+impl Smaller<Size<11>> for Size<1> {}
+impl Smaller<Size<12>> for Size<1> {}
+impl Smaller<Size<13>> for Size<1> {}
+impl Smaller<Size<14>> for Size<1> {}
+impl Smaller<Size<15>> for Size<1> {}
 
 // Bigger than 2
-impl Bigger<Size<2>> for Size<3> {}
-impl Bigger<Size<2>> for Size<5> {}
-impl Bigger<Size<2>> for Size<6> {}
-impl Bigger<Size<2>> for Size<7> {}
-impl Bigger<Size<2>> for Size<9> {}
-impl Bigger<Size<2>> for Size<10> {}
-impl Bigger<Size<2>> for Size<11> {}
-impl Bigger<Size<2>> for Size<12> {}
-impl Bigger<Size<2>> for Size<13> {}
-impl Bigger<Size<2>> for Size<14> {}
-impl Bigger<Size<2>> for Size<15> {}
+impl Smaller<Size<3>> for Size<2> {}
+impl Smaller<Size<5>> for Size<2> {}
+impl Smaller<Size<6>> for Size<2> {}
+impl Smaller<Size<7>> for Size<2> {}
+impl Smaller<Size<9>> for Size<2> {}
+impl Smaller<Size<10>> for Size<2> {}
+impl Smaller<Size<11>> for Size<2> {}
+impl Smaller<Size<12>> for Size<2> {}
+impl Smaller<Size<13>> for Size<2> {}
+impl Smaller<Size<14>> for Size<2> {}
+impl Smaller<Size<15>> for Size<2> {}
 
 // Bigger than 3
-impl Bigger<Size<3>> for Size<3> {}
-impl Bigger<Size<3>> for Size<4> {}
-impl Bigger<Size<3>> for Size<5> {}
-impl Bigger<Size<3>> for Size<6> {}
-impl Bigger<Size<3>> for Size<7> {}
-impl Bigger<Size<3>> for Size<8> {}
-impl Bigger<Size<3>> for Size<9> {}
-impl Bigger<Size<3>> for Size<10> {}
-impl Bigger<Size<3>> for Size<11> {}
-impl Bigger<Size<3>> for Size<12> {}
-impl Bigger<Size<3>> for Size<13> {}
-impl Bigger<Size<3>> for Size<14> {}
-impl Bigger<Size<3>> for Size<15> {}
-impl Bigger<Size<3>> for Size<16> {}
+impl Smaller<Size<4>> for Size<3> {}
+impl Smaller<Size<5>> for Size<3> {}
+impl Smaller<Size<6>> for Size<3> {}
+impl Smaller<Size<7>> for Size<3> {}
+impl Smaller<Size<8>> for Size<3> {}
+impl Smaller<Size<9>> for Size<3> {}
+impl Smaller<Size<10>> for Size<3> {}
+impl Smaller<Size<11>> for Size<3> {}
+impl Smaller<Size<12>> for Size<3> {}
+impl Smaller<Size<13>> for Size<3> {}
+impl Smaller<Size<14>> for Size<3> {}
+impl Smaller<Size<15>> for Size<3> {}
+impl Smaller<Size<16>> for Size<3> {}
 
 // Bigger than 4
-impl Bigger<Size<4>> for Size<5> {}
-impl Bigger<Size<4>> for Size<6> {}
-impl Bigger<Size<4>> for Size<7> {}
-impl Bigger<Size<4>> for Size<9> {}
-impl Bigger<Size<4>> for Size<10> {}
-impl Bigger<Size<4>> for Size<11> {}
-impl Bigger<Size<4>> for Size<12> {}
-impl Bigger<Size<4>> for Size<13> {}
-impl Bigger<Size<4>> for Size<14> {}
-impl Bigger<Size<4>> for Size<15> {}
+impl Smaller<Size<5>> for Size<4> {}
+impl Smaller<Size<6>> for Size<4> {}
+impl Smaller<Size<7>> for Size<4> {}
+impl Smaller<Size<9>> for Size<4> {}
+impl Smaller<Size<10>> for Size<4> {}
+impl Smaller<Size<11>> for Size<4> {}
+impl Smaller<Size<12>> for Size<4> {}
+impl Smaller<Size<13>> for Size<4> {}
+impl Smaller<Size<14>> for Size<4> {}
+impl Smaller<Size<15>> for Size<4> {}
 
 // Bigger than 5
-impl Bigger<Size<5>> for Size<6> {}
-impl Bigger<Size<5>> for Size<7> {}
-impl Bigger<Size<5>> for Size<8> {}
-impl Bigger<Size<5>> for Size<9> {}
-impl Bigger<Size<5>> for Size<10> {}
-impl Bigger<Size<5>> for Size<11> {}
-impl Bigger<Size<5>> for Size<12> {}
-impl Bigger<Size<5>> for Size<13> {}
-impl Bigger<Size<5>> for Size<14> {}
-impl Bigger<Size<5>> for Size<15> {}
-impl Bigger<Size<5>> for Size<16> {}
+impl Smaller<Size<6>> for Size<5> {}
+impl Smaller<Size<7>> for Size<5> {}
+impl Smaller<Size<8>> for Size<5> {}
+impl Smaller<Size<9>> for Size<5> {}
+impl Smaller<Size<10>> for Size<5> {}
+impl Smaller<Size<11>> for Size<5> {}
+impl Smaller<Size<12>> for Size<5> {}
+impl Smaller<Size<13>> for Size<5> {}
+impl Smaller<Size<14>> for Size<5> {}
+impl Smaller<Size<15>> for Size<5> {}
+impl Smaller<Size<16>> for Size<5> {}
 
 // Bigger than 6
-impl Bigger<Size<6>> for Size<7> {}
-impl Bigger<Size<6>> for Size<8> {}
-impl Bigger<Size<6>> for Size<9> {}
-impl Bigger<Size<6>> for Size<10> {}
-impl Bigger<Size<6>> for Size<11> {}
-impl Bigger<Size<6>> for Size<12> {}
-impl Bigger<Size<6>> for Size<13> {}
-impl Bigger<Size<6>> for Size<14> {}
-impl Bigger<Size<6>> for Size<15> {}
-impl Bigger<Size<6>> for Size<16> {}
+impl Smaller<Size<7>> for Size<6> {}
+impl Smaller<Size<8>> for Size<6> {}
+impl Smaller<Size<9>> for Size<6> {}
+impl Smaller<Size<10>> for Size<6> {}
+impl Smaller<Size<11>> for Size<6> {}
+impl Smaller<Size<12>> for Size<6> {}
+impl Smaller<Size<13>> for Size<6> {}
+impl Smaller<Size<14>> for Size<6> {}
+impl Smaller<Size<15>> for Size<6> {}
+impl Smaller<Size<16>> for Size<6> {}
 
 // Bigger than 7
-impl Bigger<Size<7>> for Size<8> {}
-impl Bigger<Size<7>> for Size<9> {}
-impl Bigger<Size<7>> for Size<10> {}
-impl Bigger<Size<7>> for Size<11> {}
-impl Bigger<Size<7>> for Size<12> {}
-impl Bigger<Size<7>> for Size<13> {}
-impl Bigger<Size<7>> for Size<14> {}
-impl Bigger<Size<7>> for Size<15> {}
-impl Bigger<Size<7>> for Size<16> {}
+impl Smaller<Size<8>> for Size<7> {}
+impl Smaller<Size<9>> for Size<7> {}
+impl Smaller<Size<10>> for Size<7> {}
+impl Smaller<Size<11>> for Size<7> {}
+impl Smaller<Size<12>> for Size<7> {}
+impl Smaller<Size<13>> for Size<7> {}
+impl Smaller<Size<14>> for Size<7> {}
+impl Smaller<Size<15>> for Size<7> {}
+impl Smaller<Size<16>> for Size<7> {}
 
 // Bigger than 8
-impl Bigger<Size<8>> for Size<9> {}
-impl Bigger<Size<8>> for Size<10> {}
-impl Bigger<Size<8>> for Size<11> {}
-impl Bigger<Size<8>> for Size<12> {}
-impl Bigger<Size<8>> for Size<13> {}
-impl Bigger<Size<8>> for Size<14> {}
-impl Bigger<Size<8>> for Size<15> {}
+impl Smaller<Size<9>> for Size<8> {}
+impl Smaller<Size<10>> for Size<8> {}
+impl Smaller<Size<11>> for Size<8> {}
+impl Smaller<Size<12>> for Size<8> {}
+impl Smaller<Size<13>> for Size<8> {}
+impl Smaller<Size<14>> for Size<8> {}
+impl Smaller<Size<15>> for Size<8> {}
 
 // Bigger than 9
-impl Bigger<Size<9>> for Size<10> {}
-impl Bigger<Size<9>> for Size<11> {}
-impl Bigger<Size<9>> for Size<12> {}
-impl Bigger<Size<9>> for Size<13> {}
-impl Bigger<Size<9>> for Size<14> {}
-impl Bigger<Size<9>> for Size<15> {}
-impl Bigger<Size<9>> for Size<16> {}
+impl Smaller<Size<10>> for Size<9> {}
+impl Smaller<Size<11>> for Size<9> {}
+impl Smaller<Size<12>> for Size<9> {}
+impl Smaller<Size<13>> for Size<9> {}
+impl Smaller<Size<14>> for Size<9> {}
+impl Smaller<Size<15>> for Size<9> {}
+impl Smaller<Size<16>> for Size<9> {}
 
 // Bigger than 10
-impl Bigger<Size<10>> for Size<11> {}
-impl Bigger<Size<10>> for Size<12> {}
-impl Bigger<Size<10>> for Size<13> {}
-impl Bigger<Size<10>> for Size<14> {}
-impl Bigger<Size<10>> for Size<15> {}
-impl Bigger<Size<10>> for Size<16> {}
+impl Smaller<Size<11>> for Size<10> {}
+impl Smaller<Size<12>> for Size<10> {}
+impl Smaller<Size<13>> for Size<10> {}
+impl Smaller<Size<14>> for Size<10> {}
+impl Smaller<Size<15>> for Size<10> {}
+impl Smaller<Size<16>> for Size<10> {}
 
 // Bigger than 11
-impl Bigger<Size<11>> for Size<12> {}
-impl Bigger<Size<11>> for Size<13> {}
-impl Bigger<Size<11>> for Size<14> {}
-impl Bigger<Size<11>> for Size<15> {}
-impl Bigger<Size<11>> for Size<16> {}
+impl Smaller<Size<12>> for Size<11> {}
+impl Smaller<Size<13>> for Size<11> {}
+impl Smaller<Size<14>> for Size<11> {}
+impl Smaller<Size<15>> for Size<11> {}
+impl Smaller<Size<16>> for Size<11> {}
 
 // Bigger than 12
-impl Bigger<Size<12>> for Size<13> {}
-impl Bigger<Size<12>> for Size<14> {}
-impl Bigger<Size<12>> for Size<15> {}
-impl Bigger<Size<12>> for Size<16> {}
+impl Smaller<Size<13>> for Size<12> {}
+impl Smaller<Size<14>> for Size<12> {}
+impl Smaller<Size<15>> for Size<12> {}
+impl Smaller<Size<16>> for Size<12> {}
 
 // Bigger than 13
-impl Bigger<Size<13>> for Size<14> {}
-impl Bigger<Size<13>> for Size<15> {}
-impl Bigger<Size<13>> for Size<16> {}
+impl Smaller<Size<14>> for Size<13> {}
+impl Smaller<Size<15>> for Size<13> {}
+impl Smaller<Size<16>> for Size<13> {}
 
 // Bigger than 14
-impl Bigger<Size<14>> for Size<15> {}
-impl Bigger<Size<14>> for Size<16> {}
+impl Smaller<Size<15>> for Size<14> {}
+impl Smaller<Size<16>> for Size<14> {}
 
 // Bigger than 15
-impl Bigger<Size<15>> for Size<16> {}
+impl Smaller<Size<16>> for Size<15> {}
 
 // 3 splits into
 impl Splits<Size<1>, Size<2>> for Size<3> {}

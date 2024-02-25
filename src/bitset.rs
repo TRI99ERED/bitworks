@@ -3,7 +3,7 @@
 use crate::{
     bit::{Bit, BitMut, BitRef},
     index::Index,
-    safety_markers::{Bigger, Combines, SizeMarker, Smaller, Splits},
+    safety_markers::{Combines, SizeMarker, Smaller, Splits},
 };
 
 // Length of Bitset in bits.
@@ -175,7 +175,6 @@ pub trait Bitset: Sized + Clone + PartialEq + Eq {
     where
         Res: Bitset,
         Self::Size: Smaller<Res::Size>,
-        Res::Size: Bigger<Self::Size>,
     {
         let result = self
             .ones()
@@ -207,7 +206,6 @@ pub trait Bitset: Sized + Clone + PartialEq + Eq {
         Self: LeftAligned,
         Res: Bitset + LeftAligned,
         Self::Size: Smaller<Res::Size>,
-        Res::Size: Bigger<Self::Size>,
     {
         let mut result = Res::NONE.clone();
 
@@ -674,8 +672,7 @@ pub trait Bitset: Sized + Clone + PartialEq + Eq {
         Other: Bitset,
         Res: Bitset,
         Self::Size: Combines<Other::Size, Res::Size> + Smaller<Res::Size>,
-        Other::Size: Combines<Self::Size, Res::Size> + Smaller<Res::Size>,
-        Res::Size: Splits<Self::Size, Other::Size> + Bigger<Self::Size> + Bigger<Other::Size>,
+        Other::Size: Smaller<Res::Size>,
     {
         let mut result = self
             .ones()
@@ -714,8 +711,7 @@ pub trait Bitset: Sized + Clone + PartialEq + Eq {
         Other: Bitset + LeftAligned,
         Res: Bitset + LeftAligned,
         Self::Size: Combines<Other::Size, Res::Size> + Smaller<Res::Size>,
-        Other::Size: Combines<Self::Size, Res::Size> + Smaller<Res::Size>,
-        Res::Size: Splits<Self::Size, Other::Size> + Bigger<Self::Size> + Bigger<Other::Size>,
+        Other::Size: Smaller<Res::Size>,
     {
         let mut result = Res::NONE.clone();
 
@@ -757,9 +753,9 @@ pub trait Bitset: Sized + Clone + PartialEq + Eq {
     where
         Res1: Bitset,
         Res2: Bitset,
-        Self::Size: Splits<Res1::Size, Res2::Size> + Bigger<Res1::Size> + Bigger<Res2::Size>,
-        Res1::Size: Combines<Res2::Size, Self::Size> + Smaller<Self::Size>,
-        Res2::Size: Combines<Res1::Size, Self::Size> + Smaller<Self::Size>,
+        Self::Size: Splits<Res1::Size, Res2::Size>,
+        Res1::Size: Smaller<Self::Size>,
+        Res2::Size: Smaller<Self::Size>,
     {
         let result1 = self
             .bits_ref()
@@ -806,9 +802,9 @@ pub trait Bitset: Sized + Clone + PartialEq + Eq {
         Self: LeftAligned,
         Res1: Bitset + LeftAligned,
         Res2: Bitset + LeftAligned,
-        Self::Size: Splits<Res1::Size, Res2::Size> + Bigger<Res1::Size> + Bigger<Res2::Size>,
-        Res1::Size: Combines<Res2::Size, Self::Size> + Smaller<Self::Size>,
-        Res2::Size: Combines<Res1::Size, Self::Size> + Smaller<Self::Size>,
+        Self::Size: Splits<Res1::Size, Res2::Size>,
+        Res1::Size: Smaller<Self::Size>,
+        Res2::Size: Smaller<Self::Size>,
     {
         let mut result1 = Res1::NONE.clone();
         let mut result2 = Res2::NONE.clone();
